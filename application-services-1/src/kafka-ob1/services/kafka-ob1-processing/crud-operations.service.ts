@@ -22,7 +22,8 @@ export class CrudOperationsService {
     this.logger.log(
       `Posting data to table ${tableEntity} for project ${projectName} at ${baseUrl} with instance name ${instanceName}`,
     );
-    const url = `${baseUrl}/services/kafka/ob1-v2/send-request/${instanceName}`;
+    const topic = 'budyos-ob1-applicationServices';
+    const url = `${baseUrl}/services/kafka/ob1-v2/send-request/${topic}/${instanceName}`;
     const requestBody = {
       destinationService: 'postgres-write-read-service',
       sourceFunction: 'fetchPage',
@@ -68,7 +69,8 @@ export class CrudOperationsService {
     this.logger.log(
       `Posting data to table ${tableEntity} for project ${projectName} at ${baseUrl} with instance name ${instanceName}`,
     );
-    const url = `${baseUrl}/services/kafka/ob1-v2/send-request/${instanceName}`;
+    const topic = 'budyos-ob1-applicationServices';
+    const url = `${baseUrl}/services/kafka/ob1-v2/send-request/${topic}/${instanceName}`;
     const requestBody = {
       destinationService: 'postgres-write-read-service',
       sourceFunction: 'fetchPage',
