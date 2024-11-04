@@ -15,7 +15,14 @@ export class CrudOperationsService {
     projectName: string,
     instanceName: string,
   ): Promise<any> {
-    const url = `services/kafka/ob1-v2/send-request/${instanceName}`;
+    const baseUrl =
+      process.env.ENV === 'PROD'
+        ? 'https://os.budy.bot'
+        : 'https://app.budy.bot';
+    this.logger.log(
+      `Posting data to table ${tableEntity} for project ${projectName} at ${baseUrl} with instance name ${instanceName}`,
+    );
+    const url = `${baseUrl}/services/kafka/ob1-v2/send-request/${instanceName}`;
     const requestBody = {
       destinationService: 'postgres-write-read-service',
       sourceFunction: 'fetchPage',
