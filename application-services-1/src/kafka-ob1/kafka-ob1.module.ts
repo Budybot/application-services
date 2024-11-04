@@ -3,7 +3,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { KafkaOb1Controller } from './kafka-ob1.controller';
 import { KafkaOb1ProcessingService } from './services/kafka-ob1-processing/kafka-ob1-processing.service';
-import { FetchDataService } from './services/kafka-ob1-processing/functions/fetchDataFromPage';
+import { CrudOperationsService } from './services/kafka-ob1-processing/crud-operations.service';
 
 @Module({
   imports: [
@@ -32,8 +32,8 @@ import { FetchDataService } from './services/kafka-ob1-processing/functions/fetc
   ],
   providers: [
     KafkaOb1ProcessingService,
-
+    CrudOperationsService
   ],
-  controllers: [KafkaOb1Controller, FetchDataService],
+  controllers: [KafkaOb1Controller],
 })
 export class KafkaOb1Module { }

@@ -6,9 +6,7 @@ import {
 } from 'src/interfaces/ob1-message.interfaces';
 import { KafkaContext } from '@nestjs/microservices';
 // import { sayHello } from './functions/sayHello.function';
-import { FetchDataService } from './functions/fetchDataFromPage';
-// import { fetchDataFromPage } from 'src/kafka-ob1/services/kafka-ob1-processing/functions/fetchDataFromPage';
-
+import { CrudOperationsService } from './crud-operations.service';
 // @Injectable()
 // export class KafkaOb1ProcessingService {
 //     private readonly logger = new Logger(KafkaOb1ProcessingService.name);
@@ -53,6 +51,7 @@ import { FetchDataService } from './functions/fetchDataFromPage';
 @Injectable()
 export class KafkaOb1ProcessingService {
   private readonly logger = new Logger(KafkaOb1ProcessingService.name);
+    crudOperationsService: any;
 
   constructor() {}
 
@@ -65,19 +64,22 @@ export class KafkaOb1ProcessingService {
             const functionName = message.messageContent.functionName;
             const functionInput = message.messageContent.functionInput;
 
-            if (functionName === 'sayHello') {
-                return;
-                // return await this.sayHello(functionInput, instanceName, userEmail); // Call the external function
-              } else if (functionName === 'fetchDataFromPage') {
+            if (functionName === 'fetchDataFromPage') {
                 const { tableEntity, projectName } = functionInput;
-                return await this.fetchDataService.fetchDataFromPage(
+                return await this.crudOperationsService.fetchData(
                   tableEntity,
                   projectName,
                   instanceName,
                 );
-              }
-              // Handle unknown function names explicitly
-              else {
+              } else if (functionName === 'postDataToPage') {
+                const { tableEntity, projectName, data } = functionInput;
+                return await this.crudOperationsService.postData(
+                  tableEntity,
+                  projectName,
+                  data,
+                  instanceName,
+                );
+              } else {
                 this.logger.error(`Function ${functionName} not found`);
                 return { errorMessage: `Function ${functionName} not found` };
               }
