@@ -33,7 +33,7 @@ export async function fetchDataFromPage(
       httpService.post(url, requestBody),
     );
     console.log(`Fetched data from table ${tableEntity} for project ${projectName}`);
-    return response.data; // Ensure TypeScript understands the response structure
+    return (response as any).data;
   } catch (error) {
     console.error(`Error fetching data from page: ${error.message}`);
     throw new Error('Failed to fetch data');
