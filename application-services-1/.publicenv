@@ -1,0 +1,4 @@
+# Public .env file
+SERVICE_NAME=application-services
+SERVICE_ID=application-services-1
+KAFKAJS_NO_PARTITIONER_WARNING=1

@@ -1,0 +1,39 @@
+services:
+
+  application-services-1:
+    build: ./application-services-1
+    container_name: application-services-1
+    hostname: application-services-1.orangebox-uswest-2.local
+    networks:
+      - ${NETWORK_NAME}
+    volumes:
+      # - ./certs:/tls
+      - application-services-1-logs:/app/logs # Mount a volume for logs
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL} # Set the desired log level here
+      - ENV=${ENV} # set as 'prod' for production and anything else for development
+    labels:
+      - "register-consul.enable=true"
+      - "register-consul.service-id=application-services-1"
+      - "register-consul.service-name=postgres-write-read-service"
+      - "register-consul.check.healthcheck-endpoint=http://application-services-1.orangebox-uswest-2.local:3000/services/health"
+      - "register-consul.service-tags=backend,ob1,nestjs,dev,agentprocessing"
+      - "register-consul.check.interval=15s"
+      - "register-consul.check.timeout=1s"
+      - "register-consul.check.deregister=72h"
+    command: node --trace-warnings dist/main.js
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m" # Rotate after 10MB
+        max-file: "2" # Keep 3 files
+
+networks:
+  OB-dev-net1-overlay:
+    external: true
+  OB-prod-net1-overlay:
+    external: true
+
+volumes:
+  application-services-1-logs:
+    driver: local
