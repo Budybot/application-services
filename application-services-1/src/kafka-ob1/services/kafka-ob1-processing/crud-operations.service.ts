@@ -54,7 +54,11 @@ export class CrudOperationsService {
     data: any,
     instanceName: string,
   ): Promise<any> {
-    const url = `services/kafka/ob1-v2/send-request/${instanceName}`;
+    const baseUrl =
+      process.env.ENV === 'PROD'
+        ? 'https://os.budy.bot'
+        : 'https://app.budy.bot';
+    const url = `${baseUrl}/services/kafka/ob1-v2/send-request/${instanceName}`;
     const requestBody = {
       destinationService: 'postgres-write-read-service',
       sourceFunction: 'fetchPage',
