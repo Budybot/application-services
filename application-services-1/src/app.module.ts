@@ -9,11 +9,7 @@ import { ConfigModule } from '@nestjs/config';
     }),
     KafkaOb1Module,
   ],
-  controllers: [
-
-  ],
-  providers: [
-
-  ],
+  controllers: [],
+  providers: [],
 })
-export class AppModule { }
+export class AppModule {}

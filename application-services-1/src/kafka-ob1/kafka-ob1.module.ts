@@ -1,4 +1,4 @@
-import { Module, Logger } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { KafkaOb1Controller } from './kafka-ob1.controller';
@@ -28,12 +28,8 @@ import { CrudOperationsService } from './services/kafka-ob1-processing/crud-oper
         inject: [ConfigService],
       },
     ]),
-
   ],
-  providers: [
-    KafkaOb1ProcessingService,
-    CrudOperationsService
-  ],
+  providers: [KafkaOb1ProcessingService, CrudOperationsService],
   controllers: [KafkaOb1Controller],
 })
-export class KafkaOb1Module { }
+export class KafkaOb1Module {}

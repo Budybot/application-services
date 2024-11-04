@@ -6,7 +6,7 @@ import {
 } from 'src/interfaces/ob1-message.interfaces';
 import { KafkaContext } from '@nestjs/microservices';
 // import { sayHello } from './functions/sayHello.function';
-import { CrudOperationsService } from './crud-operations.service';
+// import { CrudOperationsService } from './crud-operations.service';
 // @Injectable()
 // export class KafkaOb1ProcessingService {
 //     private readonly logger = new Logger(KafkaOb1ProcessingService.name);

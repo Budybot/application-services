@@ -36,7 +36,9 @@ export class FetchDataService {
       const response = await lastValueFrom(
         this.httpService.post(url, requestBody),
       );
-      this.logger.log(`Fetched data from table ${tableEntity} for project ${projectName}`);
+      this.logger.log(
+        `Fetched data from table ${tableEntity} for project ${projectName}`,
+      );
       return response.data; // Ensure TypeScript knows the structure of the response
     } catch (error) {
       this.logger.error(`Error fetching data from page: ${error.message}`);
