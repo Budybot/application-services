@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { KafkaOb1Controller } from './kafka-ob1.controller';
@@ -7,6 +8,7 @@ import { CrudOperationsService } from './services/kafka-ob1-processing/crud-oper
 
 @Module({
   imports: [
+    HttpModule,
     ConfigModule,
     ClientsModule.registerAsync([
       {
