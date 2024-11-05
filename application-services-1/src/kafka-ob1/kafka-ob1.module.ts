@@ -10,6 +10,7 @@ import { PageSubmittedService } from './services/kafka-ob1-processing/page-submi
 import { CleanTranscriptService } from './services/kafka-ob1-processing/clean-transcript.service';
 import { GetParticipantsService } from './services/kafka-ob1-processing/get-participants.service';
 import { AgentServiceRequest } from './services/kafka-ob1-processing/agent-service-request.service';
+import { KafkaOb1Service } from './kafka-ob1.service';
 @Module({
   imports: [
     HttpModule,
@@ -43,6 +44,7 @@ import { AgentServiceRequest } from './services/kafka-ob1-processing/agent-servi
     CleanTranscriptService,
     GetParticipantsService,
     AgentServiceRequest,
+    KafkaOb1Service,
   ],
   controllers: [KafkaOb1Controller],
 })
