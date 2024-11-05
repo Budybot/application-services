@@ -84,6 +84,7 @@ export class CrudOperationsService {
         },
       },
     };
+    this.logger.debug(requestBody);
 
     try {
       const response = await lastValueFrom(
