@@ -2,6 +2,11 @@ import { Injectable, Logger, Inject } from '@nestjs/common';
 import { CrudOperationsService } from './crud-operations.service';
 import { LlmFormGenerationService } from './llm-services/llm-form-generation.service';
 import { ClientKafka } from '@nestjs/microservices';
+import {
+    OB1MessageValue,
+    OB1MessageHeader,
+    CURRENT_SCHEMA_VERSION,
+  } from 'src/interfaces/ob1-message.interfaces';  
 
 @Injectable()
 export class PageSubmittedService {
@@ -38,7 +43,6 @@ export class PageSubmittedService {
       }
 
       const pageData = fetchDataResponse.messageContent[0];
-      this.logger.debug(`Fetched page data: ${JSON.stringify(pageData)}`);
 
       // Decide action based on tableEntity
       if (tableEntity === 'OB1-pages-inputPage1') {
@@ -68,14 +72,21 @@ export class PageSubmittedService {
         this.logger.log(
           `Emitting Kafka message for filter page for project ${projectName}`,
         );
-        const message = {
+        const messageValue: OB1MessageValue = {
           messageContent: pageData,
-          messageType: 'BROADCAST',
+          messageType: 'BROADCAST', // Ensure this is the correct type based on the interfaces
           projectId: projectName,
           assetId: null,
           conversationId: null,
         };
-        this.emitMessage(message);
+        const messageHeaders: OB1MessageHeader = {
+          instanceName: instanceName,
+          userEmail: userEmail,
+          sourceService: process.env.SERVICE_NAME || 'unknown-service', // Replace with the actual service name
+          schemaVersion: CURRENT_SCHEMA_VERSION,
+          destinationService: 'application-service',
+        };
+        this.emitMessage(messageValue, messageHeaders);
       } else {
         // Unrecognized tableEntity
         this.logger.warn(`Unrecognized table entity: ${tableEntity}`);
@@ -90,22 +101,30 @@ export class PageSubmittedService {
     }
   }
 
-  // Broadcasting function for Kafka message
-  emitMessage(message: any): void {
+// Broadcasting function for Kafka message with proper headers and value
+  emitMessage(
+    messageValue: OB1MessageValue,
+    messageHeaders: OB1MessageHeader,
+  ): void {
     const topic = 'budyos-ob1-applicationService';
 
     try {
       this.logger.log(
-        `Emitting message to topic: ${topic}, with content: ${JSON.stringify(message)}`,
+        `Emitting message to topic: ${topic}, with content: ${JSON.stringify(messageValue)}`,
       );
       // Emit the message to Kafka topic without awaiting a response
-      this.kafkaClient.emit(topic, message).subscribe({
-        error: (err) =>
-          this.logger.error(
-            `Failed to emit Kafka message: ${err.message}`,
-            err.stack,
-          ),
-      });
+      this.kafkaClient
+        .emit(topic, {
+          value: messageValue,
+          headers: messageHeaders,
+        })
+        .subscribe({
+          error: (err) =>
+            this.logger.error(
+              `Failed to emit Kafka message: ${err.message}`,
+              err.stack,
+            ),
+        });
 
       this.logger.log('Kafka message emitted successfully');
     } catch (error) {
@@ -116,4 +135,3 @@ export class PageSubmittedService {
     }
   }
 }
-
