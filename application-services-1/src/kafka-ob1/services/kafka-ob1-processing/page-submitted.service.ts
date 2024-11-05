@@ -87,6 +87,10 @@ export class PageSubmittedService {
         //   destinationService: 'application-service',
         };
         this.emitMessage(messageValue, messageHeaders);
+        return {
+          messageContent: pageData,
+          messageStatus: 'success',
+        };
       } else {
         // Unrecognized tableEntity
         this.logger.warn(`Unrecognized table entity: ${tableEntity}`);
