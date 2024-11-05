@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { KafkaOb1Controller } from './kafka-ob1.controller';
 import { KafkaOb1ProcessingService } from './services/kafka-ob1-processing/kafka-ob1-processing.service';
 import { CrudOperationsService } from './services/kafka-ob1-processing/crud-operations.service';
+import { LlmFormGenerationService } from './services/kafka-ob1-processing/llm-services/llm-form-generation.service';
 
 @Module({
   imports: [
@@ -31,7 +32,11 @@ import { CrudOperationsService } from './services/kafka-ob1-processing/crud-oper
       },
     ]),
   ],
-  providers: [KafkaOb1ProcessingService, CrudOperationsService],
+  providers: [
+    KafkaOb1ProcessingService,
+    CrudOperationsService,
+    LlmFormGenerationService,
+  ],
   controllers: [KafkaOb1Controller],
 })
 export class KafkaOb1Module {}
