@@ -32,6 +32,8 @@ export class PageSubmittedService {
           instanceName,
         );
 
+        this.logger.debug(fetchDataResponse);
+
         if (fetchDataResponse.messageContent) {
           const pageData = fetchDataResponse.messageContent[0];
 
