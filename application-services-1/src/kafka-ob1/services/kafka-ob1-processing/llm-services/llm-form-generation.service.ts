@@ -38,10 +38,10 @@ export class LlmFormGenerationService {
 
     // Create a form JSON based on the new structure
     const formJson = {
-      consultant_role: userRoles?.user1?.role || '',
-      consultant_name: userRoles?.user1?.name || '',
-      primary_client_name: userRoles?.user2?.name || '',
-      primary_client_role: userRoles?.user2?.role || '',
+      consultant_role: userRoles?.user1?.role || 'test',
+      consultant_name: userRoles?.user1?.name || 'test',
+      primary_client_name: userRoles?.user2?.name || 'test',
+      primary_client_role: userRoles?.user2?.role || 'test',
       DD: [
         "desired deliverable item 1",
         "desired deliverable item 2",
