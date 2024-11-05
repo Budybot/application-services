@@ -38,12 +38,12 @@ export class KafkaOb1ProcessingService {
                 if (tableEntity === 'OB1-pages-inputPage1' && fetchDataResponse.messageContent) {
                   const pageData = fetchDataResponse.messageContent[0];
 
-                  const { transcript, consultant_input, project_description, userRoles, action_items } = pageData;
-                  if (transcript === undefined) this.logger.warn('Transcript is missing');
-                  if (consultant_input === undefined) this.logger.warn('Consultant input is missing');
-                  if (project_description === undefined) this.logger.warn('Project description is missing');
-                  if (userRoles === undefined) this.logger.warn('User roles are missing');
-                  if (action_items === undefined) this.logger.warn('Action items are missing');
+                //   const { transcript, consultant_input, project_description, userRoles, action_items } = pageData;
+                //   if (transcript === undefined) this.logger.warn('Transcript is missing');
+                //   if (consultant_input === undefined) this.logger.warn('Consultant input is missing');
+                //   if (project_description === undefined) this.logger.warn('Project description is missing');
+                //   if (userRoles === undefined) this.logger.warn('User roles are missing');
+                //   if (action_items === undefined) this.logger.warn('Action items are missing');
         
                   // Generate form JSON using LLM service, passing the entire pageData
                   const generatedFormJson = await this.llmFormGenerationService.generateFormJsonFromPageData(
@@ -52,28 +52,29 @@ export class KafkaOb1ProcessingService {
                     projectName,
                   );
         
-                  // Prepare the data to be posted to the next page
-                  const postData = {
-                    consultant_role: userRoles?.user1?.role || '',
-                    consultant_name: userRoles?.user1?.name || '',
-                    primary_client_name: userRoles?.user2?.name || '',
-                    primary_client_role: userRoles?.user2?.role || '',
-                    DD: generatedFormJson.DD || [],
-                    KC1: generatedFormJson.KC1 || [],
-                    KC2: generatedFormJson.KC2 || [],
-                    action_items: action_items || [],
-                    meeting_slots: '',
-                    consultant_input: consultant_input || '',
-                    project_type: 'Digital transformation Consulting',
-                    PO: generatedFormJson.PO || [],
-                    company_name: 'Biggest company',
-                  };
+                //   // Prepare the data to be posted to the next page
+                //   const postData = {
+                //     consultant_role: userRoles?.user1?.role || '',
+                //     consultant_name: userRoles?.user1?.name || '',
+                //     primary_client_name: userRoles?.user2?.name || '',
+                //     primary_client_role: userRoles?.user2?.role || '',
+                //     DD: generatedFormJson.DD || [],
+                //     KC1: generatedFormJson.KC1 || [],
+                //     KC2: generatedFormJson.KC2 || [],
+                //     action_items: action_items || [],
+                //     meeting_slots: '',
+                //     consultant_input: consultant_input || '',
+                //     project_type: 'Digital transformation Consulting',
+                //     PO: generatedFormJson.PO || [],
+                //     company_name: 'Biggest company',
+                //   };
         
                   // Post the generated form JSON to the next page (e.g., "OB1-pages-outputPage2")
                   return await this.crudOperationsService.postData(
                     'OB1-pages-filterPage1',
                     projectName,
-                    postData,
+                    // postData,
+                    generatedFormJson,
                     instanceName,
                   );
                 } else {
