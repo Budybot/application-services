@@ -90,6 +90,7 @@ export class LlmFormGenerationService {
     this.logger.log(
       `Form JSON successfully generated for project ${projectName} by user ${userId}`,
     );
+    this.logger.debug(formJson);
     return formJson;
   }
 }
