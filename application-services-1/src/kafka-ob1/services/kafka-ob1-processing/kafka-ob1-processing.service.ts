@@ -33,27 +33,37 @@ export class KafkaOb1ProcessingService {
       const functionName = message.messageContent.functionName;
       const functionInput = message.messageContent.functionInput;
 
+      let response = {};
+
       switch (functionName) {
         case 'get-participants':
           const { transcript: transcriptForParticipants } = functionInput;
-          return await this.getParticipantsService.extractParticipants(
-            transcriptForParticipants,
-          );
+          const participants =
+            await this.getParticipantsService.extractParticipants(
+              transcriptForParticipants,
+            );
+          response = { messageContent: participants };
+          break;
         case 'clean-transcript':
           const { transcript: transcriptToClean } = functionInput;
-          return await this.cleanTranscriptService.cleanTranscript(
-            transcriptToClean,
-          );
+          const cleanedTranscript =
+            await this.cleanTranscriptService.cleanTranscript(
+              transcriptToClean,
+            );
+          response = { messageContent: cleanedTranscript };
+          break;
         case 'page-submitted':
-          return await this.pageSubmittedService.handlePageSubmitted(
+          response = await this.pageSubmittedService.handlePageSubmitted(
             functionInput,
             userEmail,
             instanceName,
           );
+          break;
         default:
           this.logger.error(`Function ${functionName} not found`);
           return { errorMessage: `Function ${functionName} not found` };
       }
+      return response;
     } catch (error) {
       this.logger.error(
         `Error processing message for user with email ${userEmail}: ${error.message}`,
