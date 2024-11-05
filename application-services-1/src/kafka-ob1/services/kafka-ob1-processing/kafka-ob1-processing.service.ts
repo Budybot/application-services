@@ -52,13 +52,6 @@ export class KafkaOb1ProcessingService {
                     projectName,
                   );
         
-                  // Generate form JSON using LLM service, passing the entire pageData
-                  const generatedFormJson = await this.llmFormGenerationService.generateFormJsonFromPageData(
-                    pageData,
-                    userEmail,
-                    projectName,
-                  );
-        
                   // Prepare the data to be posted to the next page
                   const postData = {
                     consultant_role: userRoles?.user1?.role || '',
