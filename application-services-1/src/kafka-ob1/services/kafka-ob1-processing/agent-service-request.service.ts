@@ -1,12 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { lastValueFrom } from 'rxjs';
-
+import { KafkaOb1Service } from 'src/kafka-ob1/kafka-ob1.service';
 @Injectable()
 export class AgentServiceRequest {
   private readonly logger = new Logger(AgentServiceRequest.name);
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(private readonly kafkaOb1Service: KafkaOb1Service) {}
 
   async sendAgentRequest(
     systemPrompt: string,
@@ -20,39 +18,38 @@ export class AgentServiceRequest {
       presencePenalty: number;
     },
     instanceName: string,
+    messageKey: string,
   ): Promise<any> {
-    const baseUrl =
-      process.env.ENV === 'PROD'
-        ? 'https://os.budy.bot'
-        : 'https://app.budy.bot';
     const topic = 'budyos-ob1-agentService';
-    const url = `${baseUrl}/services/kafka/ob1-v2/send-topicRequest/${topic}/${instanceName}`;
-
-    const requestBody = {
-      destinationService: 'agent-services',
-      sourceFunction: 'sendAgentRequest',
-      sourceType: 'system',
-      messageInput: {
-        messageContent: {
-          functionName: 'LLMgenerateResponse',
-          functionInput: {
-            systemPrompt,
-            userPrompt,
-            config,
-          },
+    const messageInput = {
+      messageContent: {
+        functionName: 'LLMgenerateResponse',
+        functionInput: {
+          systemPrompt,
+          userPrompt,
+          config,
         },
       },
+      messageType: 'REQUEST',
     };
 
     try {
-      const response = await lastValueFrom(
-        this.httpService.post(url, requestBody),
+      const response = await this.kafkaOb1Service.sendRequest(
+        messageKey,
+        instanceName,
+        'agent-services',
+        'sendAgentRequest',
+        'system',
+        messageInput,
+        'system',
+        'system@budy.bot',
+        topic,
       );
       this.logger.log(
         `Agent request sent for instance ${instanceName} with user prompt: ${userPrompt}`,
       );
-      this.logger.debug(response.data);
-      return response.data;
+      this.logger.debug(response);
+      return response;
     } catch (error) {
       this.logger.error(`Error sending agent request: ${error.message}`);
       throw new Error('Failed to send agent request');
