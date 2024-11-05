@@ -55,7 +55,7 @@ export class KafkaOb1Controller implements OnModuleInit {
   // }
 
   // @UseInterceptors(KafkaResponseInterceptor)
-  @MessagePattern('budyos-ob1-applicationServices')
+  @MessagePattern('budyos-ob1-applicationService')
   async handleSystemMessages(
     @Payload() message: OB1MessageValue,
     @Ctx() context: KafkaContext,
@@ -145,45 +145,45 @@ export class KafkaOb1Controller implements OnModuleInit {
     }
   }
 
-  @Post('/process-form-content')
-  async processFormContent(@Body() body: any) {
-    this.logger.log(
-      `Received form content for processing: ${JSON.stringify(body)}`,
-    );
+  // @Post('/process-form-content')
+  // async processFormContent(@Body() body: any) {
+  //   this.logger.log(
+  //     `Received form content for processing: ${JSON.stringify(body)}`,
+  //   );
 
-    const {
-      messageContent,
-      'c-email': userId,
-      projectName,
-      instanceName,
-    } = body;
+  //   const {
+  //     messageContent,
+  //     'c-email': userId,
+  //     projectName,
+  //     instanceName,
+  //   } = body;
 
-    if (!messageContent || !messageContent.formContent) {
-      this.logger.error('Form content is missing in the request');
-      return {
-        messageStatus: 'error',
-        errorMessage: 'Form content is missing in the request',
-      };
-    }
+  //   if (!messageContent || !messageContent.formContent) {
+  //     this.logger.error('Form content is missing in the request');
+  //     return {
+  //       messageStatus: 'error',
+  //       errorMessage: 'Form content is missing in the request',
+  //     };
+  //   }
 
-    try {
-      // Pass to processing service for further processing
-      await this.kafkaOb1ProcessingService.processFormSubmission(
-        messageContent.formContent,
-        userId,
-        projectName,
-        instanceName,
-      );
+  //   try {
+  //     // Pass to processing service for further processing
+  //     await this.kafkaOb1ProcessingService.processFormSubmission(
+  //       messageContent.formContent,
+  //       userId,
+  //       projectName,
+  //       instanceName,
+  //     );
 
-      return {
-        message: 'Form content processed successfully',
-      };
-    } catch (error) {
-      this.logger.error(`Error processing form content: ${error.message}`);
-      return {
-        messageStatus: 'error',
-        errorMessage: `Failed to process form content: ${error.message}`,
-      };
-    }
-  }
+  //     return {
+  //       message: 'Form content processed successfully',
+  //     };
+  //   } catch (error) {
+  //     this.logger.error(`Error processing form content: ${error.message}`);
+  //     return {
+  //       messageStatus: 'error',
+  //       errorMessage: `Failed to process form content: ${error.message}`,
+  //     };
+  //   }
+  // }
 }
