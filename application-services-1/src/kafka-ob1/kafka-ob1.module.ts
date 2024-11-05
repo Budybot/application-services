@@ -6,7 +6,9 @@ import { KafkaOb1Controller } from './kafka-ob1.controller';
 import { KafkaOb1ProcessingService } from './services/kafka-ob1-processing/kafka-ob1-processing.service';
 import { CrudOperationsService } from './services/kafka-ob1-processing/crud-operations.service';
 import { LlmFormGenerationService } from './services/kafka-ob1-processing/llm-services/llm-form-generation.service';
-
+import { PageSubmittedService } from './services/kafka-ob1-processing/page-submitted.service';
+import { CleanTranscriptService } from './services/kafka-ob1-processing/clean-transcript.service';
+import { GetParticipantsService } from './services/kafka-ob1-processing/get-participants.service';
 @Module({
   imports: [
     HttpModule,
@@ -36,6 +38,9 @@ import { LlmFormGenerationService } from './services/kafka-ob1-processing/llm-se
     KafkaOb1ProcessingService,
     CrudOperationsService,
     LlmFormGenerationService,
+    PageSubmittedService,
+    CleanTranscriptService,
+    GetParticipantsService,
   ],
   controllers: [KafkaOb1Controller],
 })
