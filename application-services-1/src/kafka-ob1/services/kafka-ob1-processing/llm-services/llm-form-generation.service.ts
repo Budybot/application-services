@@ -36,55 +36,37 @@ export class LlmFormGenerationService {
       this.logger.warn('Action items are missing from page data.');
     }
 
-    // Create a form JSON template based on the provided JSON structure
+    // Create a form JSON based on the new structure
     const formJson = {
-      company_name: "Budy",
-      PO: [
-        {
-          objective: "Enhance customer data accuracy across all platforms",
-          description: "Establish protocols for data cleansing and validation to ensure consistency across customer touchpoints."
-        },
-        {
-          objective: "Increase system integration",
-          options: ["Increase system integration", "Improve data quality", "Optimize user experience"],
-          description: "Integrate with external systems to provide seamless access to customer data for all users."
-        }
-      ],
+      consultant_role: userRoles?.user1?.role || '',
+      consultant_name: userRoles?.user1?.name || '',
+      primary_client_name: userRoles?.user2?.name || '',
+      primary_client_role: userRoles?.user2?.role || '',
       DD: [
-        {
-          goal: "Integrate seamless data flow across departments.",
-          description: "Establish a robust pipeline to reduce redundancy and improve data accuracy."
-        },
-        {
-          goal: "Real-time analytics dashboard",
-          options: ["Real-time analytics dashboard", "Customer insights portal", "Salesforce integration"],
-          description: "Develop a dashboard that provides key performance metrics and real-time insights."
-        }
+        "desired deliverable item 1",
+        "desired deliverable item 2",
+        "desired deliverable item 3",
       ],
       KC1: [
-        {
-          challenge: "Data inconsistencies",
-          options: ["Data inconsistencies", "Lack of technical resources", "System compatibility issues"],
-          details: "Data is inconsistently formatted across platforms, causing integration issues."
-        },
-        {
-          challenge: "Limited access to technical resources",
-          options: ["Data inconsistencies", "Limited access to technical resources", "System compatibility issues"],
-          details: "The project team lacks sufficient skilled personnel for timely development and troubleshooting."
-        }
+        "key challenge item 1",
+        "key challenge item 2",
+        "key challenge item 3",
       ],
       KC2: [
-        {
-          cause: "Lack of data standardization",
-          options: ["Lack of data standardization", "Legacy software limitations", "Inadequate documentation"],
-          description: "Different data formats and conventions across systems complicate the integration."
-        },
-        {
-          cause: "Legacy software limitations",
-          options: ["Lack of data standardization", "Legacy software limitations", "Inadequate documentation"],
-          description: "The project is limited by outdated systems, which hinder seamless integration."
-        }
-      ]
+        "key problem item 1",
+        "key problem item 2",
+        "key problem item 3",
+      ],
+      action_items: action_items || [],
+      meeting_slots: '',
+      consultant_input: consultant_input || '',
+      project_type: "Digital transformation Consulting",
+      PO: [
+        "objective item 1",
+        "objective item 2",
+        "objective item 3",
+      ],
+      company_name: "Biggest company",
     };
 
     this.logger.log(
