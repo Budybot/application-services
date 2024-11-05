@@ -26,7 +26,7 @@ export class KafkaOb1ProcessingService {
             const functionName = message.messageContent.functionName;
             const functionInput = message.messageContent.functionInput;
 
-            if (functionName === 'fetchDataFromPage') {
+            if (functionName === 'updatePage') {
                 const { tableEntity, projectName } = functionInput;
                 const fetchDataResponse = await this.crudOperationsService.fetchData(
                   tableEntity,
@@ -39,23 +39,23 @@ export class KafkaOb1ProcessingService {
                   const pageData = fetchDataResponse.messageContent[0];
         
                   // Generate form JSON using LLM service, passing the entire pageData
-                  return await this.llmFormGenerationService.generateFormJsonFromPageData(
+                  const generatedFormJson = await this.llmFormGenerationService.generateFormJsonFromPageData(
                     pageData,
                     userEmail,
                     projectName,
                   );
+        
+                  // Post the generated form JSON to the next page (e.g., "OB1-pages-outputPage2")
+                  return await this.crudOperationsService.postData(
+                    'OB1-pages-inputPage2',
+                    projectName,
+                    generatedFormJson,
+                    instanceName,
+                  );
                 } else {
                   return fetchDataResponse;
                 }
-              } else if (functionName === 'postDataToPage') {
-                const { tableEntity, projectName, data } = functionInput;
-                return await this.crudOperationsService.postData(
-                  tableEntity,
-                  projectName,
-                  data,
-                  instanceName,
-                );
-              } else {
+              }  else {
                 this.logger.error(`Function ${functionName} not found`);
                 return { errorMessage: `Function ${functionName} not found` };
               }
