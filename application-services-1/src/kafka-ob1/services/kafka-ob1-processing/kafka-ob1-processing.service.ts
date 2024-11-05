@@ -50,6 +50,7 @@ export class KafkaOb1ProcessingService {
             await this.cleanTranscriptService.cleanTranscript(
               transcriptToClean,
               instanceName,
+              userEmail,
             );
           response = {
             messageContent: { cleanedTranscript: cleanedTranscript },

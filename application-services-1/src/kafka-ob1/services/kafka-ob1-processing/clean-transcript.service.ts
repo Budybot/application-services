@@ -10,6 +10,7 @@ export class CleanTranscriptService {
   async cleanTranscript(
     transcript: string,
     instanceName: string,
+    userId: string,
   ): Promise<string> {
     const systemPrompt = `
       You are an AI assistant tasked with cleaning up meeting transcripts by removing filler words and small talk, while preserving all relevant content and keeping the conversation's meaning intact. Each transcript is formatted with speaker names and dialogue (no timestamps needed). When editing the transcript, please remove the following:
@@ -43,6 +44,7 @@ export class CleanTranscriptService {
         transcript,
         config,
         instanceName,
+        userId,
       );
 
       const cleanedTranscript = response.messageContent.content;
