@@ -19,7 +19,7 @@ export class CrudOperationsService {
       process.env.ENV === 'PROD'
         ? 'https://os.budy.bot'
         : 'https://app.budy.bot';
-    const topic = 'budyos-ob1-system';
+    const topic = 'budyos-ob1-databaseService';
     const url = `${baseUrl}/services/kafka/ob1-v2/send-request/${topic}/${instanceName}`;
     const requestBody = {
       destinationService: 'database-service',
@@ -64,7 +64,7 @@ export class CrudOperationsService {
       process.env.ENV === 'PROD'
         ? 'https://os.budy.bot'
         : 'https://app.budy.bot';
-    const topic = 'budyos-ob1-system';
+    const topic = 'budyos-ob1-databaseService';
     const url = `${baseUrl}/services/kafka/ob1-v2/send-request/${topic}/${instanceName}`;
     const requestBody = {
       destinationService: 'database-service',
