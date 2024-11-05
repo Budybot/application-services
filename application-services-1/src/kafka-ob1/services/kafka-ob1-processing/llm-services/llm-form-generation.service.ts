@@ -6,7 +6,7 @@ export class LlmFormGenerationService {
 
   constructor() {}
 
-  async generateFormJson(
+  async generateFormJsonromPageData(
     pageData: any,
     userId: string,
     projectName: string,
