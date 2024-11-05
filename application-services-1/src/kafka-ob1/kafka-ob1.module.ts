@@ -9,6 +9,7 @@ import { LlmFormGenerationService } from './services/kafka-ob1-processing/llm-se
 import { PageSubmittedService } from './services/kafka-ob1-processing/page-submitted.service';
 import { CleanTranscriptService } from './services/kafka-ob1-processing/clean-transcript.service';
 import { GetParticipantsService } from './services/kafka-ob1-processing/get-participants.service';
+import { AgentServiceRequest } from './services/kafka-ob1-processing/agent-service-request.service';
 @Module({
   imports: [
     HttpModule,
@@ -41,6 +42,7 @@ import { GetParticipantsService } from './services/kafka-ob1-processing/get-part
     PageSubmittedService,
     CleanTranscriptService,
     GetParticipantsService,
+    AgentServiceRequest,
   ],
   controllers: [KafkaOb1Controller],
 })
