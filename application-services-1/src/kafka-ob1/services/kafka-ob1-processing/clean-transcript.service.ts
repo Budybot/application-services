@@ -1,18 +1,51 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { AgentServiceRequest } from './agent-service-request.service';
 
 @Injectable()
 export class CleanTranscriptService {
   private readonly logger = new Logger(CleanTranscriptService.name);
 
-  async cleanTranscript(transcript: string): Promise<string> {
-    try {
-      this.logger.log('Cleaning transcript...');
-      // Add logic to clean transcript here
-      // Example: Removing filler words, irrelevant content, etc.
-      const cleanedTranscript = transcript
-        .replace(/\b(um|uh|you know|like)\b/g, '')
-        .trim();
+  constructor(private readonly agentServiceRequest: AgentServiceRequest) {}
 
+  async cleanTranscript(
+    transcript: string,
+    instanceName: string,
+  ): Promise<string> {
+    const systemPrompt = `
+      You are an AI assistant tasked with cleaning up meeting transcripts by removing filler words and small talk, while preserving all relevant content and keeping the conversation's meaning intact. Each transcript is formatted with speaker names and dialogue (no timestamps needed). When editing the transcript, please remove the following:
+
+      Filler words and verbal pauses (e.g., "um," "uh," "you know," "like," "I mean," "actually").
+      Casual greetings and pleasantries at the very beginning or end of the conversation.
+      Irrelevant side comments or off-topic remarks that do not pertain to the main discussion.
+      Focus on retaining all the relevant content, ensuring that the main points of the conversation remain unchanged.
+
+      Do not remove any sentences or phrases that contain important information or contribute to the discussion.
+
+      Ensure that the cleaned transcript maintains the original structure with speaker names and dialogue, and is clear and easy to read. The goal is to provide a transcript that focuses on the important content of the meeting without unnecessary fillers or small talk.
+
+      Only the cleaned transcript is required. Do not include any additional information or explanations.
+    `;
+
+    const config = {
+      provider: 'openai',
+      model: 'gpt-4o-mini',
+      temperature: 0.7,
+      maxTokens: 1000,
+      frequencyPenalty: 0,
+      presencePenalty: 0,
+    };
+    try {
+      this.logger.log(
+        'Requesting cleaned transcript from AgentServiceRequest...',
+      );
+      const response = await this.agentServiceRequest.sendAgentRequest(
+        systemPrompt,
+        transcript,
+        config,
+        instanceName,
+      );
+
+      const cleanedTranscript = response.messageContent.content;
       this.logger.log('Transcript cleaned successfully');
       return cleanedTranscript;
     } catch (error) {

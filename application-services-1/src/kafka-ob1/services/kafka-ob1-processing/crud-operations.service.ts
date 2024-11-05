@@ -1,5 +1,3 @@
-// src/kafka-ob1/services/kafka-ob1-processing/crud-operations.service.ts
-
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
