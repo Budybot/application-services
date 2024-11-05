@@ -34,6 +34,7 @@ export class PageSubmittedService {
         tableEntity,
         projectName,
         instanceName,
+        userEmail,
       );
 
       // Ensure fetchDataResponse is valid and contains data
@@ -66,6 +67,7 @@ export class PageSubmittedService {
           projectName,
           generatedFormJson,
           instanceName,
+          userEmail,
         );
       } else if (tableEntity === 'OB1-pages-filterPage1') {
         // Emit Kafka message with the form content from input
