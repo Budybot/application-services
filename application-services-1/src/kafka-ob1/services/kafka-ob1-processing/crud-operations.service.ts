@@ -26,6 +26,7 @@ export class CrudOperationsService {
           },
         },
       },
+      messageType: 'REQUEST',
     };
 
     try {
@@ -33,7 +34,7 @@ export class CrudOperationsService {
         messageKey, // Key for Kafka message
         instanceName,
         'database-service',
-        'fetchPage',
+        'fetchData',
         'user',
         messageInput,
         'system', // Example user role
@@ -106,6 +107,7 @@ export class CrudOperationsService {
           },
         },
       },
+      messageType: 'REQUEST',
     };
 
     try {
