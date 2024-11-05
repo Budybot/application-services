@@ -66,7 +66,7 @@ export class LlmFormGenerationService {
         "objective item 2",
         "objective item 3",
       ],
-      company_name: "Biggest company",
+      company_name: "McDonalds",
     };
 
     this.logger.log(
