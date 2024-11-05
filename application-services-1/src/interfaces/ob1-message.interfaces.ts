@@ -4,9 +4,9 @@ import { Logger } from '@nestjs/common';
 import { KafkaContext } from '@nestjs/microservices';
 
 // Define current and compatible schema versions
-export const CURRENT_SCHEMA_VERSION = "0.1.2";
+export const CURRENT_SCHEMA_VERSION = "0.1.3";
 export const MIN_COMPATIBLE_SCHEMA_VERSION = "0.1.1";
-export const MAX_COMPATIBLE_SCHEMA_VERSION = "0.1.2";
+export const MAX_COMPATIBLE_SCHEMA_VERSION = "0.1.3";
 
 // Instantiate the NestJS Logger
 const logger = new Logger('OB1MessageValidator');
