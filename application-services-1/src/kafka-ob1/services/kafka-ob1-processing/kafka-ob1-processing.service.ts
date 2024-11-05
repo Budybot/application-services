@@ -1,10 +1,11 @@
 // src/kafka-ob1/services/kafka-ob1-processing/kafka-ob1-processing.service.ts
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { CrudOperationsService } from './crud-operations.service';
 import {
   OB1MessageValue,
   OB1MessageHeader,
 } from 'src/interfaces/ob1-message.interfaces';
+import { ClientKafka } from '@nestjs/microservices';
 import { KafkaContext } from '@nestjs/microservices';
 import { LlmFormGenerationService } from './llm-services/llm-form-generation.service';
 
@@ -15,7 +16,8 @@ export class KafkaOb1ProcessingService {
     constructor(
         private readonly crudOperationsService: CrudOperationsService,
         private readonly llmFormGenerationService: LlmFormGenerationService,
-      ) {}
+        @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
+    ) {}
 
     async processRequest(message: OB1MessageValue, context: KafkaContext) {
         const messageHeaders = context.getMessage().headers;
@@ -92,4 +94,45 @@ export class KafkaOb1ProcessingService {
             throw new Error('Failed to process request');
         }
     }
+    async processFormSubmission(
+        formContent: any,
+        userId: string,
+        projectName: string,
+        instanceName: string,
+      ) {
+        try {
+          this.logger.log(`Processing form submission for project: ${projectName} by user: ${userId}`);
+    
+          // Sending Kafka Message with form content
+          this.emitMessage({
+            messageType: 'BROADCAST',
+            messageContent: { formContent },
+            projectId: projectName,
+            assetId: null,
+            conversationId: null,
+          });
+    
+          this.logger.log('Form submission successfully processed and Kafka message sent');
+        } catch (error) {
+          this.logger.error(`Error processing form submission: ${error.message}`, error.stack);
+          throw new Error('Failed to process form submission');
+        }
+      }
+    
+      // Broadcasting function for Kafka message
+      emitMessage(message: OB1MessageValue): void {
+        const topic = 'budyos-ob1-system';
+    
+        try {
+          this.logger.log(`Emitting message to topic: ${topic}, with content: ${JSON.stringify(message)}`);
+          // Emit the message to Kafka topic without awaiting a response
+          this.kafkaClient.emit(topic, message).subscribe({
+            error: (err) => this.logger.error(`Failed to emit Kafka message: ${err.message}`, err.stack),
+          });
+    
+          this.logger.log('Kafka message emitted successfully');
+        } catch (error) {
+          this.logger.error(`Failed to emit Kafka message: ${error.message}`, error.stack);
+        }
+      }
 }
