@@ -42,7 +42,7 @@ export class KafkaOb1ProcessingService {
             await this.getParticipantsService.extractParticipants(
               transcriptForParticipants,
             );
-          response = { messageContent: participants };
+          response = { messageContent: { participants: participants } };
           break;
         case 'clean-transcript':
           const { transcript: transcriptToClean } = functionInput;
@@ -50,7 +50,9 @@ export class KafkaOb1ProcessingService {
             await this.cleanTranscriptService.cleanTranscript(
               transcriptToClean,
             );
-          response = { messageContent: cleanedTranscript };
+          response = {
+            messageContent: { cleanedTranscript: cleanedTranscript },
+          };
           break;
         case 'page-submitted':
           response = await this.pageSubmittedService.handlePageSubmitted(
