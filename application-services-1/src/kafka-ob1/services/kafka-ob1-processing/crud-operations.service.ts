@@ -78,7 +78,7 @@ export class CrudOperationsService {
             CRUDInput: {
               tableEntity,
               projectName,
-              data,
+              ...data,
             },
           },
         },
