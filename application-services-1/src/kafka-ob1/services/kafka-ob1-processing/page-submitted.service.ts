@@ -84,7 +84,7 @@ export class PageSubmittedService {
           userEmail: userEmail,
           sourceService: process.env.SERVICE_NAME || 'unknown-service', // Replace with the actual service name
           schemaVersion: CURRENT_SCHEMA_VERSION,
-          destinationService: 'application-service',
+        //   destinationService: 'application-service',
         };
         this.emitMessage(messageValue, messageHeaders);
       } else {
