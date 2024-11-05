@@ -21,51 +21,55 @@ export class PageSubmittedService {
     const { tableEntity, projectName, transcript } = functionInput;
 
     try {
+      // Fetch data from Postgres
+      this.logger.log(
+        `Fetching data from ${tableEntity} for project ${projectName}`,
+      );
+      const fetchDataResponse = await this.crudOperationsService.fetchData(
+        tableEntity,
+        projectName,
+        instanceName,
+      );
+
+      // Ensure fetchDataResponse is valid and contains data
+      if (!fetchDataResponse || !fetchDataResponse.messageContent) {
+        this.logger.error('No data fetched or invalid data format received.');
+        throw new Error('No data fetched or invalid data format');
+      }
+
+      const pageData = fetchDataResponse.messageContent[0];
+      this.logger.debug(`Fetched page data: ${JSON.stringify(pageData)}`);
+
+      // Decide action based on tableEntity
       if (tableEntity === 'OB1-pages-inputPage1') {
-        // Fetch data from Postgres
+        // Call LLM service to generate form JSON
         this.logger.log(
-          `Fetching data from ${tableEntity} for project ${projectName}`,
+          `Generating form JSON using LLM for project ${projectName}`,
         );
-        const fetchDataResponse = await this.crudOperationsService.fetchData(
-          tableEntity,
+        const generatedFormJson =
+          await this.llmFormGenerationService.generateFormJsonFromPageData(
+            pageData,
+            userEmail,
+            projectName,
+          );
+
+        // Post the generated form JSON to the next page
+        this.logger.log(
+          `Posting generated form JSON to OB1-pages-filterPage1 for project ${projectName}`,
+        );
+        return await this.crudOperationsService.postData(
+          'OB1-pages-filterPage1',
           projectName,
+          generatedFormJson,
           instanceName,
         );
-
-        this.logger.debug(fetchDataResponse);
-
-        if (fetchDataResponse.messageContent) {
-          const pageData = fetchDataResponse.messageContent[0];
-
-          // Call LLM service to generate form JSON
-          this.logger.log(
-            `Generating form JSON using LLM for project ${projectName}`,
-          );
-          const generatedFormJson =
-            await this.llmFormGenerationService.generateFormJsonFromPageData(
-              pageData,
-              userEmail,
-              projectName,
-            );
-
-          // Post the generated form JSON to the next page
-          this.logger.log(
-            `Posting generated form JSON to OB1-pages-filterPage1 for project ${projectName}`,
-          );
-          return await this.crudOperationsService.postData(
-            'OB1-pages-filterPage1',
-            projectName,
-            generatedFormJson,
-            instanceName,
-          );
-        }
       } else if (tableEntity === 'OB1-pages-filterPage1') {
         // Emit Kafka message with the form content from input
         this.logger.log(
           `Emitting Kafka message for filter page for project ${projectName}`,
         );
         const message = {
-          messageContent: functionInput,
+          messageContent: pageData,
           messageType: 'BROADCAST',
           projectId: projectName,
           assetId: null,
@@ -73,7 +77,9 @@ export class PageSubmittedService {
         };
         this.emitMessage(message);
       } else {
+        // Unrecognized tableEntity
         this.logger.warn(`Unrecognized table entity: ${tableEntity}`);
+        throw new Error(`Unrecognized table entity: ${tableEntity}`);
       }
     } catch (error) {
       this.logger.error(
@@ -86,7 +92,7 @@ export class PageSubmittedService {
 
   // Broadcasting function for Kafka message
   emitMessage(message: any): void {
-    const topic = 'budyos-ob1-system';
+    const topic = 'budyos-ob1-applicationService';
 
     try {
       this.logger.log(
@@ -110,3 +116,4 @@ export class PageSubmittedService {
     }
   }
 }
+
