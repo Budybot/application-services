@@ -60,7 +60,22 @@ export class GoogleDocService {
     parentFolderId?: string,
   ): Promise<string> {
     try {
-      // const auth = await this.getCredentials();
+      this.logger.log(
+        `Current OAuth2 Credentials: ${JSON.stringify(this.oAuth2Client.credentials)}`,
+      );
+
+      // Check if the access token is expired or missing, and refresh if needed
+      if (
+        !this.oAuth2Client.credentials.access_token ||
+        (this.oAuth2Client.credentials.expiry_date &&
+          Date.now() >= this.oAuth2Client.credentials.expiry_date)
+      ) {
+        this.logger.log(
+          'Access token is missing or expired. Attempting to refresh...',
+        );
+        await this.oAuth2Client.refreshAccessToken(); // Refreshes the token if expired
+        this.logger.log('Token refreshed successfully');
+      }
       const driveService = google.drive({
         version: 'v3',
         auth: this.oAuth2Client,
