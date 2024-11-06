@@ -187,7 +187,8 @@ export class KafkaOb1Controller implements OnModuleInit {
     try {
       this.logger.log(`Handling content emission: ${JSON.stringify(message)}`);
       // Extract necessary fields from message content
-      const { pageName, sowContent, projectName } = message.messageContent;
+      const { pageName, projectName } = message.messageContent;
+      const sowContent = message.messageContent;
       const instanceName = headers.instanceName;
       const userEmail = headers.userEmail;
 
