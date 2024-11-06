@@ -66,6 +66,7 @@ export class KafkaOb1Controller implements OnModuleInit {
       .headers as unknown as OB1MessageHeader;
     const userEmail = messageHeaders.userEmail;
     const SERVICE_NAME = process.env.SERVICE_NAME;
+    const messageType = message.messageType;
 
     this.logger.debug(
       `Received message with key: ${messageKey} for user ${userEmail}`,
@@ -98,19 +99,36 @@ export class KafkaOb1Controller implements OnModuleInit {
     // Process message if intended for this service
     this.logger.log(`Processing message intended for ${SERVICE_NAME}`);
 
+    // Route based on messageType
+    if (messageType === 'BROADCAST') {
+      // Handle BROADCAST messages as content generation
+      await this.handleBroadcastContent(message, messageHeaders);
+    } else if (messageType === 'REQUEST') {
+      // Handle REQUEST messages as application requests
+      return await this.processApplicationRequest(message, messageHeaders);
+    } else {
+      this.logger.warn(`Unknown message type: ${messageType}`);
+      return { messageStatus: 'error', errorMessage: 'Unknown message type' };
+    }
+  }
+  // Process application requests that expect a response
+  private async processApplicationRequest(
+    message: OB1MessageValue,
+    headers: OB1MessageHeader,
+  ) {
     try {
       const result: { messageContent?: string; [key: string]: any } =
-        await this.kafkaOb1ProcessingService.processRequest(message, context);
+        await this.kafkaOb1ProcessingService.processRequest(message, headers);
 
       const responseHeaders: OB1MessageHeader = {
-        instanceName: messageHeaders.instanceName,
-        userEmail,
+        instanceName: headers.instanceName,
+        userEmail: headers.userEmail,
         schemaVersion: CURRENT_SCHEMA_VERSION,
-        sourceService: SERVICE_NAME,
-        destinationService: messageHeaders.sourceService,
+        sourceService: process.env.SERVICE_NAME,
+        destinationService: headers.sourceService,
         sourceType: 'system',
-        requestId: messageHeaders.requestId || `Not-Sent-${Date.now()}`,
-        responseId: `RE-${SERVICE_NAME}-${Date.now()}`, // Unique response Id
+        requestId: headers.requestId || `Not-Sent-${Date.now()}`,
+        responseId: `RE-${process.env.SERVICE_NAME}-${Date.now()}`,
       };
 
       const responseValue: OB1MessageValue = {
@@ -122,7 +140,7 @@ export class KafkaOb1Controller implements OnModuleInit {
         messageContent:
           typeof result.messageContent === 'object'
             ? result.messageContent
-            : {}, // Ensure messageContent is included
+            : {},
       };
 
       this.logger.debug(
@@ -135,13 +153,77 @@ export class KafkaOb1Controller implements OnModuleInit {
       };
     } catch (error) {
       this.logger.error(
-        `Error processing message for ${userEmail}: ${error.message}`,
+        `Error processing request: ${error.message}`,
         error.stack,
       );
       return {
         messageStatus: 'error',
-        errorMessage: `Failed to process message for ${userEmail}`,
+        errorMessage: `Failed to process request`,
       };
     }
   }
+
+  // Process broadcast content messages without expecting a response
+  private async handleBroadcastContent(
+    message: OB1MessageValue,
+    headers: OB1MessageHeader,
+  ) {
+    try {
+      // Content-specific handling for BROADCAST messages
+      this.logger.log(`Handling content emission: ${JSON.stringify(message)}`);
+      // Add logic for content processing, such as saving or triggering events
+
+    } catch (error) {
+      this.logger.error(
+        `Error processing broadcast content: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+  //   try {
+  //     const result: { messageContent?: string; [key: string]: any } =
+  //       await this.kafkaOb1ProcessingService.processRequest(message, context);
+
+  //     const responseHeaders: OB1MessageHeader = {
+  //       instanceName: messageHeaders.instanceName,
+  //       userEmail,
+  //       schemaVersion: CURRENT_SCHEMA_VERSION,
+  //       sourceService: SERVICE_NAME,
+  //       destinationService: messageHeaders.sourceService,
+  //       sourceType: 'system',
+  //       requestId: messageHeaders.requestId || `Not-Sent-${Date.now()}`,
+  //       responseId: `RE-${SERVICE_NAME}-${Date.now()}`, // Unique response Id
+  //     };
+
+  //     const responseValue: OB1MessageValue = {
+  //       ...result,
+  //       messageType: 'RESPONSE',
+  //       conversationId: message.conversationId || null,
+  //       projectId: message.projectId || null,
+  //       assetId: message.assetId || null,
+  //       messageContent:
+  //         typeof result.messageContent === 'object'
+  //           ? result.messageContent
+  //           : {}, // Ensure messageContent is included
+  //     };
+
+  //     this.logger.debug(
+  //       `Returning response with headers: ${JSON.stringify(responseHeaders)}`,
+  //     );
+  //     return {
+  //       key: '',
+  //       value: responseValue,
+  //       headers: responseHeaders,
+  //     };
+  //   } catch (error) {
+  //     this.logger.error(
+  //       `Error processing message for ${userEmail}: ${error.message}`,
+  //       error.stack,
+  //     );
+  //     return {
+  //       messageStatus: 'error',
+  //       errorMessage: `Failed to process message for ${userEmail}`,
+  //     };
+  //   }
+  // }
 }

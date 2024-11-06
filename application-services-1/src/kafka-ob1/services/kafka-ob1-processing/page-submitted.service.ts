@@ -84,9 +84,9 @@ export class PageSubmittedService {
         const messageHeaders: OB1MessageHeader = {
           instanceName: instanceName,
           userEmail: userEmail,
-          sourceService: process.env.SERVICE_NAME || 'unknown-service', // Replace with the actual service name
+          sourceService: process.env.SERVICE_NAME || 'unknown-service',
           schemaVersion: CURRENT_SCHEMA_VERSION,
-        //   destinationService: 'application-service',
+          destinationService: 'application-service',
         };
         this.emitMessage(messageValue, messageHeaders);
         return {
