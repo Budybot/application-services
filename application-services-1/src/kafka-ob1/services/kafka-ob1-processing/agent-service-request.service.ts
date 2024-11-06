@@ -49,7 +49,7 @@ export class AgentServiceRequest {
         'system',
         messageInput,
         'system',
-        'system@budy.bot',
+        messageKey,
         topic,
       );
       this.logger.log(
