@@ -20,12 +20,16 @@ export class GoogleDocService {
         const credentials = JSON.parse(tokenData);
         this.oAuth2Client = new google.auth.OAuth2();
         this.oAuth2Client.setCredentials(credentials);
-        this.logger.log('OAuth2 client initialized with token from environment');
+        this.logger.log(
+          'OAuth2 client initialized with token from environment',
+        );
       } catch (error) {
         this.logger.error('Failed to parse token JSON from environment', error);
       }
     } else {
-      this.logger.error('GOOGLE_TOKEN environment variable not set. OAuth client not initialized.');
+      this.logger.error(
+        'GOOGLE_TOKEN environment variable not set. OAuth client not initialized.',
+      );
     }
   }
 
@@ -46,7 +50,7 @@ export class GoogleDocService {
       throw new Error('OAuth client not initialized');
     }
     const { tokens } = await this.oAuth2Client.getToken(code);
-    this.oAuth2Client.setCredentials(tokens);  
+    this.oAuth2Client.setCredentials(tokens);
     // Optional: Log or store token securely
     this.logger.log('OAuth token received and set');
   }
@@ -68,6 +72,11 @@ export class GoogleDocService {
         mimeType: 'application/vnd.google-apps.folder',
         ...(parentFolderId && { parents: [parentFolderId] }), // Add parent folder if specified
       };
+
+      // Log the request data before making the call
+      this.logger.debug(
+        `Folder creation request data: ${JSON.stringify(folderMetadata)}`,
+      );
 
       // Create the folder in Google Drive
       const folder = await driveService.files.create({
