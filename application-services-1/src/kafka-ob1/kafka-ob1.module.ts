@@ -14,6 +14,7 @@ import { KafkaOb1Service } from './kafka-ob1.service';
 import { SowGenerationService } from './services/kafka-ob1-processing/content/sow-generation.service';
 import { ContentAssetsService } from './services/kafka-ob1-processing/content-assets.service';
 import { ContentService } from './services/kafka-ob1-processing/content/content.service';
+import { GoogleDocService } from './services/google/google-doc.service';
 @Module({
   imports: [
     HttpModule,
@@ -51,6 +52,7 @@ import { ContentService } from './services/kafka-ob1-processing/content/content.
     SowGenerationService,
     ContentAssetsService,
     ContentService,
+    GoogleDocService,
   ],
   controllers: [KafkaOb1Controller],
 })
