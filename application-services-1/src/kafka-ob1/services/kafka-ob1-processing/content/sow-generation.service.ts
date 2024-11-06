@@ -98,7 +98,8 @@ export class SowGenerationService {
         userId,
       );
 
-      const generatedSow = response.messageContent.content;
+      const generatedSow = response.messageContent;
+      this.logger.debug(generatedSow);
       this.logger.log('SOW generated successfully');
       return generatedSow;
     } catch (error) {
