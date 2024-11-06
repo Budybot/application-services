@@ -63,6 +63,9 @@ export class KafkaOb1Service implements OnModuleInit {
       requestId: `RQ-${sourceFunction}-${Date.now()}`,
     };
 
+    console.log('Sending Kafka request with headers:', messageHeader);
+    console.log('Sending Kafka request with content:', messageInput);
+
     // Send the message and apply filters to the observable stream
     const response$ = this.kafkaClient
       .send(topic, {
