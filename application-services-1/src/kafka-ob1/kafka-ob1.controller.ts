@@ -118,7 +118,7 @@ export class KafkaOb1Controller implements OnModuleInit {
   ) {
     try {
       const result: { messageContent?: string; [key: string]: any } =
-        await this.kafkaOb1ProcessingService.processRequest(message, headers);
+        await this.kafkaOb1ProcessingService.processRequest(message, context);
 
       const responseHeaders: OB1MessageHeader = {
         instanceName: headers.instanceName,
