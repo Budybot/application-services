@@ -94,7 +94,7 @@ export class SowGenerationService {
       Billing Schedule: Specify whether payment is due at milestones, monthly, or at project completion
       Expense Reimbursement: Note any additional costs for travel, software, or equipment
     `;
-    const minimalSystemPrompt = `Return a joke or something funny.`;
+    // const minimalSystemPrompt = `Return a joke or something funny.`;
 
     const config = {
       provider: 'openai',
@@ -108,8 +108,8 @@ export class SowGenerationService {
     try {
       this.logger.log('Requesting SOW generation from AgentServiceRequest...');
       const response = await this.agentServiceRequest.sendAgentRequest(
-        // systemPrompt,
-        minimalSystemPrompt,
+        systemPrompt,
+        // minimalSystemPrompt,
         'Please...', // No user prompt
         config,
         instanceName,

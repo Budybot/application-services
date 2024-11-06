@@ -41,6 +41,7 @@ export class ContentService {
         const documentId = await this.googleDocService.createGoogleDoc(
           `SOW for ${projectName}`,
           folderId,
+          userEmail,
         );
 
         // Step 3: Write the generated content to the Google Doc

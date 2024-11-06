@@ -216,52 +216,6 @@ export class KafkaOb1Controller implements OnModuleInit {
       );
     }
   }
-  //   try {
-  //     const result: { messageContent?: string; [key: string]: any } =
-  //       await this.kafkaOb1ProcessingService.processRequest(message, context);
-
-  //     const responseHeaders: OB1MessageHeader = {
-  //       instanceName: messageHeaders.instanceName,
-  //       userEmail,
-  //       schemaVersion: CURRENT_SCHEMA_VERSION,
-  //       sourceService: SERVICE_NAME,
-  //       destinationService: messageHeaders.sourceService,
-  //       sourceType: 'system',
-  //       requestId: messageHeaders.requestId || `Not-Sent-${Date.now()}`,
-  //       responseId: `RE-${SERVICE_NAME}-${Date.now()}`, // Unique response Id
-  //     };
-
-  //     const responseValue: OB1MessageValue = {
-  //       ...result,
-  //       messageType: 'RESPONSE',
-  //       conversationId: message.conversationId || null,
-  //       projectId: message.projectId || null,
-  //       assetId: message.assetId || null,
-  //       messageContent:
-  //         typeof result.messageContent === 'object'
-  //           ? result.messageContent
-  //           : {}, // Ensure messageContent is included
-  //     };
-
-  //     this.logger.debug(
-  //       `Returning response with headers: ${JSON.stringify(responseHeaders)}`,
-  //     );
-  //     return {
-  //       key: '',
-  //       value: responseValue,
-  //       headers: responseHeaders,
-  //     };
-  //   } catch (error) {
-  //     this.logger.error(
-  //       `Error processing message for ${userEmail}: ${error.message}`,
-  //       error.stack,
-  //     );
-  //     return {
-  //       messageStatus: 'error',
-  //       errorMessage: `Failed to process message for ${userEmail}`,
-  //     };
-  //   }
-  // }
 }
 
 @Controller('google-auth')
