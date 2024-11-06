@@ -14,24 +14,23 @@ export class ContentService {
   async generateContent(
     projectName: string,
     instanceName: string,
-    contentData: { sowContent?: any; pageName: string },
+    contentData: { sowData?: any; pageName: string },
     userEmail: string,
   ): Promise<string> {
-    const { pageName, sowContent } = contentData;
-
+    const { pageName, sowData } = contentData;
+    this.logger.debug(
+      `Generating content for page ${pageName} with data: ${JSON.stringify(sowData)}`,
+    );
     try {
       // Route generation based on page name (e.g., for SOW generation)
-      this.logger.debug(
-        `Generating content for page ${pageName} with data: ${sowContent}`,
-      );
-      if (pageName === 'OB1-pages-filterPage1' && sowContent) {
+      if (pageName === 'OB1-pages-filterPage1' && sowData) {
         this.logger.log(`Generating SOW content for page ${pageName}`);
 
         // Use SowGenerationService for SOW content
         const documentId = await this.sowGenerationService.generateSow(
           instanceName,
           userEmail,
-          sowContent,
+          sowData,
         );
 
         // Record the generated asset in ContentAssetsService

@@ -188,7 +188,7 @@ export class KafkaOb1Controller implements OnModuleInit {
       this.logger.log(`Handling content emission: ${JSON.stringify(message)}`);
       // Extract necessary fields from message content
       const { pageName, projectName } = message.messageContent;
-      const sowContent = message.messageContent;
+      const sowData = message.messageContent;
       const instanceName = headers.instanceName;
       const userEmail = headers.userEmail;
 
@@ -202,7 +202,7 @@ export class KafkaOb1Controller implements OnModuleInit {
       const documentId = await this.contentService.generateContent(
         projectName,
         instanceName,
-        { sowContent, pageName },
+        { sowData, pageName },
         userEmail,
       );
 

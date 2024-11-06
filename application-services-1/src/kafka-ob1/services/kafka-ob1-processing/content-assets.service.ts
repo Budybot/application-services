@@ -19,7 +19,7 @@ export class ContentAssetsService {
   ): Promise<void> {
     try {
       await this.crudOperationsService.postData(
-        'ob1-assets',
+        'OB1-assets',
         projectName,
         {
           assetName,
