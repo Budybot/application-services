@@ -44,6 +44,7 @@ export class PageSubmittedService {
       }
 
       const pageData = fetchDataResponse.messageContent[0];
+      pageData.pageName = tableEntity;
 
       // Decide action based on tableEntity
       if (tableEntity === 'OB1-pages-inputPage1') {
