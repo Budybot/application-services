@@ -12,6 +12,8 @@ import { GetParticipantsService } from './services/kafka-ob1-processing/get-part
 import { AgentServiceRequest } from './services/kafka-ob1-processing/agent-service-request.service';
 import { KafkaOb1Service } from './kafka-ob1.service';
 import { SowGenerationService } from './services/kafka-ob1-processing/content/sow-generation.service';
+import { ContentAssetsService } from './services/kafka-ob1-processing/content-assets.service';
+import { ContentService } from './services/kafka-ob1-processing/content/content.service';
 @Module({
   imports: [
     HttpModule,
@@ -47,6 +49,8 @@ import { SowGenerationService } from './services/kafka-ob1-processing/content/so
     AgentServiceRequest,
     KafkaOb1Service,
     SowGenerationService,
+    ContentAssetsService,
+    ContentService,
   ],
   controllers: [KafkaOb1Controller],
 })
