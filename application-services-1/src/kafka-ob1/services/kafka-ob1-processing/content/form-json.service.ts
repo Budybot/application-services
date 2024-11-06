@@ -123,35 +123,53 @@ export class FormJsonService {
     transcript: string,
     consultantInput: string,
     projectDescription: string,
-    actionItems: string,
-    userId: string,
+    actionItems: any,
+    userEmail: string,
     projectName: string,
   ): Promise<any> {
     try {
-      const resultJson = await this.generateFormJson(
+      // Call your LLM function here
+      const llmOutput = await this.generateFormJson(
         transcript,
         consultantInput,
         projectDescription,
-        userId,
+        userEmail,
         projectName,
       );
 
-      const actionResultJson = await this.generateActionItems(
+      const actionLlmOutput = await this.generateActionItems(
         transcript,
         actionItems,
-        userId,
+        userEmail,
         projectName,
       );
 
-      const combinedResult = { ...resultJson, ...actionResultJson };
-      this.logger.log(
-        `Processed JSON result: ${JSON.stringify(combinedResult)}`,
+      const combinedOutput = this.cleanAndParseJson(
+        `${llmOutput}${actionLlmOutput}`,
       );
-      return combinedResult;
+      this.logger.log(
+        `Processed JSON result: ${JSON.stringify(combinedOutput)}`,
+      );
+      return combinedOutput;
     } catch (error) {
-      // eslint-disable-next-line prettier/prettier
-      this.logger.error(`Error generating combined JSON: ${error.message}`, error.stack);
-      throw new Error('Failed to generate combined JSON');
+      this.logger.error(
+        `Error generating form JSON: ${error.message}`,
+        error.stack,
+      );
+      throw new Error('Failed to generate form JSON');
+    }
+  }
+  // Cleans up and parses the LLM JSON output
+  private cleanAndParseJson(output: string): any {
+    try {
+      // Remove any backticks or code block delimiters
+      const sanitizedOutput = output.replace(/```json|```/g, '').trim();
+
+      // Parse the JSON
+      return JSON.parse(sanitizedOutput);
+    } catch (error) {
+      this.logger.error(`Failed to parse JSON: ${error.message}`);
+      throw new Error('Invalid JSON format received from LLM');
     }
   }
 }
