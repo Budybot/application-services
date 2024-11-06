@@ -9,29 +9,63 @@ export class GoogleDocService {
   private oAuth2Client: any;
 
   constructor() {
-    this.initOAuthClientFromEnv();
+    this.initOAuthClientFromToken();
   }
 
-  private initOAuthClientFromEnv() {
+  private initOAuthClientFromToken() {
     const tokenData = process.env.GOOGLE_TOKEN;
 
-    if (tokenData) {
-      try {
-        const credentials = JSON.parse(tokenData);
-        this.oAuth2Client = new google.auth.OAuth2();
-        this.oAuth2Client.setCredentials(credentials);
-        this.logger.log(
-          'OAuth2 client initialized with token from environment',
-        );
-      } catch (error) {
-        this.logger.error('Failed to parse token JSON from environment', error);
-      }
-    } else {
+    if (!tokenData) {
       this.logger.error(
         'GOOGLE_TOKEN environment variable not set. OAuth client not initialized.',
       );
+      throw new Error('Missing GOOGLE_TOKEN environment variable');
+    }
+
+    try {
+      const credentials = JSON.parse(tokenData);
+
+      const { client_id, client_secret, token_uri, refresh_token } = credentials;
+      this.oAuth2Client = new google.auth.OAuth2(
+        client_id,
+        client_secret,
+        token_uri,
+      );
+
+      // Set token credentials (including access_token and refresh_token)
+      this.oAuth2Client.setCredentials({
+        access_token: credentials.token,
+        refresh_token: refresh_token,
+        expiry_date: new Date(credentials.expiry).getTime(),
+      });
+
+      this.logger.log('OAuth2 client initialized with token from environment.');
+    } catch (error) {
+      this.logger.error('Failed to parse GOOGLE_TOKEN JSON', error);
+      throw new Error('Failed to initialize OAuth client from GOOGLE_TOKEN');
     }
   }
+
+  // private initOAuthClientFromEnv() {
+  //   const tokenData = process.env.GOOGLE_TOKEN;
+
+  //   if (tokenData) {
+  //     try {
+  //       const credentials = JSON.parse(tokenData);
+  //       this.oAuth2Client = new google.auth.OAuth2();
+  //       this.oAuth2Client.setCredentials(credentials);
+  //       this.logger.log(
+  //         'OAuth2 client initialized with token from environment',
+  //       );
+  //     } catch (error) {
+  //       this.logger.error('Failed to parse token JSON from environment', error);
+  //     }
+  //   } else {
+  //     this.logger.error(
+  //       'GOOGLE_TOKEN environment variable not set. OAuth client not initialized.',
+  //     );
+  //   }
+  // }
 
   getAuthorizationUrl(): string {
     if (!this.oAuth2Client) {
@@ -73,7 +107,7 @@ export class GoogleDocService {
         this.logger.log(
           'Access token is missing or expired. Attempting to refresh...',
         );
-        await this.oAuth2Client.refreshAccessToken(); // Refreshes the token if expired
+        await this.oAuth2Client.getAccessToken(); // Refreshes the token if expired
         this.logger.log('Token refreshed successfully');
       }
       const driveService = google.drive({
