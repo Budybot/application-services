@@ -48,7 +48,9 @@ export class FormJsonService {
       );
 
       if (llmOutput?.messageContent?.content) {
-        const resultJson = JSON.parse(llmOutput.messageContent.content);
+        const resultJson = this.cleanAndParseJson(
+          llmOutput.messageContent.content,
+        );
         this.logger.debug(`Generated form JSON: ${JSON.stringify(resultJson)}`);
         return resultJson;
       } else {
@@ -100,7 +102,7 @@ export class FormJsonService {
       );
 
       if (actionLlmOutput?.messageContent?.content) {
-        const actionResultJson = JSON.parse(
+        const actionResultJson = this.cleanAndParseJson(
           actionLlmOutput.messageContent.content,
         );
         this.logger.debug(
@@ -144,9 +146,7 @@ export class FormJsonService {
         projectName,
       );
 
-      const combinedOutput = this.cleanAndParseJson(
-        `${llmOutput}${actionLlmOutput}`,
-      );
+      const combinedOutput = { ...llmOutput, ...actionLlmOutput };
       this.logger.log(
         `Processed JSON result: ${JSON.stringify(combinedOutput)}`,
       );
