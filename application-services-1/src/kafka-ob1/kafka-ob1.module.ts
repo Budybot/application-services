@@ -11,7 +11,7 @@ import { CleanTranscriptService } from './services/kafka-ob1-processing/clean-tr
 import { GetParticipantsService } from './services/kafka-ob1-processing/get-participants.service';
 import { AgentServiceRequest } from './services/kafka-ob1-processing/agent-service-request.service';
 import { KafkaOb1Service } from './kafka-ob1.service';
-import { SowGenerationService } from './services/kafka-ob1-processing/sow-generation.service';
+import { SowGenerationService } from './services/kafka-ob1-processing/content/sow-generation.service';
 @Module({
   imports: [
     HttpModule,

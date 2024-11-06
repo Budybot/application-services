@@ -1,5 +1,13 @@
-// src/kafka-ob1/kafka-ob1.controller.ts
-import { Controller, OnModuleInit, Logger, Post, Body } from '@nestjs/common';
+import {
+  Controller,
+  OnModuleInit,
+  Logger,
+  Get,
+  Query,
+  Res,
+} from '@nestjs/common';
+import { Response } from 'express';
+import { GoogleDocService } from './services/google/google-doc.service';
 import {
   // EventPattern,
   MessagePattern,
@@ -14,6 +22,7 @@ import {
   CURRENT_SCHEMA_VERSION,
 } from 'src/interfaces/ob1-message.interfaces';
 import { KafkaOb1ProcessingService } from './services/kafka-ob1-processing/kafka-ob1-processing.service';
+import { ContentService } from './services/kafka-ob1-processing/content/content.service';
 
 @Controller('kafka-ob1')
 export class KafkaOb1Controller implements OnModuleInit {
@@ -21,6 +30,7 @@ export class KafkaOb1Controller implements OnModuleInit {
 
   constructor(
     private readonly kafkaOb1ProcessingService: KafkaOb1ProcessingService,
+    private readonly contentService: ContentService,
     // private readonly kafkaOb1SystemService: KafkaOb1SystemService
   ) {}
 
@@ -175,10 +185,29 @@ export class KafkaOb1Controller implements OnModuleInit {
     context: KafkaContext,
   ) {
     try {
-      // Content-specific handling for BROADCAST messages
       this.logger.log(`Handling content emission: ${JSON.stringify(message)}`);
-      // Add logic for content processing, such as saving or triggering events
+      // Extract necessary fields from message content
+      const { pageName, sowContent, projectName } = message.messageContent;
+      const instanceName = headers.instanceName;
+      const userEmail = headers.userEmail;
 
+      if (!projectName || !pageName) {
+        throw new Error(
+          "Required fields 'projectName' or 'pageName' are missing in messageContent.",
+        );
+      }
+
+      // Use ContentService to handle content generation based on pageName
+      const documentId = await this.contentService.generateContent(
+        projectName,
+        instanceName,
+        { sowContent, pageName },
+        userEmail,
+      );
+
+      this.logger.log(
+        `Content successfully generated with document ID: ${documentId}`,
+      );
     } catch (error) {
       this.logger.error(
         `Error processing broadcast content: ${error.message}`,
@@ -232,4 +261,26 @@ export class KafkaOb1Controller implements OnModuleInit {
   //     };
   //   }
   // }
+}
+
+@Controller('google-auth')
+export class GoogleAuthController {
+  constructor(private readonly googleDocService: GoogleDocService) {}
+
+  // Route to start the OAuth flow by redirecting to Google’s authorization URL
+  @Get('authorize')
+  async authorize(@Res() res: Response) {
+    const authUrl = this.googleDocService.getAuthorizationUrl();
+    return res.redirect(authUrl);
+  }
+
+  // Callback route to handle Google’s redirect and capture the authorization code
+  @Get('oauth2callback')
+  async oauth2callback(@Query('code') code: string, @Res() res: Response) {
+    if (code) {
+      await this.googleDocService.handleOAuthCallback(code);
+      return res.send('Authentication successful! You can close this window.');
+    }
+    return res.status(400).send('Authorization code is missing.');
+  }
 }
