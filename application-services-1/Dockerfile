@@ -10,6 +10,9 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
+# Copy credentials.json to the working directory
+COPY credentials.json /usr/src/app/credentials.json
+
 # Copy the rest of the application code
 COPY . .
 

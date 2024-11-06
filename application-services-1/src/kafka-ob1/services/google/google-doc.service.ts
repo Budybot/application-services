@@ -11,10 +11,13 @@ export class GoogleDocService {
     'https://www.googleapis.com/auth/drive',
   ];
   private readonly TOKEN_PATH = path.join(__dirname, '../../token.json');
-  private readonly CREDENTIALS_PATH = path.join(
-    __dirname,
-    '../../credentials.json',
-  );
+  // private readonly CREDENTIALS_PATH = path.join(
+  //   __dirname,
+  //   '../../credentials.json',
+  // );
+  private readonly CREDENTIALS_PATH =
+    process.env.CREDENTIALS_PATH ||
+    path.join(__dirname, '../../credentials.json');
   private oAuth2Client: any;
 
   constructor() {
