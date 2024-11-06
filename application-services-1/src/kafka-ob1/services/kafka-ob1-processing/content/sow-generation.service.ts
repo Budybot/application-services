@@ -6,7 +6,6 @@ export class SowGenerationService {
   private readonly logger = new Logger(SowGenerationService.name);
 
   constructor(private readonly agentServiceRequest: AgentServiceRequest) {}
-// In SowGenerationService
   async generateSow(
     instanceName: string,
     userId: string,
@@ -115,11 +114,17 @@ export class SowGenerationService {
         instanceName,
         userId,
       );
-
-      const generatedSow = response.messageContent;
-      this.logger.debug(generatedSow);
-      this.logger.log('SOW generated successfully');
-      return generatedSow;
+      if (response?.messageContent?.content) {
+        const generatedSow = response.messageContent.content;
+        this.logger.debug(`Generated SOW: ${generatedSow}`);
+        return generatedSow;
+      } else {
+        throw new Error(`Invalid response: ${JSON.stringify(response)}`);
+      }
+      // const generatedSow = response.messageContent;
+      // this.logger.debug(generatedSow);
+      // this.logger.log('SOW generated successfully');
+      // return generatedSow;
     } catch (error) {
       this.logger.error(`Error generating SOW: ${error.message}`, error.stack);
       throw new Error('Failed to generate SOW');

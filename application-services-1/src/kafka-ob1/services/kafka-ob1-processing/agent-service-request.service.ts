@@ -32,6 +32,13 @@ export class AgentServiceRequest {
       },
       messageType: 'REQUEST',
     };
+    this.logger.log(
+      'Sending request to LLM service with the following payload:',
+    );
+    this.logger.debug(`System Prompt: ${systemPrompt}`);
+    this.logger.debug(`Config: ${JSON.stringify(config)}`);
+    this.logger.debug(`Instance Name: ${instanceName}, User ID: ${messageKey}`);
+
 
     try {
       const response = await this.kafkaOb1Service.sendRequest(
