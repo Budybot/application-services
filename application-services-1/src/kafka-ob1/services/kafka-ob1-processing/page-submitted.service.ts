@@ -1,12 +1,13 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { CrudOperationsService } from './crud-operations.service';
-import { LlmFormGenerationService } from './llm-services/llm-form-generation.service';
+// import { LlmFormGenerationService } from './llm-services/llm-form-generation.service';
 import { ClientKafka } from '@nestjs/microservices';
 import {
-    OB1MessageValue,
-    OB1MessageHeader,
-    CURRENT_SCHEMA_VERSION,
-  } from 'src/interfaces/ob1-message.interfaces';  
+  OB1MessageValue,
+  OB1MessageHeader,
+  CURRENT_SCHEMA_VERSION,
+} from 'src/interfaces/ob1-message.interfaces';
+import { FormJsonService } from './content/form-json.service';
 
 @Injectable()
 export class PageSubmittedService {
@@ -14,7 +15,8 @@ export class PageSubmittedService {
 
   constructor(
     private readonly crudOperationsService: CrudOperationsService,
-    private readonly llmFormGenerationService: LlmFormGenerationService,
+    // private readonly llmFormGenerationService: LlmFormGenerationService,
+    private readonly formJsonService: FormJsonService,
     @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka,
   ) {}
 
@@ -54,12 +56,14 @@ export class PageSubmittedService {
           `Generating form JSON using LLM for project ${projectName}`,
         );
         const generatedFormJson =
-          await this.llmFormGenerationService.generateFormJsonFromPageData(
-            pageData,
+          await this.formJsonService.generateCombinedJson(
+            transcript,
+            pageData.consultantInput,
+            pageData.projectDescription,
+            pageData.actionItems,
             userEmail,
             projectName,
           );
-
         // Post the generated form JSON to the next page
         this.logger.log(
           `Posting generated form JSON to OB1-pages-filterPage1 for project ${projectName}`,
