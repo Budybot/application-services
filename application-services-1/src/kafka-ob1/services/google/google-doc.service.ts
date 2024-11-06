@@ -11,13 +11,13 @@ export class GoogleDocService {
     'https://www.googleapis.com/auth/drive',
   ];
   private readonly TOKEN_PATH = path.join(__dirname, '../../token.json');
-  // private readonly CREDENTIALS_PATH = path.join(
-  //   __dirname,
-  //   '../../credentials.json',
-  // );
-  private readonly CREDENTIALS_PATH =
-    process.env.CREDENTIALS_PATH ||
-    path.join(__dirname, '../../credentials.json');
+  private readonly CREDENTIALS_PATH = path.join(
+    __dirname,
+    '../../credentials.json',
+  );
+  // private readonly CREDENTIALS_PATH =
+  //   process.env.CREDENTIALS_PATH ||
+  //   path.join(__dirname, '../../credentials.json');
   private oAuth2Client: any;
 
   constructor() {
@@ -35,6 +35,18 @@ export class GoogleDocService {
     );
   }
 
+  // Retry loading credentials.json if not found initially
+  private loadOAuth2Client() {
+    if (!this.oAuth2Client && fs.existsSync(this.CREDENTIALS_PATH)) {
+      this.initOAuth2Client();
+    } else if (!this.oAuth2Client) {
+      throw new Error(
+        'Google OAuth2 Client is not initialized; credentials.json is missing.',
+      );
+    }
+    return this.oAuth2Client;
+  }
+
   async getCredentials() {
     try {
       if (fs.existsSync(this.TOKEN_PATH)) {
@@ -50,13 +62,25 @@ export class GoogleDocService {
     }
   }
 
+  // getAuthorizationUrl(): string {
+  //   const authUrl = this.oAuth2Client.generateAuthUrl({
+  //     access_type: 'offline',
+  //     scope: this.SCOPES,
+  //   });
+  //   this.logger.log(`Authorize this app by visiting this URL: ${authUrl}`);
+  //   return authUrl;
+  // }
   getAuthorizationUrl(): string {
-    const authUrl = this.oAuth2Client.generateAuthUrl({
+    this.loadOAuth2Client();
+    if (!this.oAuth2Client) {
+      throw new Error(
+        'OAuth client is unavailable; credentials.json is missing.',
+      );
+    }
+    return this.oAuth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: this.SCOPES,
     });
-    this.logger.log(`Authorize this app by visiting this URL: ${authUrl}`);
-    return authUrl;
   }
 
   async handleOAuthCallback(code: string) {
