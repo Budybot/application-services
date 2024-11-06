@@ -12,6 +12,8 @@ export class CleanTranscriptService {
     instanceName: string,
     userId: string,
   ): Promise<string> {
+    const transcriptWithoutTimestamps = this.removeTimestamps(transcript);
+
     const systemPrompt = `
       You are an AI assistant tasked with cleaning up meeting transcripts by removing filler words and small talk, while preserving all relevant content and keeping the conversation's meaning intact. Each transcript is formatted with speaker names and dialogue (no timestamps needed). When editing the transcript, please remove the following:
 
@@ -41,7 +43,7 @@ export class CleanTranscriptService {
       );
       const response = await this.agentServiceRequest.sendAgentRequest(
         systemPrompt,
-        transcript,
+        transcriptWithoutTimestamps,
         config,
         instanceName,
         userId,
@@ -57,5 +59,17 @@ export class CleanTranscriptService {
       );
       throw new Error('Failed to clean transcript');
     }
+  }
+  private removeTimestamps(transcript: string): string {
+    this.logger.log('Removing timestamps from transcript...');
+    // Regular expression to match timestamps in formats like 0:00 or 12:34
+    const timestampRegex = /\b\d{1,2}:\d{2}\b/g;
+    const transcriptWithoutTimestamps = transcript
+      .replace(timestampRegex, '')
+      .trim();
+    this.logger.debug(
+      `Transcript without timestamps: ${transcriptWithoutTimestamps}`,
+    );
+    return transcriptWithoutTimestamps;
   }
 }
