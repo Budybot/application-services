@@ -21,6 +21,9 @@ export class ContentService {
 
     try {
       // Route generation based on page name (e.g., for SOW generation)
+      this.logger.debug(
+        `Generating content for page ${pageName} with data: ${sowContent}`,
+      );
       if (pageName === 'OB1-pages-filterPage1' && sowContent) {
         this.logger.log(`Generating SOW content for page ${pageName}`);
 
