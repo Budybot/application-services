@@ -110,7 +110,7 @@ export class SowGenerationService {
       const response = await this.agentServiceRequest.sendAgentRequest(
         // systemPrompt,
         minimalSystemPrompt,
-        '', // No user prompt
+        'Please...', // No user prompt
         config,
         instanceName,
         userId,
