@@ -26,8 +26,6 @@ export class FormJsonService {
       Clean Transcript: ${transcript},
       Consultant Input: ${consultantInput},
       Project Description: ${projectDescription}
-
-      Ensure the output of this call is only JSON.
     `;
 
     const config = {
@@ -43,7 +41,7 @@ export class FormJsonService {
       this.logger.log('Requesting form JSON generation from LLM...');
       const llmOutput = await this.agentServiceRequest.sendAgentRequest(
         formPrompt,
-        '',
+        'Ensure the output of this call is only JSON.',
         config,
         projectName,
         userId,
@@ -80,8 +78,6 @@ export class FormJsonService {
       Input Details:
       Clean Transcript: ${transcript},
       Action Items: ${actionItems}
-
-      Ensure the output of this call is only JSON.
     `;
 
     const config = {
@@ -97,7 +93,7 @@ export class FormJsonService {
       this.logger.log('Requesting action items JSON generation from LLM...');
       const actionLlmOutput = await this.agentServiceRequest.sendAgentRequest(
         actionPrompt,
-        '',
+        'Ensure the output of this call is only JSON.',
         config,
         projectName,
         userId,
