@@ -22,45 +22,78 @@ export class GoogleDocService {
 
   constructor() {
     // Initialize the OAuth2 client with credentials
-    this.initOAuth2Client();
+    // this.initOAuth2Client();
   }
-  private initOAuth2Client() {
-    const content = fs.readFileSync(this.CREDENTIALS_PATH, 'utf8');
-    const credentials = JSON.parse(content);
-    const { client_secret, client_id, redirect_uris } = credentials.installed;
-    this.oAuth2Client = new google.auth.OAuth2(
-      client_id,
-      client_secret,
-      redirect_uris[0],
-    );
-  }
-
-  // Retry loading credentials.json if not found initially
-  private loadOAuth2Client() {
+  private initializeOAuthClient() {
     if (!this.oAuth2Client && fs.existsSync(this.CREDENTIALS_PATH)) {
-      this.initOAuth2Client();
+      const content = fs.readFileSync(this.CREDENTIALS_PATH, 'utf8');
+      const credentials = JSON.parse(content);
+      const { client_secret, client_id, redirect_uris } = credentials.installed;
+      this.oAuth2Client = new google.auth.OAuth2(
+        client_id,
+        client_secret,
+        redirect_uris[0],
+      );
     } else if (!this.oAuth2Client) {
-      throw new Error(
-        'Google OAuth2 Client is not initialized; credentials.json is missing.',
+      this.logger.warn(
+        'credentials.json not found; Google OAuth client not initialized.',
       );
     }
-    return this.oAuth2Client;
   }
+  // private initOAuth2Client() {
+  //   const content = fs.readFileSync(this.CREDENTIALS_PATH, 'utf8');
+  //   const credentials = JSON.parse(content);
+  //   const { client_secret, client_id, redirect_uris } = credentials.installed;
+  //   this.oAuth2Client = new google.auth.OAuth2(
+  //     client_id,
+  //     client_secret,
+  //     redirect_uris[0],
+  //   );
+  // }
+
+  // Retry loading credentials.json if not found initially
+  // private loadOAuth2Client() {
+  //   if (!this.oAuth2Client && fs.existsSync(this.CREDENTIALS_PATH)) {
+  //     this.initOAuth2Client();
+  //   } else if (!this.oAuth2Client) {
+  //     throw new Error(
+  //       'Google OAuth2 Client is not initialized; credentials.json is missing.',
+  //     );
+  //   }
+  //   return this.oAuth2Client;
+  // }
 
   async getCredentials() {
-    try {
-      if (fs.existsSync(this.TOKEN_PATH)) {
-        const token = fs.readFileSync(this.TOKEN_PATH, 'utf8');
-        this.oAuth2Client.setCredentials(JSON.parse(token));
-        return this.oAuth2Client;
-      } else {
-        return this.getAuthorizationUrl();
-      }
-    } catch (error) {
-      this.logger.error('Error loading client secret file:', error);
-      throw new Error('Failed to load credentials');
+    this.initializeOAuthClient();
+    if (!this.oAuth2Client) {
+      throw new Error(
+        'OAuth client not initialized; credentials.json is missing.',
+      );
+    }
+
+    if (fs.existsSync(this.TOKEN_PATH)) {
+      const token = fs.readFileSync(this.TOKEN_PATH, 'utf8');
+      this.oAuth2Client.setCredentials(JSON.parse(token));
+      return this.oAuth2Client;
+    } else {
+      return this.getAuthorizationUrl();
     }
   }
+
+  // async getCredentials() {
+  //   try {
+  //     if (fs.existsSync(this.TOKEN_PATH)) {
+  //       const token = fs.readFileSync(this.TOKEN_PATH, 'utf8');
+  //       this.oAuth2Client.setCredentials(JSON.parse(token));
+  //       return this.oAuth2Client;
+  //     } else {
+  //       return this.getAuthorizationUrl();
+  //     }
+  //   } catch (error) {
+  //     this.logger.error('Error loading client secret file:', error);
+  //     throw new Error('Failed to load credentials');
+  //   }
+  // }
 
   // getAuthorizationUrl(): string {
   //   const authUrl = this.oAuth2Client.generateAuthUrl({
@@ -70,11 +103,23 @@ export class GoogleDocService {
   //   this.logger.log(`Authorize this app by visiting this URL: ${authUrl}`);
   //   return authUrl;
   // }
+  // getAuthorizationUrl(): string {
+  //   this.loadOAuth2Client();
+  //   if (!this.oAuth2Client) {
+  //     throw new Error(
+  //       'OAuth client is unavailable; credentials.json is missing.',
+  //     );
+  //   }
+  //   return this.oAuth2Client.generateAuthUrl({
+  //     access_type: 'offline',
+  //     scope: this.SCOPES,
+  //   });
+  // }
   getAuthorizationUrl(): string {
-    this.loadOAuth2Client();
+    this.initializeOAuthClient();
     if (!this.oAuth2Client) {
       throw new Error(
-        'OAuth client is unavailable; credentials.json is missing.',
+        'OAuth client not initialized; credentials.json is missing.',
       );
     }
     return this.oAuth2Client.generateAuthUrl({
