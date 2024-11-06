@@ -102,10 +102,14 @@ export class KafkaOb1Controller implements OnModuleInit {
     // Route based on messageType
     if (messageType === 'BROADCAST') {
       // Handle BROADCAST messages as content generation
-      await this.handleBroadcastContent(message, messageHeaders);
+      await this.handleBroadcastContent(message, messageHeaders, context);
     } else if (messageType === 'REQUEST') {
       // Handle REQUEST messages as application requests
-      return await this.processApplicationRequest(message, messageHeaders);
+      return await this.processApplicationRequest(
+        message,
+        messageHeaders,
+        context,
+      );
     } else {
       this.logger.warn(`Unknown message type: ${messageType}`);
       return { messageStatus: 'error', errorMessage: 'Unknown message type' };
@@ -115,6 +119,7 @@ export class KafkaOb1Controller implements OnModuleInit {
   private async processApplicationRequest(
     message: OB1MessageValue,
     headers: OB1MessageHeader,
+    context: KafkaContext,
   ) {
     try {
       const result: { messageContent?: string; [key: string]: any } =
@@ -167,6 +172,7 @@ export class KafkaOb1Controller implements OnModuleInit {
   private async handleBroadcastContent(
     message: OB1MessageValue,
     headers: OB1MessageHeader,
+    context: KafkaContext,
   ) {
     try {
       // Content-specific handling for BROADCAST messages
