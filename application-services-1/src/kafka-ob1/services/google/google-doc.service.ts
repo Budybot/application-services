@@ -46,27 +46,6 @@ export class GoogleDocService {
     }
   }
 
-  // private initOAuthClientFromEnv() {
-  //   const tokenData = process.env.GOOGLE_TOKEN;
-
-  //   if (tokenData) {
-  //     try {
-  //       const credentials = JSON.parse(tokenData);
-  //       this.oAuth2Client = new google.auth.OAuth2();
-  //       this.oAuth2Client.setCredentials(credentials);
-  //       this.logger.log(
-  //         'OAuth2 client initialized with token from environment',
-  //       );
-  //     } catch (error) {
-  //       this.logger.error('Failed to parse token JSON from environment', error);
-  //     }
-  //   } else {
-  //     this.logger.error(
-  //       'GOOGLE_TOKEN environment variable not set. OAuth client not initialized.',
-  //     );
-  //   }
-  // }
-
   getAuthorizationUrl(): string {
     if (!this.oAuth2Client) {
       throw new Error('OAuth client not initialized');
@@ -234,7 +213,7 @@ export class GoogleDocService {
       if (rewrite && endIndex > 1) {
         requests.push({
           deleteContentRange: {
-            range: { startIndex: 1, endIndex },
+            range: { startIndex: 1, endIndex: endIndex - 1 },
           },
         });
       }
