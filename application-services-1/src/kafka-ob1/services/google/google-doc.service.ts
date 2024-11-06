@@ -6,161 +6,49 @@ import * as path from 'path';
 @Injectable()
 export class GoogleDocService {
   private readonly logger = new Logger(GoogleDocService.name);
-  private readonly SCOPES = [
-    'https://www.googleapis.com/auth/documents',
-    'https://www.googleapis.com/auth/drive',
-  ];
-  private readonly TOKEN_PATH = path.join(__dirname, 'token.json');
-  // private readonly CREDENTIALS_PATH = path.join(
-  //   __dirname,
-  //   '../../credentials.json',
-  // );
-  // private readonly CREDENTIALS_PATH =
-  //   process.env.CREDENTIALS_PATH ||
-  //   path.join(__dirname, '../../credentials.json');
   private oAuth2Client: any;
 
   constructor() {
-    // Initialize the OAuth2 client with credentials
-    // this.initOAuth2Client();
-    this.initializeOAuthClient();
+    this.initOAuthClientFromEnv();
   }
-  private initializeOAuthClient() {
-    // Check if token.json exists
-    if (fs.existsSync(this.TOKEN_PATH)) {
-      const token = JSON.parse(fs.readFileSync(this.TOKEN_PATH, 'utf8'));
-      const { client_secret, client_id, redirect_uris } = token.installed; // Adjust if structure varies
-      this.oAuth2Client = new google.auth.OAuth2(
-        client_id,
-        client_secret,
-        redirect_uris[0],
-      );
-      this.oAuth2Client.setCredentials(token);
+
+  private initOAuthClientFromEnv() {
+    const tokenData = process.env.GOOGLE_TOKEN;
+
+    if (tokenData) {
+      try {
+        const credentials = JSON.parse(tokenData);
+        this.oAuth2Client = new google.auth.OAuth2();
+        this.oAuth2Client.setCredentials(credentials);
+        this.logger.log('OAuth2 client initialized with token from environment');
+      } catch (error) {
+        this.logger.error('Failed to parse token JSON from environment', error);
+      }
     } else {
-      console.error('token.json file not found');
+      this.logger.error('GOOGLE_TOKEN environment variable not set. OAuth client not initialized.');
     }
   }
 
-  // private initializeOAuthClient() {
-  //   if (!this.oAuth2Client && fs.existsSync(this.CREDENTIALS_PATH)) {
-  //     const content = fs.readFileSync(this.CREDENTIALS_PATH, 'utf8');
-  //     const credentials = JSON.parse(content);
-  //     const { client_secret, client_id, redirect_uris } = credentials.installed;
-  //     this.oAuth2Client = new google.auth.OAuth2(
-  //       client_id,
-  //       client_secret,
-  //       redirect_uris[0],
-  //     );
-  //   } else if (!this.oAuth2Client) {
-  //     this.logger.warn(
-  //       'credentials.json not found; Google OAuth client not initialized.',
-  //     );
-  //   }
-  // }
-  // private initOAuth2Client() {
-  //   const content = fs.readFileSync(this.CREDENTIALS_PATH, 'utf8');
-  //   const credentials = JSON.parse(content);
-  //   const { client_secret, client_id, redirect_uris } = credentials.installed;
-  //   this.oAuth2Client = new google.auth.OAuth2(
-  //     client_id,
-  //     client_secret,
-  //     redirect_uris[0],
-  //   );
-  // }
-
-  // Retry loading credentials.json if not found initially
-  // private loadOAuth2Client() {
-  //   if (!this.oAuth2Client && fs.existsSync(this.CREDENTIALS_PATH)) {
-  //     this.initOAuth2Client();
-  //   } else if (!this.oAuth2Client) {
-  //     throw new Error(
-  //       'Google OAuth2 Client is not initialized; credentials.json is missing.',
-  //     );
-  //   }
-  //   return this.oAuth2Client;
-  // }
-
-  // async getCredentials() {
-  //   this.initializeOAuthClient();
-  //   if (!this.oAuth2Client) {
-  //     throw new Error(
-  //       'OAuth client not initialized; credentials.json is missing.',
-  //     );
-  //   }
-
-  //   if (fs.existsSync(this.TOKEN_PATH)) {
-  //     const token = fs.readFileSync(this.TOKEN_PATH, 'utf8');
-  //     this.oAuth2Client.setCredentials(JSON.parse(token));
-  //     return this.oAuth2Client;
-  //   } else {
-  //     return this.getAuthorizationUrl();
-  //   }
-  // }
-
-  // async getCredentials() {
-  //   try {
-  //     if (fs.existsSync(this.TOKEN_PATH)) {
-  //       const token = fs.readFileSync(this.TOKEN_PATH, 'utf8');
-  //       this.oAuth2Client.setCredentials(JSON.parse(token));
-  //       return this.oAuth2Client;
-  //     } else {
-  //       return this.getAuthorizationUrl();
-  //     }
-  //   } catch (error) {
-  //     this.logger.error('Error loading client secret file:', error);
-  //     throw new Error('Failed to load credentials');
-  //   }
-  // }
-
-  // getAuthorizationUrl(): string {
-  //   const authUrl = this.oAuth2Client.generateAuthUrl({
-  //     access_type: 'offline',
-  //     scope: this.SCOPES,
-  //   });
-  //   this.logger.log(`Authorize this app by visiting this URL: ${authUrl}`);
-  //   return authUrl;
-  // }
-  // getAuthorizationUrl(): string {
-  //   this.loadOAuth2Client();
-  //   if (!this.oAuth2Client) {
-  //     throw new Error(
-  //       'OAuth client is unavailable; credentials.json is missing.',
-  //     );
-  //   }
-  //   return this.oAuth2Client.generateAuthUrl({
-  //     access_type: 'offline',
-  //     scope: this.SCOPES,
-  //   });
-  // }
-
-  async getCredentials() {
+  getAuthorizationUrl(): string {
     if (!this.oAuth2Client) {
-      throw new Error(
-        'OAuth client not initialized; token.json or credentials are missing.',
-      );
+      throw new Error('OAuth client not initialized');
     }
-    return this.oAuth2Client;
+    return this.oAuth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: [
+        'https://www.googleapis.com/auth/documents',
+        'https://www.googleapis.com/auth/drive',
+      ],
+    });
   }
-
-  // getAuthorizationUrl(): string {
-  //   this.initializeOAuthClient();
-  //   if (!this.oAuth2Client) {
-  //     throw new Error(
-  //       'OAuth client not initialized; credentials.json is missing.',
-  //     );
-  //   }
-  //   return this.oAuth2Client.generateAuthUrl({
-  //     access_type: 'offline',
-  //     scope: this.SCOPES,
-  //   });
-  // }
-
   async handleOAuthCallback(code: string) {
-    const token = await this.oAuth2Client.getToken(code);
-    this.oAuth2Client.setCredentials(token.tokens);
-    fs.writeFileSync(this.TOKEN_PATH, JSON.stringify(token.tokens));
-    this.logger.log('Token stored to', this.TOKEN_PATH);
-    return this.oAuth2Client;
+    if (!this.oAuth2Client) {
+      throw new Error('OAuth client not initialized');
+    }
+    const { tokens } = await this.oAuth2Client.getToken(code);
+    this.oAuth2Client.setCredentials(tokens);  
+    // Optional: Log or store token securely
+    this.logger.log('OAuth token received and set');
   }
 
   async createGoogleDriveFolder(
@@ -168,8 +56,11 @@ export class GoogleDocService {
     parentFolderId?: string,
   ): Promise<string> {
     try {
-      const auth = await this.getCredentials();
-      const driveService = google.drive({ version: 'v3', auth });
+      // const auth = await this.getCredentials();
+      const driveService = google.drive({
+        version: 'v3',
+        auth: this.oAuth2Client,
+      });
 
       // Define the folder metadata
       const folderMetadata = {
@@ -202,9 +93,15 @@ export class GoogleDocService {
     role: string = 'writer',
   ) {
     try {
-      const auth = await this.getCredentials();
-      const docsService = google.docs({ version: 'v1', auth });
-      const driveService = google.drive({ version: 'v3', auth });
+      // const auth = await this.getCredentials();
+      const docsService = google.docs({
+        version: 'v1',
+        auth: this.oAuth2Client,
+      });
+      const driveService = google.drive({
+        version: 'v3',
+        auth: this.oAuth2Client,
+      });
 
       // Step 1: Create the Google Doc
       const document = await docsService.documents.create({
@@ -260,8 +157,11 @@ export class GoogleDocService {
     rewrite: boolean = true,
   ) {
     try {
-      const auth = await this.getCredentials();
-      const docsService = google.docs({ version: 'v1', auth });
+      // const auth = await this.getCredentials();
+      const docsService = google.docs({
+        version: 'v1',
+        auth: this.oAuth2Client,
+      });
       // Fetch the document to determine its current content
       const doc = await docsService.documents.get({ documentId });
       const bodyContent = doc.data.body?.content || [];
@@ -299,8 +199,11 @@ export class GoogleDocService {
 
   async readDocumentContent(documentId: string): Promise<string> {
     try {
-      const auth = await this.getCredentials();
-      const docsService = google.docs({ version: 'v1', auth });
+      // const auth = await this.getCredentials();
+      const docsService = google.docs({
+        version: 'v1',
+        auth: this.oAuth2Client,
+      });
 
       // Fetch the document's content
       const doc = await docsService.documents.get({ documentId });
