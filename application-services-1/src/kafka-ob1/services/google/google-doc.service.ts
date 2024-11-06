@@ -90,7 +90,11 @@ export class GoogleDocService {
       );
       return folderId;
     } catch (error) {
-      this.logger.error(`Failed to create Google Drive folder: ${error}`);
+      // this.logger.error(`Failed to create Google Drive folder: ${error}`);
+      this.logger.error(
+        `Failed to create Google Drive folder: ${error.message}`,
+        error.response?.data || error,
+      );
       throw new Error('Failed to create Google Drive folder');
     }
   }
