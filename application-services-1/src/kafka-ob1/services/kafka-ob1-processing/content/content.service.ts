@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SowGenerationService } from './sow-generation.service';
 import { ContentAssetsService } from '../content-assets.service';
+import { GoogleDocService } from '../../google/google-doc.service';
 
 @Injectable()
 export class ContentService {
@@ -9,6 +10,7 @@ export class ContentService {
   constructor(
     private readonly sowGenerationService: SowGenerationService,
     private readonly contentAssetsService: ContentAssetsService,
+    private readonly googleDocService: GoogleDocService,
   ) {}
 
   async generateContent(
@@ -26,14 +28,25 @@ export class ContentService {
       if (pageName === 'OB1-pages-filterPage1' && sowData) {
         this.logger.log(`Generating SOW content for page ${pageName}`);
 
-        // Use SowGenerationService for SOW content
-        const documentId = await this.sowGenerationService.generateSow(
+        // Step 1: Generate the SOW content
+        const sowContent = await this.sowGenerationService.generateSow(
           instanceName,
           userEmail,
           sowData,
         );
 
-        // Record the generated asset in ContentAssetsService
+        // Step 2: Create a Google Doc with the generated content
+        const folderId =
+          await this.googleDocService.createGoogleDriveFolder(projectName);
+        const documentId = await this.googleDocService.createGoogleDoc(
+          `SOW for ${projectName}`,
+          folderId,
+        );
+
+        // Step 3: Write the generated content to the Google Doc
+        await this.googleDocService.writeToDocument(documentId, sowContent);
+
+        // Step 4: Save the document info in the assets database
         await this.contentAssetsService.saveDocumentAsset(
           'SOW',
           'google doc',
