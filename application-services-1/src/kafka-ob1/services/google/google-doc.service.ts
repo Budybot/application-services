@@ -209,13 +209,17 @@ export class GoogleDocService {
       const endIndex = bodyContent[bodyContent.length - 1]?.endIndex || 1;
 
       const requests: any[] = [];
-      // Optionally clear existing content
-      if (rewrite && endIndex > 1) {
+      // Check that the endIndex allows for deletion without creating an empty range
+      if (rewrite && endIndex > 2) {
         requests.push({
           deleteContentRange: {
             range: { startIndex: 1, endIndex: endIndex - 1 },
           },
         });
+      } else {
+        this.logger.warn(
+          `Skipping content deletion: endIndex (${endIndex}) does not allow deletion without creating an empty range.`,
+        );
       }
 
       // Insert the new content
