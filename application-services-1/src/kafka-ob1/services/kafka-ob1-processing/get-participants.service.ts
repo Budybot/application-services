@@ -7,25 +7,27 @@ export class GetParticipantsService {
   async extractParticipants(transcript: string): Promise<any> {
     try {
       this.logger.log('Extracting participants from transcript...');
-      // Logic to extract participants from the transcript
       const participants = {};
       const participantNames = new Set<string>();
-      const lines = transcript.split('\n');
 
+      // Use regex to match names followed by timestamps in the format <Name> <Timestamp>
+      const regex = /(\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+\d{1,2}:\d{2}/g;
       let userCount = 1;
-      for (const line of lines) {
-        const match = line.match(/^(.+?):\s/);
-        if (match) {
-          const name = match[1].trim();
-          if (!participantNames.has(name)) {
-            participantNames.add(name);
-            participants[`user${userCount}`] = {
-              name,
-              role: 'Unknown', // Default role, can be updated as needed
-              roletype: 'Unknown', // Default role type, can be updated as needed
-            };
-            userCount++;
-          }
+
+      // Extract all name matches from the transcript
+      let match;
+      while ((match = regex.exec(transcript)) !== null) {
+        const name = match[1].trim();
+
+        // Add the name only if it hasn't been added before
+        if (!participantNames.has(name)) {
+          participantNames.add(name);
+          participants[`user${userCount}`] = {
+            name,
+            role: 'Unknown', // Default role, can be updated as needed
+            roletype: 'Unknown', // Default role type, can be updated as needed
+          };
+          userCount++;
         }
       }
 
