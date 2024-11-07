@@ -57,10 +57,10 @@ export class PageSubmittedService {
         );
         const generatedFormJson =
           await this.formJsonService.generateCombinedJson(
-            transcript,
-            pageData.consultantInput,
-            pageData.projectDescription,
-            pageData.actionItems,
+            pageData.transcript,
+            pageData.consultant_input,
+            pageData.project_description,
+            pageData.action_items,
             userEmail,
             projectName,
           );

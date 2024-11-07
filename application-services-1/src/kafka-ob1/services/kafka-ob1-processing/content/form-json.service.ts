@@ -136,7 +136,6 @@ export class FormJsonService {
     userEmail: string,
     projectName: string,
   ): Promise<any> {
-    this.logger.log(`Generating combined JSON for project ${projectName}`);
     this.logger.debug(`Action Items: ${JSON.stringify(actionItems)}`);
     this.logger.debug(`Transcript: ${transcript}`);
     this.logger.debug(`Consultant Input: ${consultantInput}`);
