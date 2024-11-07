@@ -124,19 +124,20 @@ export class ProjectPlannerService {
         const char = row[i];
 
         if (char === '"') {
-          // Toggle insideQuotes when encountering a quote
           insideQuotes = !insideQuotes;
         } else if (char === ',' && !insideQuotes) {
-          // If we’re outside quotes and see a comma, push the value
-          values.push(current.trim());
+          values.push(current.trim()); // Trim each value to remove extra whitespace
           current = '';
         } else {
-          // Otherwise, add the character to the current cell value
           current += char;
         }
       }
-      values.push(current); // Add the last value in the row
-      result.push(values);
+      values.push(current.trim()); // Add the last value in the row
+
+      // Only add non-empty rows that don't have empty strings as values
+      if (values.filter((val) => val !== '').length === values.length) {
+        result.push(values);
+      }
     }
 
     this.logger.log(
