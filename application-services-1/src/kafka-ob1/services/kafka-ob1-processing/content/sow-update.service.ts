@@ -45,7 +45,7 @@ export class SowUpdateService {
         provider: 'openai',
         model: 'gpt-4o-mini',
         temperature: 0.7,
-        maxTokens: 4096,
+        maxTokens: 8192,
         frequencyPenalty: 0,
         presencePenalty: 0,
       };

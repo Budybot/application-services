@@ -120,7 +120,6 @@ export class ProjectPlannerService {
       );
       const response = await this.agentServiceRequest.sendAgentRequest(
         systemPrompt,
-        // 'Only return the CSV format of the project plan',
         'Ensure the response is in valid JSON format.',
         config,
         instanceName,
