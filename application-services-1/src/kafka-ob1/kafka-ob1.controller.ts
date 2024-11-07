@@ -186,30 +186,39 @@ export class KafkaOb1Controller implements OnModuleInit {
   ) {
     try {
       this.logger.log(`Handling content emission: ${JSON.stringify(message)}`);
-      // Extract necessary fields from message content
       const { pageName, projectName } = message.messageContent;
-      const sowData = message.messageContent;
       const instanceName = headers.instanceName;
       const userEmail = headers.userEmail;
-
       if (!projectName || !pageName) {
         throw new Error(
           "Required fields 'projectName' or 'pageName' are missing in messageContent.",
         );
       }
-
-      // Use ContentService to handle content generation based on pageName
-      const documentId = await this.contentService.generateContent(
-        projectName,
-        instanceName,
-        { sowData, pageName },
-        userEmail,
-        'SOW',
-      );
-
-      this.logger.log(
-        `Content successfully generated with document ID: ${documentId}`,
-      );
+      // Define content generation rules for different page names
+      const contentGenerationRules = {
+        'OB1-pages-filterPage1': ['SOW', 'Email'],
+        // Add other pageNames and content types as needed
+      };
+      const contentTypesToGenerate = contentGenerationRules[pageName] || [];
+      // Iterate over content types for this page and generate each
+      for (const contentType of contentTypesToGenerate) {
+        try {
+          const documentId = await this.contentService.generateContent(
+            projectName,
+            instanceName,
+            { sowData: message.messageContent, pageName },
+            userEmail,
+            contentType,
+          );
+          this.logger.log(
+            `Successfully generated ${contentType} content with document ID: ${documentId}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Error generating ${contentType} for page ${pageName}: ${error.message}`,
+          );
+        }
+      }
     } catch (error) {
       this.logger.error(
         `Error processing broadcast content: ${error.message}`,
