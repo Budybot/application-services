@@ -189,24 +189,30 @@ export class GoogleSheetService {
     }
     return letter;
   }
-  async readSheetData(sheetId: string, sheetName: string = 'Sheet1'): Promise<any[][]> {
+  async readSheetData(
+    sheetId: string,
+    sheetName: string = 'Sheet1',
+  ): Promise<any[][]> {
     try {
       const sheetsService = google.sheets({
         version: 'v4',
         auth: this.oAuth2Client,
       });
-  
-      // Use the sheet name without specifying a cell range to read the entire sheet
+
+      // Use the sheet name only, without specifying a cell range, to read the entire sheet
       const response = await sheetsService.spreadsheets.values.get({
         spreadsheetId: sheetId,
         range: sheetName,
       });
-  
+
       const rows = response.data.values;
-      this.logger.log(`Data read from Google Sheet ID: ${sheetId}`);
+      this.logger.log(
+        `Data read from Google Sheet ID: ${sheetId}, sheet name: ${sheetName}`,
+      );
       return rows || [];
     } catch (error) {
       this.logger.error(`Failed to read Google Sheet data: ${error.message}`);
       throw new Error('Failed to read Google Sheet data');
     }
-  }  
+  }
+}
