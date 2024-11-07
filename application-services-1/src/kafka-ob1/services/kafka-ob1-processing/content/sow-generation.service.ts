@@ -80,22 +80,7 @@ export class SowGenerationService {
 
       Consultant Team: Paragraph detailing responsibilities
       Client Team: Paragraph detailing responsibilities
-      Collaboration: Paragraph defining how communication and collaboration will work
-      Project Timeline and Milestones:
-
-      Phased timeline breaking the project into stages
-      Key milestones and expected completion dates
-      Review points for progress assessment
-      Assumptions and Constraints:
-
-      Assumptions: Outline assumptions such as client resource availability, access to systems, and the accuracy of current documentation
-      Constraints: List any limitations or dependencies like budget restrictions, technical limitations, or third-party systems
-      Cost and Payment Terms:
-
-      Project Cost: Define the total cost of the project, broken down by phase if necessary
-      Billing Schedule: Specify whether payment is due at milestones, monthly, or at project completion
-      Expense Reimbursement: Note any additional costs for travel, software, or equipment
-    `;
+      Collaboration: Paragraph defining how communication and collaboration will work`;
 
     const config = {
       provider: 'openai',
