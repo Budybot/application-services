@@ -16,6 +16,7 @@ import { ContentAssetsService } from './services/kafka-ob1-processing/content-as
 import { ContentService } from './services/kafka-ob1-processing/content/content.service';
 import { GoogleDocService } from './services/google/google-doc.service';
 import { FormJsonService } from './services/kafka-ob1-processing/content/form-json.service';
+import { EmailGenerationService } from './services/kafka-ob1-processing/content/email-generation.service';
 @Module({
   imports: [
     HttpModule,
@@ -55,6 +56,7 @@ import { FormJsonService } from './services/kafka-ob1-processing/content/form-js
     ContentService,
     GoogleDocService,
     FormJsonService,
+    EmailGenerationService,
   ],
   controllers: [KafkaOb1Controller],
 })

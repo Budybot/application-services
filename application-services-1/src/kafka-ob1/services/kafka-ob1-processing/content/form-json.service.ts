@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AgentServiceRequest } from '../agent-service-request.service';
+import { FormJson, ActionItemsJson } from 'src/interfaces/form-json.interfaces';
 
 @Injectable()
 export class FormJsonService {
@@ -15,12 +16,17 @@ export class FormJsonService {
     projectName: string,
   ): Promise<any> {
     const formPrompt = `
-      You are an AI consultant responsible for documenting and summarizing a recent customer meeting. This summary includes key sections on project objectives, challenges, and the project’s current status in structured JSON format, editable by the customer. Ensure each section is organized with headings, drop-downs, and editable fields, following this format:
-
-      Project Objectives (PO)
-      High-Level Desired Deliverables (DD)
-      Key Challenges (KC1)
-      Potential Root Causes (KC2)
+      You are an AI consultant responsible for documenting and summarizing a recent customer meeting. This summary should be structured in JSON format, using the following exact fields:
+      
+      "consultant_role": "primary",
+      "consultant_name": "",
+      "primary_client_name": "",
+      "primary_client_role": "",
+      "DD": ["desired deliverable item 1", "desired deliverable item 2", "desired deliverable item 3"],
+      "KC1": ["key challenge item 1", "key challenge item 2", "key challenge item 3"],
+      "KC2": ["key problem item 1", "key problem item 2", "key problem item 3"],
+      "PO": ["objective item 1", "objective item 2", "objective item 3"],
+      "company_name": "Biggest company"
       
       Input Details:
       Clean Transcript: ${transcript},
@@ -51,6 +57,7 @@ export class FormJsonService {
         const resultJson = this.cleanAndParseJson(
           llmOutput.messageContent.content,
         );
+        this.validateFormJson(resultJson);
         this.logger.debug(`Generated form JSON: ${JSON.stringify(resultJson)}`);
         return resultJson;
       } else {
@@ -105,6 +112,7 @@ export class FormJsonService {
         const actionResultJson = this.cleanAndParseJson(
           actionLlmOutput.messageContent.content,
         );
+        this.validateActionItemsJson(actionResultJson);
         this.logger.debug(
           `Generated action items JSON: ${JSON.stringify(actionResultJson)}`,
         );
@@ -170,6 +178,29 @@ export class FormJsonService {
     } catch (error) {
       this.logger.error(`Failed to parse JSON: ${error.message}`);
       throw new Error('Invalid JSON format received from LLM');
+    }
+  }
+  private validateFormJson(data: any): asserts data is FormJson {
+    const requiredKeys = [
+      'consultant_role',
+      'consultant_name',
+      'primary_client_name',
+      'primary_client_role',
+      'DD',
+      'KC1',
+      'KC2',
+      'PO',
+      'company_name',
+    ];
+    const missingKeys = requiredKeys.filter((key) => !(key in data));
+    if (missingKeys.length > 0) {
+      throw new Error(`Form JSON is missing keys: ${missingKeys.join(', ')}`);
+    }
+  }
+
+  private validateActionItemsJson(data: any): asserts data is ActionItemsJson {
+    if (!data.action_items || !Array.isArray(data.action_items)) {
+      throw new Error('Action Items JSON is missing the "action_items" array');
     }
   }
 }

@@ -108,7 +108,7 @@ export class SowGenerationService {
       this.logger.log('Requesting SOW generation from AgentServiceRequest...');
       const response = await this.agentServiceRequest.sendAgentRequest(
         systemPrompt,
-        'Only return the SOW and nothing else', // No user prompt
+        'Only return the SOW and nothing else',
         config,
         instanceName,
         userId,
