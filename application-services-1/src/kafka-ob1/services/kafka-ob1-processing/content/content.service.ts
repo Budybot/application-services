@@ -18,83 +18,78 @@ export class ContentService {
   async generateContent(
     projectName: string,
     instanceName: string,
-    contentData: {
-      contentType: 'SOW' | 'Email';
-      sowData?: any;
-      emailData?: any;
-      pageName: string;
-    },
+    contentData: { sowData?: any; pageName: string },
     userEmail: string,
+    contentType: 'SOW' | 'Email',
   ): Promise<string> {
-    const { pageName, contentType, sowData, emailData } = contentData;
-    this.logger.debug(
-      `Generating content of type ${contentType} for page ${pageName} with data: ${JSON.stringify(contentData)}`,
-    );
+    const { sowData } = contentData;
 
     try {
-      let generatedContent: string;
-      let documentTitle: string;
-
-      // Route generation based on content type
-      if (contentType === 'SOW' && sowData) {
-        this.logger.log(`Generating SOW content for page ${pageName}`);
-
-        // Step 1: Generate the SOW content
-        generatedContent = await this.sowGenerationService.generateSow(
+      if (contentType === 'SOW') {
+        this.logger.log(`Generating SOW content for project ${projectName}`);
+        const sowContent = await this.sowGenerationService.generateSow(
           instanceName,
           userEmail,
           sowData,
         );
-        documentTitle = `SOW for ${projectName}`;
-      } else if (contentType === 'Email' && emailData) {
-        this.logger.log(`Generating Email content for page ${pageName}`);
 
-        // Step 1: Generate the email content
-        generatedContent = await this.emailGenerationService.generateEmail(
+        const folderId = await this.googleDocService.createGoogleDriveFolder(projectName);
+        const documentId = await this.googleDocService.createGoogleDoc(
+          `SOW for ${projectName}`,
+          folderId,
+          userEmail,
+        );
+
+        await this.googleDocService.writeToDocument(documentId, sowContent);
+        await this.contentAssetsService.saveDocumentAsset(
+          'SOW',
+          'google doc',
+          documentId,
+          `https://docs.google.com/document/d/${documentId}`,
+          `Statement of Work document for project ${projectName}`,
+          projectName,
           instanceName,
           userEmail,
-          emailData,
         );
-        documentTitle = `Follow-Up Email for ${projectName}`;
-      } else {
-        throw new Error(
-          'Invalid content type or missing data for content generation',
+        this.logger.log(`Generated SOW document with ID: ${documentId}`);
+        return documentId;
+
+      } else if (contentType === 'Email') {
+        this.logger.log(`Generating Email content for project ${projectName}`);
+        const emailContent = await this.emailGenerationService.generateEmail(
+          instanceName,
+          userEmail,
+          sowData,
         );
+
+        const folderId = await this.googleDocService.createGoogleDriveFolder(projectName);
+        const documentId = await this.googleDocService.createGoogleDoc(
+          `Follow-up Email for ${projectName}`,
+          folderId,
+          userEmail,
+        );
+
+        await this.googleDocService.writeToDocument(documentId, emailContent);
+        await this.contentAssetsService.saveDocumentAsset(
+          'Email',
+          'google doc',
+          documentId,
+          `https://docs.google.com/document/d/${documentId}`,
+          `Follow-up email document for project ${projectName}`,
+          projectName,
+          instanceName,
+          userEmail,
+        );
+        this.logger.log(`Generated Email document with ID: ${documentId}`);
+        return documentId;
       }
 
-      // Step 2: Create a Google Doc with the generated content
-      const folderId =
-        await this.googleDocService.createGoogleDriveFolder(projectName);
-      const documentId = await this.googleDocService.createGoogleDoc(
-        documentTitle,
-        folderId,
-        userEmail,
-      );
-
-      // Step 3: Write the generated content to the Google Doc
-      await this.googleDocService.writeToDocument(documentId, generatedContent);
-
-      // Step 4: Save the document info in the assets database
-      await this.contentAssetsService.saveDocumentAsset(
-        contentType,
-        'google doc',
-        documentId,
-        `https://docs.google.com/document/d/${documentId}`,
-        `${contentType} document for project ${projectName}`,
-        projectName,
-        instanceName,
-        userEmail,
-      );
-
-      this.logger.log(
-        `Generated ${contentType} document with ID: ${documentId}`,
-      );
-      return documentId;
+      throw new Error('Invalid content type specified');
     } catch (error) {
       this.logger.error(
         `Failed to generate ${contentType} content: ${error.message}`,
       );
-      throw new Error(`${contentType} content generation failed`);
+      throw new Error(`Content generation failed for ${contentType}`);
     }
   }
   // async generateContent(

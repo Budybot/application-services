@@ -204,6 +204,7 @@ export class KafkaOb1Controller implements OnModuleInit {
         instanceName,
         { sowData, pageName },
         userEmail,
+        'SOW',
       );
 
       this.logger.log(
