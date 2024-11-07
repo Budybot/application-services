@@ -58,6 +58,9 @@ export class SowUpdateService {
       );
 
       if (!response?.messageContent?.content) {
+        this.logger.error(
+          `Invalid response from LLM: ${JSON.stringify(response)}`,
+        );
         throw new Error('Invalid response from LLM');
       }
       const updatedSowContent = response.messageContent.content;
