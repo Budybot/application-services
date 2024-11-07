@@ -46,14 +46,15 @@ export class SowUpdateService {
         provider: 'openai',
         model: 'gpt-4o-mini',
         temperature: 0.7,
-        maxTokens: 8192,
+        maxTokens: 4096,
         frequencyPenalty: 0,
         presencePenalty: 0,
       };
       const response = await this.agentServiceRequest.sendAgentRequest(
         // systemPrompt,
         testPrompt,
-        'Return the full updated SOW content',
+        'Make sure it is funny as well.',
+        // 'Return the full updated SOW content',
         llmConfig,
         instanceName,
         userEmail,
