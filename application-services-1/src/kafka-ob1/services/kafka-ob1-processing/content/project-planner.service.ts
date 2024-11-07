@@ -109,7 +109,10 @@ export class ProjectPlannerService {
     }
   }
   parseCsvToArray(csvData: string): string[][] {
-    const rows = csvData.split(/\r?\n/);
+    const cleanedCsvData = csvData
+      .replace(/```csv|```/g, '') // Remove specific markers
+      .trim(); // Remove any leading or trailing whitespace
+    const rows = cleanedCsvData.split(/\r?\n/);
     const result: string[][] = [];
 
     for (const row of rows) {
