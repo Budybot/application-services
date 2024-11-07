@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CrudOperationsService } from './crud-operations.service';
-import { ProjectPlannerService } from './content/project-planner.service';
-import { GoogleSheetService } from '../google/google-sheet.service';
+// import { ProjectPlannerService } from './content/project-planner.service';
+import { ContentService } from './content/content.service';
+// import { GoogleSheetService } from '../google/google-sheet.service';
 
 @Injectable()
 export class CreateProjectPlanService {
@@ -9,8 +10,9 @@ export class CreateProjectPlanService {
 
   constructor(
     private readonly crudOperationsService: CrudOperationsService,
-    private readonly projectPlannerService: ProjectPlannerService,
-    private readonly googleSheetService: GoogleSheetService,
+    private readonly contentService: ContentService,
+    // private readonly projectPlannerService: ProjectPlannerService,
+    // private readonly googleSheetService: GoogleSheetService,
   ) {}
 
   async createProjectPlan(
@@ -39,27 +41,41 @@ export class CreateProjectPlanService {
 
       const plannerData = fetchDataResponse.messageContent[0];
 
-      // Step 2: Generate project plan CSV data
-      this.logger.log('Generating project plan in string[][] format...');
-      const projectPlanData =
-        await this.projectPlannerService.generateProjectPlan(
-          instanceName,
-          userEmail,
-          plannerData,
-        );
-      // Step 3: Parse CSV data to 2D array
-      const folderId =
-        await this.googleSheetService.createGoogleDriveFolder(projectName);
-      const sheetId = await this.googleSheetService.createGoogleSheet(
-        `Project Plan for ${projectName}`,
-        folderId,
+      // Step 2: Generate Project Planner by calling generateContent from ContentService
+      // eslint-disable-next-line prettier/prettier
+      this.logger.log(`Calling ContentService to generate Project Planner for project ${projectName}`);
+      const sheetId = await this.contentService.generateContent(
+        projectName,
+        instanceName,
+        { sowData: plannerData, pageName: tableEntity },
         userEmail,
+        'ProjectPlanner',
       );
 
-      await this.googleSheetService.writeToSheet(sheetId, projectPlanData);
-
-      this.logger.log(`Project Plan sheet created with ID: ${sheetId}`);
+      this.logger.log(`Project Planner sheet created with ID: ${sheetId}`);
       return sheetId;
+
+    //   // Step 2: Generate project plan CSV data
+    //   this.logger.log('Generating project plan in string[][] format...');
+    //   const projectPlanData =
+    //     await this.projectPlannerService.generateProjectPlan(
+    //       instanceName,
+    //       userEmail,
+    //       plannerData,
+    //     );
+    //   // Step 3: Parse CSV data to 2D array
+    //   const folderId =
+    //     await this.googleSheetService.createGoogleDriveFolder(projectName);
+    //   const sheetId = await this.googleSheetService.createGoogleSheet(
+    //     `Project Plan for ${projectName}`,
+    //     folderId,
+    //     userEmail,
+    //   );
+
+    //   await this.googleSheetService.writeToSheet(sheetId, projectPlanData);
+
+    //   this.logger.log(`Project Plan sheet created with ID: ${sheetId}`);
+    //   return sheetId;
     } catch (error) {
       this.logger.error(
         `Error creating project plan for project ${projectName}: ${error.message}`,

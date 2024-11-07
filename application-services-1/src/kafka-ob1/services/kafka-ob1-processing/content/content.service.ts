@@ -24,7 +24,7 @@ export class ContentService {
     instanceName: string,
     contentData: { sowData?: any; pageName: string },
     userEmail: string,
-    contentType: 'SOW' | 'Email',
+    contentType: 'SOW' | 'Email' | 'ProjectPlanner',
   ): Promise<string> {
     const { sowData } = contentData;
 
