@@ -44,17 +44,17 @@ export class SowUpdateService {
       // Step 4: Make LLM call
       const llmConfig = {
         provider: 'openai',
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o-2024-08-06',
         temperature: 0.7,
-        maxTokens: 4096,
+        maxTokens: 8192,
         frequencyPenalty: 0,
         presencePenalty: 0,
       };
       const response = await this.agentServiceRequest.sendAgentRequest(
-        // systemPrompt,
-        testPrompt,
-        'Make sure it is funny as well.',
-        // 'Return the full updated SOW content',
+        systemPrompt,
+        // testPrompt,
+        // 'Make sure it is funny as well.',
+        'Return the full updated SOW content',
         llmConfig,
         instanceName,
         userEmail,
