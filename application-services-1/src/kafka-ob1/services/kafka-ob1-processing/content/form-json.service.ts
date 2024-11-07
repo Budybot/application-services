@@ -81,8 +81,7 @@ export class FormJsonService {
     const actionPrompt = `
       Based on the customer meeting transcript, generate JSON-formatted action items that align with the project goals. Use this structure:
 
-      Action Items:
-      - List of actionable steps with objectives, challenges, and expected outcomes.
+      Output must be a JSON object with an "action_items" array containing strings of action items.
 
       Input Details:
       Clean Transcript: ${transcript},
