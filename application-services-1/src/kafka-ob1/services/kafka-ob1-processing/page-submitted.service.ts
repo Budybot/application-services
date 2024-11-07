@@ -45,6 +45,7 @@ export class PageSubmittedService {
       }
 
       const pageData = fetchDataResponse.messageContent[0];
+      this.logger.debug(`Fetched data: ${JSON.stringify(pageData)}`);
       pageData.pageName = tableEntity;
       pageData.projectName = projectName;
 

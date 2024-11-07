@@ -136,6 +136,12 @@ export class FormJsonService {
     userEmail: string,
     projectName: string,
   ): Promise<any> {
+    this.logger.log(`Generating combined JSON for project ${projectName}`);
+    this.logger.debug(`Action Items: ${JSON.stringify(actionItems)}`);
+    this.logger.debug(`Transcript: ${transcript}`);
+    this.logger.debug(`Consultant Input: ${consultantInput}`);
+    this.logger.debug(`Project Description: ${projectDescription}`);
+    this.logger.debug(`User Email: ${userEmail}`);
     try {
       // Call your LLM function here
       const llmOutput = await this.generateFormJson(
