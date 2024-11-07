@@ -128,7 +128,7 @@ export class ProjectPlannerService {
           insideQuotes = !insideQuotes;
         } else if (char === ',' && !insideQuotes) {
           // If we’re outside quotes and see a comma, push the value
-          values.push(current);
+          values.push(current.trim());
           current = '';
         } else {
           // Otherwise, add the character to the current cell value
@@ -144,5 +144,4 @@ export class ProjectPlannerService {
     );
     return result;
   }
-
 }
