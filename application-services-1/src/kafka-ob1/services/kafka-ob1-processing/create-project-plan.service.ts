@@ -98,7 +98,7 @@ export class CreateProjectPlanService {
         projectName,
         sowAssetExternalId,
         plannerSheetId,
-        // instanceName,
+        instanceName,
         userEmail,
       );
 
