@@ -19,6 +19,7 @@ import { FormJsonService } from './services/kafka-ob1-processing/content/form-js
 import { EmailGenerationService } from './services/kafka-ob1-processing/content/email-generation.service';
 import { ProjectPlannerService } from './services/kafka-ob1-processing/content/project-planner.service';
 import { CreateProjectPlanService } from './services/kafka-ob1-processing/create-project-plan.service';
+import { SowUpdateService } from './services/kafka-ob1-processing/content/sow-update.service';
 @Module({
   imports: [
     HttpModule,
@@ -61,6 +62,7 @@ import { CreateProjectPlanService } from './services/kafka-ob1-processing/create
     EmailGenerationService,
     ProjectPlannerService,
     CreateProjectPlanService,
+    SowUpdateService,
   ],
   controllers: [KafkaOb1Controller],
 })
