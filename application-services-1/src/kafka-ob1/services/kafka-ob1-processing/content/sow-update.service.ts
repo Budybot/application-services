@@ -26,11 +26,10 @@ export class SowUpdateService {
   ): Promise<string> {
     try {
       // Step 2: Fetch SOW and Project Planner content
-      const sowContent = await this.googleDocService.readDocumentContent(sowDocId);
-      const projectPlannerData = await this.googleSheetService.readSheetData(
-        plannerSheetId,
-        'Discovery',
-      );
+      const sowContent =
+        await this.googleDocService.readDocumentContent(sowDocId);
+      const projectPlannerData =
+        await this.googleSheetService.readSheetData(plannerSheetId);
 
       // Step 3: Construct prompt with relevant SOW and Project Planner sections
       const systemPrompt = `
