@@ -10,6 +10,7 @@ import { KafkaContext } from '@nestjs/microservices';
 import { CleanTranscriptService } from './clean-transcript.service';
 import { GetParticipantsService } from './get-participants.service';
 import { PageSubmittedService } from './page-submitted.service';
+import { CreateProjectPlanService } from './create-project-plan.service';
 
 @Injectable()
 export class KafkaOb1ProcessingService {
@@ -21,6 +22,7 @@ export class KafkaOb1ProcessingService {
     private readonly cleanTranscriptService: CleanTranscriptService,
     private readonly getParticipantsService: GetParticipantsService,
     private readonly pageSubmittedService: PageSubmittedService,
+    private readonly createProjectPlanService: CreateProjectPlanService,
     // @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
   ) {}
 
@@ -62,6 +64,19 @@ export class KafkaOb1ProcessingService {
             userEmail,
             instanceName,
           );
+          break;
+        case 'create-project-plan':
+          const { projectName } = functionInput;
+          this.logger.log(`Creating project plan for ${projectName}`);
+          const projectPlanId =
+            await this.createProjectPlanService.createProjectPlan(
+              projectName,
+              instanceName,
+              userEmail,
+            );
+          response = {
+            messageContent: { projectPlanId: projectPlanId },
+          };
           break;
         default:
           this.logger.error(`Function ${functionName} not found`);

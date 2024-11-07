@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SowGenerationService } from './sow-generation.service';
 import { EmailGenerationService } from './email-generation.service';
+import { ProjectPlannerService } from './project-planner.service';
 import { ContentAssetsService } from '../content-assets.service';
 import { GoogleDocService } from '../../google/google-doc.service';
+import { GoogleSheetService } from '../../google/google-sheet.service';
 
 @Injectable()
 export class ContentService {
@@ -11,8 +13,10 @@ export class ContentService {
   constructor(
     private readonly sowGenerationService: SowGenerationService,
     private readonly emailGenerationService: EmailGenerationService,
+    private readonly projectPlannerService: ProjectPlannerService,
     private readonly contentAssetsService: ContentAssetsService,
     private readonly googleDocService: GoogleDocService,
+    private readonly googleSheetService: GoogleSheetService,
   ) {}
 
   async generateContent(
@@ -33,7 +37,8 @@ export class ContentService {
           sowData,
         );
 
-        const folderId = await this.googleDocService.createGoogleDriveFolder(projectName);
+        const folderId =
+          await this.googleDocService.createGoogleDriveFolder(projectName);
         const documentId = await this.googleDocService.createGoogleDoc(
           `SOW for ${projectName}`,
           folderId,
@@ -53,7 +58,6 @@ export class ContentService {
         );
         this.logger.log(`Generated SOW document with ID: ${documentId}`);
         return documentId;
-
       } else if (contentType === 'Email') {
         this.logger.log(`Generating Email content for project ${projectName}`);
         const emailContent = await this.emailGenerationService.generateEmail(
@@ -62,7 +66,8 @@ export class ContentService {
           sowData,
         );
 
-        const folderId = await this.googleDocService.createGoogleDriveFolder(projectName);
+        const folderId =
+          await this.googleDocService.createGoogleDriveFolder(projectName);
         const documentId = await this.googleDocService.createGoogleDoc(
           `Follow-up Email for ${projectName}`,
           folderId,
@@ -82,6 +87,46 @@ export class ContentService {
         );
         this.logger.log(`Generated Email document with ID: ${documentId}`);
         return documentId;
+      } else if (contentType === 'ProjectPlanner') {
+        this.logger.log(
+          `Generating Project Planner for project ${projectName}`,
+        );
+        // Generate project planner content in CSV format
+        const projectPlannerContent =
+          await this.projectPlannerService.generateProjectPlan(
+            instanceName,
+            userEmail,
+            sowData,
+          );
+
+        const folderId =
+          await this.googleSheetService.createGoogleDriveFolder(projectName);
+        const sheetId = await this.googleSheetService.createGoogleSheet(
+          `Project Planner for ${projectName}`,
+          folderId,
+          userEmail,
+        );
+
+        // Write the CSV formatted content into the Google Sheet
+        await this.googleSheetService.writeToSheet(
+          sheetId,
+          projectPlannerContent,
+        );
+
+        // Save the Sheet info in the assets database
+        await this.contentAssetsService.saveDocumentAsset(
+          'ProjectPlanner',
+          'google sheet',
+          sheetId,
+          `https://docs.google.com/spreadsheets/d/${sheetId}`,
+          `Project Planner for project ${projectName}`,
+          projectName,
+          instanceName,
+          userEmail,
+        );
+
+        this.logger.log(`Generated Project Planner with Sheet ID: ${sheetId}`);
+        return sheetId;
       }
 
       throw new Error('Invalid content type specified');
@@ -92,61 +137,4 @@ export class ContentService {
       throw new Error(`Content generation failed for ${contentType}`);
     }
   }
-  // async generateContent(
-  //   projectName: string,
-  //   instanceName: string,
-  //   contentData: { sowData?: any; pageName: string },
-  //   userEmail: string,
-  // ): Promise<string> {
-  //   const { pageName, sowData } = contentData;
-  //   this.logger.debug(
-  //     `Generating content for page ${pageName} with data: ${JSON.stringify(sowData)}`,
-  //   );
-  //   try {
-  //     // Route generation based on page name (e.g., for SOW generation)
-  //     if (pageName === 'OB1-pages-filterPage1' && sowData) {
-  //       this.logger.log(`Generating SOW content for page ${pageName}`);
-
-  //       // Step 1: Generate the SOW content
-  //       const sowContent = await this.sowGenerationService.generateSow(
-  //         instanceName,
-  //         userEmail,
-  //         sowData,
-  //       );
-
-  //       // Step 2: Create a Google Doc with the generated content
-  //       const folderId =
-  //         await this.googleDocService.createGoogleDriveFolder(projectName);
-  //       const documentId = await this.googleDocService.createGoogleDoc(
-  //         `SOW for ${projectName}`,
-  //         folderId,
-  //         userEmail,
-  //       );
-
-  //       // Step 3: Write the generated content to the Google Doc
-  //       await this.googleDocService.writeToDocument(documentId, sowContent);
-
-  //       // Step 4: Save the document info in the assets database
-  //       await this.contentAssetsService.saveDocumentAsset(
-  //         'SOW',
-  //         'google doc',
-  //         documentId,
-  //         `https://docs.google.com/document/d/${documentId}`,
-  //         `Statement of Work document for project ${projectName}`,
-  //         projectName,
-  //         instanceName,
-  //         userEmail,
-  //       );
-
-  //       this.logger.log(`Generated SOW document with ID: ${documentId}`);
-  //       return documentId;
-  //     }
-
-  //     // Extend with additional pageName conditions as needed
-  //     throw new Error('No matching content generation found for the page');
-  //   } catch (error) {
-  //     this.logger.error(`Failed to generate content: ${error.message}`);
-  //     throw new Error('Content generation failed');
-  //   }
-  // }
 }

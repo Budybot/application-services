@@ -5,7 +5,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { KafkaOb1Controller } from './kafka-ob1.controller';
 import { KafkaOb1ProcessingService } from './services/kafka-ob1-processing/kafka-ob1-processing.service';
 import { CrudOperationsService } from './services/kafka-ob1-processing/crud-operations.service';
-// import { LlmFormGenerationService } from './services/kafka-ob1-processing/llm-services/llm-form-generation.service';
 import { PageSubmittedService } from './services/kafka-ob1-processing/page-submitted.service';
 import { CleanTranscriptService } from './services/kafka-ob1-processing/clean-transcript.service';
 import { GetParticipantsService } from './services/kafka-ob1-processing/get-participants.service';
@@ -17,6 +16,7 @@ import { ContentService } from './services/kafka-ob1-processing/content/content.
 import { GoogleDocService } from './services/google/google-doc.service';
 import { FormJsonService } from './services/kafka-ob1-processing/content/form-json.service';
 import { EmailGenerationService } from './services/kafka-ob1-processing/content/email-generation.service';
+import { ProjectPlannerService } from './services/kafka-ob1-processing/content/project-planner.service';
 @Module({
   imports: [
     HttpModule,
@@ -45,7 +45,6 @@ import { EmailGenerationService } from './services/kafka-ob1-processing/content/
   providers: [
     KafkaOb1ProcessingService,
     CrudOperationsService,
-    // LlmFormGenerationService,
     PageSubmittedService,
     CleanTranscriptService,
     GetParticipantsService,
@@ -57,6 +56,7 @@ import { EmailGenerationService } from './services/kafka-ob1-processing/content/
     GoogleDocService,
     FormJsonService,
     EmailGenerationService,
+    ProjectPlannerService,
   ],
   controllers: [KafkaOb1Controller],
 })
