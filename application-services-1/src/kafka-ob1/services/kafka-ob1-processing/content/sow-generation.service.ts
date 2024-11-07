@@ -25,6 +25,7 @@ export class SowGenerationService {
       DD,
       action_items,
     } = sowData;
+    this.logger.debug(`Extracted sowData: ${JSON.stringify(sowData)}`);
 
     const sowDetails = {
       consultantName: consultant_name,
@@ -40,6 +41,7 @@ export class SowGenerationService {
       actionItems: Object.values(action_items).join(', '),
       currentPhase: 'Phase 1', // Adjust as needed
     };
+    this.logger.debug(`Mapped sowDetails: ${JSON.stringify(sowDetails)}`);
 
     const systemPrompt = `
       You are acting as a consultant, drafting a Statement of Work (SOW) after a recent meeting with a client. Please generate an SOW that follows the structure outlined below, using the provided details to fill in the necessary information.
