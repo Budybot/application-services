@@ -39,6 +39,7 @@ export class SowUpdateService {
         Original SOW: ${sowContent}
         Project Planner Discovery Phase: ${JSON.stringify(projectPlannerData)}
       `;
+      const testPrompt = `Give me a bad dad joke.`;
 
       // Step 4: Make LLM call
       const llmConfig = {
@@ -50,7 +51,8 @@ export class SowUpdateService {
         presencePenalty: 0,
       };
       const response = await this.agentServiceRequest.sendAgentRequest(
-        systemPrompt,
+        // systemPrompt,
+        testPrompt,
         'Return the full updated SOW content',
         llmConfig,
         projectName,
