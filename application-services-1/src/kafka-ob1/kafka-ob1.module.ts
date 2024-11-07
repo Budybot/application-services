@@ -20,6 +20,8 @@ import { EmailGenerationService } from './services/kafka-ob1-processing/content/
 import { ProjectPlannerService } from './services/kafka-ob1-processing/content/project-planner.service';
 import { CreateProjectPlanService } from './services/kafka-ob1-processing/create-project-plan.service';
 import { SowUpdateService } from './services/kafka-ob1-processing/content/sow-update.service';
+import { SummarizationService } from './services/kafka-ob1-processing/content/summarization.service';
+
 @Module({
   imports: [
     HttpModule,
@@ -63,6 +65,7 @@ import { SowUpdateService } from './services/kafka-ob1-processing/content/sow-up
     ProjectPlannerService,
     CreateProjectPlanService,
     SowUpdateService,
+    SummarizationService,
   ],
   controllers: [KafkaOb1Controller],
 })
