@@ -34,8 +34,8 @@ export class CrudOperationsService {
         'fetchData',
         'user',
         messageInput,
-        'system', // Example user role
-        'system@budy.bot', // Example user email
+        'consultant',
+        messageKey,
         'budyos-ob1-databaseService', // Kafka topic
       );
       this.logger.log(
@@ -78,8 +78,8 @@ export class CrudOperationsService {
         'savePage',
         'user',
         messageInput,
-        'system', // Example user role
-        'system@budy.bot', // Example user email
+        'consultant',
+        messageKey,
         'budyos-ob1-databaseService', // Kafka topic
       );
       this.logger.log(
