@@ -14,6 +14,7 @@ import { SowGenerationService } from './services/kafka-ob1-processing/content/so
 import { ContentAssetsService } from './services/kafka-ob1-processing/content-assets.service';
 import { ContentService } from './services/kafka-ob1-processing/content/content.service';
 import { GoogleDocService } from './services/google/google-doc.service';
+import { GoogleSheetService } from './services/google/google-sheet.service';
 import { FormJsonService } from './services/kafka-ob1-processing/content/form-json.service';
 import { EmailGenerationService } from './services/kafka-ob1-processing/content/email-generation.service';
 import { ProjectPlannerService } from './services/kafka-ob1-processing/content/project-planner.service';
@@ -55,6 +56,7 @@ import { CreateProjectPlanService } from './services/kafka-ob1-processing/create
     ContentAssetsService,
     ContentService,
     GoogleDocService,
+    GoogleSheetService,
     FormJsonService,
     EmailGenerationService,
     ProjectPlannerService,
