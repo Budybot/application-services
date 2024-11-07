@@ -51,11 +51,11 @@ export class SowUpdateService {
         presencePenalty: 0,
       };
       const response = await this.agentServiceRequest.sendAgentRequest(
-        // systemPrompt,
-        testPrompt,
+        systemPrompt,
+        // testPrompt,
         'Return the full updated SOW content',
         llmConfig,
-        projectName,
+        instanceName,
         userEmail,
       );
 
