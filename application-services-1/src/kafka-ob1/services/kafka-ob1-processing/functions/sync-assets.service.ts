@@ -140,6 +140,7 @@ export class SyncAssetsService {
         throw new Error('Error in generating updated Project Planner');
       }
       updatedOutput = updatedOutput.replace(/```json|```/g, '').trim();
+      updatedOutput = JSON.parse(updatedOutput);
     }
 
     // Step 7: Rewrite syncTo asset with updatedOutput
