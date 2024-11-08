@@ -113,43 +113,25 @@ export class SowUpdateService {
         throw new Error('Error in generating timeline analysis');
       }
 
-      // Step 3: Generate Updated SOW Document
-      const combinedMeetingAnalysis = `
-        Scope Analysis:
-        ${scopeAnalysis}
+      // Step 3a: Scope Analysis Update
+      const scopeUpdatePrompt = `
+        Update the relevant sections of the Statement of Work (SOW) based on the scope analysis. Only return sections with changes.
+        
+        Scope Analysis: ${pageContent.scopeAnalysis}
+        Existing SOW: ${existingSowContent}
 
-        Timeline Analysis:
-        ${timelineAnalysis}
+        Return a JSON with changes:
+        {
+          "sectionName": {"add": "new content", "remove": "old content"},
+          ...
+        }
+
+        If sections have no changes, omit them.
       `;
 
-      const sowUpdatePrompt = `
-      Update the Statement of Work (SOW) based on recent project insights. Only return sections with changes.
-      
-      Meeting Summary: ${combinedMeetingAnalysis}
-      Existing SOW: ${existingSowContent}
-
-      SOW Structure:
-      1. Project Overview
-      2. Project Objectives
-      3. Key Challenges
-      4. Project Scope
-      5. Desired Deliverables
-      6. Timeline and Milestones
-
-      Return a JSON of the format:
-      {
-        sectionName : {"add": "new content", "remove": "old content"},
-        ...
-      }
-
-      If sections have no changes, omit them or state "no change".
-      `;
-
-      this.logger.log(`Generating updated SOW based on meeting analysis`);
-      // Step 1: Send prompt to LLM
-      const sowResponse = await this.agentServiceRequest.sendAgentRequest(
-        sowUpdatePrompt,
-        'Return the updated SOW content only without any other comments.',
+      const scopeResponse = await this.agentServiceRequest.sendAgentRequest(
+        scopeUpdatePrompt,
+        'Return the scope-based SOW updates in JSON format.',
         {
           provider: 'openai',
           model: 'gpt-4o-mini',
@@ -161,34 +143,64 @@ export class SowUpdateService {
         instanceName,
         userId,
       );
-      const updatedSowContent = sowResponse.messageContent?.content;
-      if (!updatedSowContent) {
-        this.logger.warn('No updates detected in SOW');
-        return existingSowContent;
-      }
-      // Step 1: Clean and parse the JSON response
-      const parsedUpdate = this.cleanAndParseJson(updatedSowContent);
 
-      // Step 3: Apply updates to existing sections or add new sections
-      for (const [section, changes] of Object.entries(parsedUpdate) as [
+      const scopeUpdates = this.cleanAndParseJson(
+        scopeResponse.messageContent?.content || '{}',
+      );
+
+      // Step 3b: Timeline Analysis Update
+      const timelineUpdatePrompt = `
+        Update the relevant sections of the Statement of Work (SOW) based on the timeline analysis. Only return sections with changes.
+        
+        Timeline Analysis: ${pageContent.timelineAnalysis}
+        Existing SOW: ${existingSowContent}
+
+        Return a JSON with changes:
+        {
+          "sectionName": {"add": "new content", "remove": "old content"},
+          ...
+        }
+
+        If sections have no changes, omit them.
+      `;
+
+      const timelineResponse = await this.agentServiceRequest.sendAgentRequest(
+        timelineUpdatePrompt,
+        'Return the timeline-based SOW updates in JSON format.',
+        {
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          temperature: 0.7,
+          maxTokens: 4096,
+          frequencyPenalty: 0,
+          presencePenalty: 0,
+        },
+        instanceName,
+        userId,
+      );
+
+      const timelineUpdates = this.cleanAndParseJson(
+        timelineResponse.messageContent?.content || '{}',
+      );
+
+      // Step 4: Merge scope and timeline updates
+      const allUpdates = { ...scopeUpdates, ...timelineUpdates };
+      for (const [section, changes] of Object.entries(allUpdates) as [
         string,
         { add?: string; remove?: string; update?: string },
       ][]) {
         if (sowSections[section]) {
-          // Existing section: apply add/remove logic
           if (changes.add) sowSections[section] += ` ${changes.add}`;
           if (changes.remove)
             sowSections[section] = sowSections[section].replace(
               changes.remove,
               '',
             );
-          if (changes.update) sowSections[section] = changes.update;
         } else {
-          // New section: add it entirely
-          sowSections[section] = changes.add || changes.update || '';
+          sowSections[section] = changes.add || '';
         }
       }
-      // Step 4: Reassemble the final SOW content
+      // Step 5: Reassemble the SOW
       const sectionOrder = [
         'Project Overview',
         'Project Objectives',
@@ -208,6 +220,93 @@ export class SowUpdateService {
         `Successfully generated updated SOW for project ${pageName}`,
       );
       return finalSowContent;
+      // // Step 3: Generate Updated SOW Document
+      // const combinedMeetingAnalysis = `
+      //   Scope Analysis:
+      //   ${scopeAnalysis}
+
+      //   Timeline Analysis:
+      //   ${timelineAnalysis}
+      // `;
+
+      // const sowUpdatePrompt = `
+      // Update the Statement of Work (SOW) based on recent project insights. Only return sections with changes.
+      
+      // Meeting Summary: ${combinedMeetingAnalysis}
+      // Existing SOW: ${existingSowContent}
+
+      // Return a JSON of the format:
+      // {
+      //   sectionName : {"add": "new content", "remove": "old content"},
+      //   ...
+      // }
+
+      // If sections have no changes, omit them or state "no change".
+      // `;
+
+      // this.logger.log(`Generating updated SOW based on meeting analysis`);
+      // // Step 1: Send prompt to LLM
+      // const sowResponse = await this.agentServiceRequest.sendAgentRequest(
+      //   sowUpdatePrompt,
+      //   'Return the updated SOW content only without any other comments.',
+      //   {
+      //     provider: 'openai',
+      //     model: 'gpt-4o-mini',
+      //     temperature: 0.7,
+      //     maxTokens: 4096,
+      //     frequencyPenalty: 0,
+      //     presencePenalty: 0,
+      //   },
+      //   instanceName,
+      //   userId,
+      // );
+      // const updatedSowContent = sowResponse.messageContent?.content;
+      // if (!updatedSowContent) {
+      //   this.logger.warn('No updates detected in SOW');
+      //   return existingSowContent;
+      // }
+      // // Step 1: Clean and parse the JSON response
+      // const parsedUpdate = this.cleanAndParseJson(updatedSowContent);
+
+      // // Step 3: Apply updates to existing sections or add new sections
+      // for (const [section, changes] of Object.entries(parsedUpdate) as [
+      //   string,
+      //   { add?: string; remove?: string; update?: string },
+      // ][]) {
+      //   if (sowSections[section]) {
+      //     // Existing section: apply add/remove logic
+      //     if (changes.add) sowSections[section] += ` ${changes.add}`;
+      //     if (changes.remove)
+      //       sowSections[section] = sowSections[section].replace(
+      //         changes.remove,
+      //         '',
+      //       );
+      //     if (changes.update) sowSections[section] = changes.update;
+      //   } else {
+      //     // New section: add it entirely
+      //     sowSections[section] = changes.add || changes.update || '';
+      //   }
+      // }
+      // // Step 4: Reassemble the final SOW content
+      // const sectionOrder = [
+      //   'Project Overview',
+      //   'Project Objectives',
+      //   'Key Challenges',
+      //   'Project Scope',
+      //   'Desired Deliverables',
+      //   'Timeline and Milestones',
+      // ];
+
+      // let finalSowContent = '**Statement of Work (SOW)**\n\n';
+      // for (const section of sectionOrder) {
+      //   if (sowSections[section]) {
+      //     finalSowContent += `## **${section}**\n${sowSections[section]}\n\n`;
+      //   }
+      // }
+      // this.logger.log(
+      //   `Successfully generated updated SOW for project ${pageName}`,
+      // );
+      // return finalSowContent;
 
       // // Step 2: Parse the LLM response to extract only updated sections
       // const updatedSections = await this.sowSectionService.splitSowIntoSections(
