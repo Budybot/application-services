@@ -51,13 +51,13 @@ export class CreateProjectPlanService {
         'ProjectPlanner',
       );
 
-      // Step 3: Update the SOW with planner data
-      await this.updateSowWithPlanner(
-        projectName,
-        instanceName,
-        userEmail,
-        sheetId,
-      );
+      // Step 3: Update the SOW with planner data - TEMPORARILY DISABLED
+      // await this.updateSowWithPlanner(
+      //   projectName,
+      //   instanceName,
+      //   userEmail,
+      //   sheetId,
+      // );
 
       this.logger.log(`Project Planner sheet created with ID: ${sheetId}`);
       return sheetId;

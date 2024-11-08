@@ -70,17 +70,19 @@ export class SowGenerationService {
       Current process evaluation
       Process co-design with client
       Iteration on solution prototypes
+      
+      Roles and Responsibilities:
+
+      Consultant Team: Paragraph detailing responsibilities
+      Client Team: Paragraph detailing responsibilities
+      Collaboration: Paragraph defining how communication and collaboration will work
       Desired Deliverables:
 
       Bullet point list with elements from one or more of the following categories:
       Software system implementation
       Dashboards creation
       Training & documentation
-      Roles and Responsibilities:
-
-      Consultant Team: Paragraph detailing responsibilities
-      Client Team: Paragraph detailing responsibilities
-      Collaboration: Paragraph defining how communication and collaboration will work`;
+      `;
 
     const config = {
       provider: 'openai',

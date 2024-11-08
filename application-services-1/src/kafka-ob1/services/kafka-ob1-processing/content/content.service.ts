@@ -5,6 +5,7 @@ import { ProjectPlannerService } from './project-planner.service';
 import { ContentAssetsService } from '../content-assets.service';
 import { GoogleDocService } from '../../google/google-doc.service';
 import { GoogleSheetService } from '../../google/google-sheet.service';
+import { SowUpdateService } from './sow-update.service';
 
 @Injectable()
 export class ContentService {
@@ -17,6 +18,7 @@ export class ContentService {
     private readonly contentAssetsService: ContentAssetsService,
     private readonly googleDocService: GoogleDocService,
     private readonly googleSheetService: GoogleSheetService,
+    private readonly sowUpdateService: SowUpdateService,
   ) {}
 
   async generateContent(
@@ -135,6 +137,89 @@ export class ContentService {
         `Failed to generate ${contentType} content: ${error.message}`,
       );
       throw new Error(`Content generation failed for ${contentType}`);
+    }
+  }
+  async updateContent(
+    projectName: string,
+    instanceName: string,
+    contentData: { sowData?: any; pageName: string },
+    userEmail: string,
+    contentType: 'SOW' | 'Email' | 'ProjectPlanner',
+  ): Promise<string> {
+    try {
+      // Step 1: Fetch External Asset ID based on contentType
+      this.logger.log(`Fetching asset ID for contentType: ${contentType}`);
+      const assetId = await this.contentAssetsService.getAssetId(
+        contentType,
+        projectName,
+        instanceName,
+        userEmail,
+      );
+
+      // Step 2: Read Existing Content
+      let existingContent;
+      if (contentType === 'SOW' || contentType === 'Email') {
+        this.logger.log(`Reading document content for asset ID: ${assetId}`);
+        existingContent =
+          await this.googleDocService.readDocumentContent(assetId);
+      } else if (contentType === 'ProjectPlanner') {
+        this.logger.log(`Reading sheet data for asset ID: ${assetId}`);
+        existingContent = await this.googleSheetService.readSheetData(assetId);
+      }
+
+      // Step 3: Pass Content to Update Function based on contentType
+      let updatedContent;
+      if (contentType === 'SOW') {
+        this.logger.log(`Updating SOW content for project: ${projectName}`);
+        updatedContent = await this.sowUpdateService.updateSow(
+          existingContent,
+          contentData.sowData,
+          contentData.pageName,
+        );
+      // } else if (contentType === 'Email') {
+      //   this.logger.log(`Updating Email content for project: ${projectName}`);
+      //   updatedContent = await this.emailGenerationService.updateEmail(
+      //     existingContent,
+      //     contentData.sowData,
+      //   );
+      // } else if (contentType === 'ProjectPlanner') {
+      //   this.logger.log(
+      //     `Updating Project Planner content for project: ${projectName}`,
+      //   );
+      //   updatedContent = await this.projectPlannerService.updateProjectPlan(
+      //     existingContent,
+      //     contentData.pageName,
+      //   );
+      }
+
+      // Step 4: Write Updated Content to Document or Sheet
+      if (contentType === 'SOW' || contentType === 'Email') {
+        await this.googleDocService.writeToDocument(assetId, updatedContent);
+      } else if (contentType === 'ProjectPlanner') {
+        await this.googleSheetService.writeToSheet(assetId, updatedContent);
+      }
+
+      // Step 5: Save Updated Content to Database
+      await this.contentAssetsService.saveDocumentAsset(
+        contentType,
+        contentType === 'ProjectPlanner' ? 'google sheet' : 'google doc',
+        assetId,
+        `https://docs.google.com/${contentType === 'ProjectPlanner' ? 'spreadsheets' : 'document'}/d/${assetId}`,
+        `${contentType} for project ${projectName} (Updated)`,
+        projectName,
+        instanceName,
+        userEmail,
+      );
+
+      this.logger.log(
+        `Successfully updated ${contentType} for project ${projectName}`,
+      );
+      return `Updated ${contentType} content for project: ${projectName}`;
+    } catch (error) {
+      this.logger.error(
+        `Failed to update ${contentType} content: ${error.message}`,
+      );
+      throw new Error(`Content update failed for ${contentType}`);
     }
   }
 }

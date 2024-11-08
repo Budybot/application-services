@@ -1,120 +1,53 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AgentServiceRequest } from '../agent-service-request.service';
-import { GoogleDocService } from '../../google/google-doc.service';
-import { GoogleSheetService } from '../../google/google-sheet.service';
-import { ContentAssetsService } from '../content-assets.service';
-import { SummarizationService } from './summarization.service';
 
 @Injectable()
 export class SowUpdateService {
   private readonly logger = new Logger(SowUpdateService.name);
 
-  constructor(
-    private readonly agentServiceRequest: AgentServiceRequest,
-    private readonly googleDocService: GoogleDocService,
-    private readonly googleSheetService: GoogleSheetService,
-    private readonly contentAssetsService: ContentAssetsService,
-    private readonly summarizationService: SummarizationService,
-  ) {}
+  constructor(private readonly agentServiceRequest: AgentServiceRequest) {}
 
-  async updateSowWithPlanner(
-    projectName: string,
-    sowDocId: string,
-    plannerSheetId: string,
-    instanceName: string,
-    userEmail: string,
+  // Update SOW with insights from meeting analysis
+  async updateSow(
+    existingSowContent: string,
+    pageContent: any,
+    pageName: string,
   ): Promise<string> {
     try {
-      // Step 1: Fetch SOW and Project Planner content
-      const sowContent =
-        await this.googleDocService.readDocumentContent(sowDocId);
-      const projectPlannerData =
-        await this.googleSheetService.readSheetData(plannerSheetId);
-
-      // Step 2: Summarize SOW sections
-      const projectOverviewSummary =
-        await this.summarizationService.summarizeFromDocument(
-          instanceName,
-          userEmail,
-          sowContent,
-          'Project Overview',
-        );
-      const keyChallengesSummary =
-        await this.summarizationService.summarizeFromDocument(
-          instanceName,
-          userEmail,
-          sowContent,
-          'Key Challenges',
-        );
-      const projectObjectivesSummary =
-        await this.summarizationService.summarizeFromDocument(
-          instanceName,
-          userEmail,
-          sowContent,
-          'Project Objectives',
-        );
-      const projectScopeSummary =
-        await this.summarizationService.summarizeFromDocument(
-          instanceName,
-          userEmail,
-          sowContent,
-          'Project Scope',
-        );
-
-      // Step 3: Summarize Project Planner Discovery Phase
-      const discoverySummary =
-        await this.summarizationService.summarizeFromSheet(
-          instanceName,
-          userEmail,
-          projectPlannerData,
-          'Discovery',
-        );
-
-      // Step 4: Update Desired Deliverables in SOW based on summaries
-      const desiredDeliverablesPrompt = `
-      Based on the following summaries, update the "Desired Deliverables" section of the SOW:
-      - Project Overview: ${projectOverviewSummary}
-      - Key Challenges: ${keyChallengesSummary}
-      - Project Objectives: ${projectObjectivesSummary}
-      - Project Scope: ${projectScopeSummary}
-      - Discovery Phase Summary: ${discoverySummary}
-      Current SOW: ${sowContent}
-    `;
-      const desiredDeliverablesResponse =
-        await this.agentServiceRequest.sendAgentRequest(
-          desiredDeliverablesPrompt,
-          'Return only the updated Desired Deliverables content.',
-          {
-            provider: 'openai',
-            model: 'gpt-4o-mini',
-            temperature: 0.7,
-            maxTokens: 4096,
-            frequencyPenalty: 0,
-            presencePenalty: 0,
-          },
-          instanceName,
-          userEmail,
-        );
-
-      if (!desiredDeliverablesResponse?.messageContent?.content) {
-        throw new Error('Failed to update Desired Deliverables');
-      }
-      const updatedDesiredDeliverables =
-        desiredDeliverablesResponse.messageContent.content;
-
-      // Step 5: Update Project Timeline in SOW based on summaries
-      const timelinePrompt = `
-        Using the summaries below, update the "Project Timeline" section of the SOW:
-        - Project Overview: ${projectOverviewSummary}
-        - Key Challenges: ${keyChallengesSummary}
-        - Project Objectives: ${projectObjectivesSummary}
-        - Project Scope: ${projectScopeSummary}
-        - Discovery Phase Summary: ${discoverySummary}
+      // Step 1: Generate Meeting Analysis
+      const meetingAnalysisPrompt = `
+        You are acting as a consultant collaborating with another consultant to analyze a recent follow-up meeting with an existing customer. This is not the initial meeting; the project is already underway, and your goal is to assess progress, challenges, and any shifts in scope or timeline, using the details provided below:
+        • Meeting Transcript: ${pageContent.transcript}
+        • Existing Statement of Work (SOW): ${existingSowContent}
+        • Current Action Items: ${pageContent.action_items}
+        • Next Scheduled Meeting: ${pageContent.meeting_slot}
+        • Consultant’s Input: ${pageContent.consultant_input}
+        • Meeting Type: ${pageContent.event_type}
+        • Completed Action Items from Previous Call: ${pageContent.completed_action_items}
+        
+        Please address the following questions in your analysis:
+        
+        1. Scope of Project: Did the scope of the project change, and if so, how?
+           1.1 What is the current business case for doing the project? Has it shifted in focus or priority?
+           1.2 Are there any budgetary changes affecting the project’s feasibility or scope?
+           1.3 What key challenges have emerged or evolved since the last meeting?
+           1.4 Has there been a scope change in key deliverables or in how the problem is addressed?
+           1.5 Are there any notable reprioritizations in project goals or deliverables?
+           1.6 Are there any new stakeholders involved, or have any existing stakeholders shifted their priorities or support for the project?
+           1.7 Are there any new dependencies or resource bottlenecks that could impact project completion?
+        
+        2. Project Timeline: Did the project timeline change, and if so, how?
+           2.1 Has the overall project end date changed (extended, shortened, or stayed the same)?
+           2.2 Have any interim milestones or phases been adjusted in length or scheduling?
+           2.3 Are there any mitigations or contingency plans in place for newly identified risks that might affect the timeline?
+        
+        If there are additional relevant factors not covered above, please include them in your analysis. For each point, if there is no change, simply state “no change,” and if it was not discussed, simply state "not discussed."
       `;
 
-      const timelineResponse = await this.agentServiceRequest.sendAgentRequest(
-        timelinePrompt,
-        'Return only the updated Project Timeline content.',
+      this.logger.log(`Running meeting analysis for SOW update on ${pageName}`);
+      const analysisResponse = await this.agentServiceRequest.sendAgentRequest(
+        meetingAnalysisPrompt,
+        'Return meeting analysis with answers to the outlined questions.',
         {
           provider: 'openai',
           model: 'gpt-4o-mini',
@@ -123,76 +56,72 @@ export class SowUpdateService {
           frequencyPenalty: 0,
           presencePenalty: 0,
         },
-        instanceName,
-        userEmail,
+        pageContent.instanceName,
+        pageContent.userEmail,
       );
 
-      if (!timelineResponse?.messageContent?.content) {
-        throw new Error('Failed to update Project Timeline');
+      const meetingAnalysis = analysisResponse.messageContent?.content;
+      if (!meetingAnalysis) {
+        this.logger.error(`Failed to generate meeting analysis`);
+        throw new Error('Error in generating meeting analysis');
       }
-      const updatedProjectTimeline = timelineResponse.messageContent.content;
 
-      // Step 6: Write updated sections to SOW document in Google Docs
-    //   const finalUpdatedSow = `${sowContent}\n\n**Desired Deliverables:**\n${updatedDesiredDeliverables}\n\n**Project Timeline:**\n${updatedProjectTimeline}`;
-      const finalUpdatedSow = `${updatedDesiredDeliverables}\n\n${updatedProjectTimeline}`;
-      await this.googleDocService.writeToDocument(sowDocId, finalUpdatedSow);
+      // Step 2: Generate Updated SOW Document
+      const sowUpdatePrompt = `
+        You are acting as a consultant collaborating with another consultant to update an existing Statement of Work (SOW) based on the recent follow-up meeting with an existing customer. The project is already underway, and your goal is to integrate the latest insights to reflect any changes in scope, objectives, deliverables, or timeline. Please use the inputs below to create an updated version of the SOW:
+        Meeting Summary: ${meetingAnalysis}
+        Existing Statement of Work (SOW): ${existingSowContent}
+        
+        Please provide the updates to be added to the SOW in the following structure:
+        
+        SOW Structure:
+          1. Project Overview
+             Project Title: [Specify or confirm any changes in the project title, if applicable]
+             Project Background: [Include any adjustments to context or motivation based on the meeting]
+          2. Project Objectives and Key Challenges
+             Updated Objectives: Bullet points summarizing each objective identified in the meeting
+             Key Challenges: Bullet points listing any challenges discussed or updated, with any relevant context
+          3. Project Scope
+             Current Process Evaluation: [Any updates to the process evaluation based on recent findings]
+             Process Co-Design with Client: [Modifications or additions based on client feedback or new requirements]
+             Iteration on Solution Prototypes: [Updates regarding prototype development or changes in approach]
+          4. Desired Deliverables
+             Deliverables List: [List any new deliverables discussed or updated specifications for existing ones]
+          5. Timeline and Milestones
+             Project End Date: [Adjustments to the end date if applicable]
+             Phases and Interim Milestones: [List of updated milestones or changes in phases based on the latest meeting]
+        
+        If there are any points from the meeting analysis that don’t directly fit into the categories above but are relevant to the SOW update, please include them under a new section called Additional Insights. If any sections have no changes, simply state “no change.”
+      `;
 
-    //   // Step 3: Construct prompt with relevant SOW and Project Planner sections
-    //   const systemPrompt = `
-    //     Update the Desired Deliverables and Project Timeline sections of the SOW. Use:
-    //     - SOW Sections: Project Overview, Key Challenges, Project Objectives, Project Scope.
-    //     - Project Planner Discovery Phase tasks to guide the update.
-    //     Original SOW: ${sowContent}
-    //     Project Planner Discovery Phase: ${JSON.stringify(projectPlannerData)}
-    //   `;
-    //   const testPrompt = `Give me a bad dad joke.`;
-
-    //   // Step 4: Make LLM call
-    //   const llmConfig = {
-    //     provider: 'openai',
-    //     model: 'gpt-4o-2024-08-06',
-    //     temperature: 0.7,
-    //     maxTokens: 8192,
-    //     frequencyPenalty: 0,
-    //     presencePenalty: 0,
-    //   };
-    //   const response = await this.agentServiceRequest.sendAgentRequest(
-    //     systemPrompt,
-    //     // testPrompt,
-    //     // 'Make sure it is funny as well.',
-    //     'Return the full updated SOW content',
-    //     llmConfig,
-    //     instanceName,
-    //     userEmail,
-    //   );
-
-    //   if (!response?.messageContent?.content) {
-    //     this.logger.error(
-    //       `Invalid response from LLM: ${JSON.stringify(response)}`,
-    //     );
-    //     throw new Error('Invalid response from LLM');
-    //   }
-    //   const updatedSowContent = response.messageContent.content;
-
-    //   // Step 5: Write updated SOW content to Google Doc
-    //   await this.googleDocService.writeToDocument(sowDocId, updatedSowContent);
-
-      // Step 6: Update SOW in database with new description
-      await this.contentAssetsService.saveDocumentAsset(
-        'SOW',
-        'google doc',
-        sowDocId,
-        `https://docs.google.com/document/d/${sowDocId}`,
-        `Statement of Work document for project ${projectName} (Updated with Project Planner)`,
-        projectName,
-        instanceName,
-        userEmail,
+      this.logger.log(`Generating updated SOW based on meeting analysis`);
+      const sowResponse = await this.agentServiceRequest.sendAgentRequest(
+        sowUpdatePrompt,
+        'Return the full updated SOW content.',
+        {
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          temperature: 0.7,
+          maxTokens: 4096,
+          frequencyPenalty: 0,
+          presencePenalty: 0,
+        },
+        pageContent.instanceName,
+        pageContent.userEmail,
       );
 
-      this.logger.log(`Successfully updated SOW for project ${projectName}`);
-      return `SOW updated successfully for project: ${projectName}`;
+      const updatedSowContent = sowResponse.messageContent?.content;
+      if (!updatedSowContent) {
+        this.logger.error(`Failed to generate updated SOW content`);
+        throw new Error('Error in generating updated SOW content');
+      }
+
+      this.logger.log(
+        `Successfully generated updated SOW for project ${pageName}`,
+      );
+      return updatedSowContent;
     } catch (error) {
-      this.logger.error(`Error updating SOW: ${error.message}`);
+      this.logger.error(`Error in updating SOW: ${error.message}`);
       throw new Error('Failed to update SOW');
     }
   }

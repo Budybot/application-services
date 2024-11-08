@@ -11,6 +11,7 @@ import { CleanTranscriptService } from './clean-transcript.service';
 import { GetParticipantsService } from './get-participants.service';
 import { PageSubmittedService } from './page-submitted.service';
 import { CreateProjectPlanService } from './create-project-plan.service';
+import { CompletedActionItemsService } from './completed-action-items.service';
 
 @Injectable()
 export class KafkaOb1ProcessingService {
@@ -23,6 +24,7 @@ export class KafkaOb1ProcessingService {
     private readonly getParticipantsService: GetParticipantsService,
     private readonly pageSubmittedService: PageSubmittedService,
     private readonly createProjectPlanService: CreateProjectPlanService,
+    private readonly completedActionItemsService: CompletedActionItemsService,
     // @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
   ) {}
 
@@ -76,6 +78,18 @@ export class KafkaOb1ProcessingService {
             );
           response = {
             messageContent: { projectPlanId: projectPlanId },
+          };
+          break;
+        case 'completed-action-items':
+          const { transcript } = functionInput;
+          const completedActionItems =
+            await this.completedActionItemsService.extractCompletedActionItems(
+              instanceName,
+              userEmail,
+              transcript,
+            );
+          response = {
+            messageContent: { completedActionItems: completedActionItems },
           };
           break;
         default:

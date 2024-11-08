@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { KafkaOb1Service } from 'src/kafka-ob1/kafka-ob1.service';
+import { AgentServiceRequestBody, validateAgentServiceRequestBody } from 'src/interfaces/ob1-message.interfaces';
+
 @Injectable()
 export class AgentServiceRequest {
   private readonly logger = new Logger(AgentServiceRequest.name);
@@ -32,6 +34,13 @@ export class AgentServiceRequest {
       },
       messageType: 'REQUEST',
     };
+
+    try {
+      validateAgentServiceRequestBody(messageInput);
+    } catch (validationError) {
+      this.logger.error(`Validation failed: ${validationError.message}`);
+      throw new Error('Invalid request data; please check your input');
+    }
     this.logger.log(
       'Sending request to LLM service with the following payload:',
     );

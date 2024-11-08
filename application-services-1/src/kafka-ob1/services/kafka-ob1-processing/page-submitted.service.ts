@@ -82,7 +82,31 @@ export class PageSubmittedService {
         );
         const messageValue: OB1MessageValue = {
           messageContent: pageData,
-          messageType: 'BROADCAST', // Ensure this is the correct type based on the interfaces
+          messageType: 'BROADCAST',
+          projectId: projectName,
+          assetId: null,
+          conversationId: null,
+        };
+        const messageHeaders: OB1MessageHeader = {
+          instanceName: instanceName,
+          userEmail: userEmail,
+          sourceService: process.env.SERVICE_NAME || 'unknown-service',
+          schemaVersion: CURRENT_SCHEMA_VERSION,
+          destinationService: 'application-service',
+        };
+        this.emitMessage(messageValue, messageHeaders);
+        return {
+          messageContent: pageData,
+          messageStatus: 'success',
+        };
+      } else if (tableEntity === 'OB1-pages-inputPage2') {
+        // Emit Kafka message with the form content from input
+        this.logger.log(
+          `Emitting Kafka message for input page for project ${projectName}`,
+        );
+        const messageValue: OB1MessageValue = {
+          messageContent: pageData,
+          messageType: 'BROADCAST',
           projectId: projectName,
           assetId: null,
           conversationId: null,
