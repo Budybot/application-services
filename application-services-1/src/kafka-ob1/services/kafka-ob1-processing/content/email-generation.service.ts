@@ -77,7 +77,8 @@ export class EmailGenerationService {
             3b Actions for the primary user
             3c Actions for any additional parties
         4. Closing: End with a thank you, reiterating your commitment to supporting their needs, and propose a time for the next meeting based on the available slots.
-        "Please structure the email with titles as specified but exclude any numbering or labels like 'Body:', '1. Opening:', etc."
+        Please structure the email with titles as specified but exclude any numbering or labels like 'Body:', '1. Opening:', etc.
+        Do not include section titles in the email.
         `;
 
       const config = {
@@ -123,10 +124,10 @@ export class EmailGenerationService {
         client_role,
         transcript,
         action_items,
-        consultant_input,
         meeting_slots,
         event_type,
       } = emailData;
+      let consultant_input = emailData.consultant_input;
 
       // // Generate meeting summary and action items for inputPage2
       // const meetingSummary = await this.formJsonService.generateFormJson(
@@ -143,6 +144,7 @@ export class EmailGenerationService {
         userId,
         instanceName,
       );
+      consultant_input = `${consultant_input} This is the second meeting with the client about the project.`;
 
       // Define email structure for inputPage2
       const inputPage2Prompt = `
@@ -168,6 +170,8 @@ export class EmailGenerationService {
             b. Primary user's responsibilities
             c. Additional parties (if any)
         4. Closing: Express commitment, propose next meeting time from available slots.
+        Please structure the email with titles as specified but exclude any numbering or labels like 'Body:', '1. Opening:', etc.
+        Do not include section titles in the email.
       `;
 
       const config = {

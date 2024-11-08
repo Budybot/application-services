@@ -8,6 +8,7 @@ import {
 @Injectable()
 export class FormJsonService {
   private readonly logger = new Logger(FormJsonService.name);
+  private readonly maxTranscriptLength = 5000;
 
   constructor(private readonly agentServiceRequest: AgentServiceRequest) {}
 
@@ -18,6 +19,14 @@ export class FormJsonService {
     userId: string,
     projectName: string,
   ): Promise<any> {
+    if (transcript.length > this.maxTranscriptLength) {
+      transcript = await this.summarizeTranscript(
+        transcript,
+        projectName,
+        userId,
+      );
+    }
+
     const formPrompt = `
       You are an AI consultant responsible for documenting and summarizing a recent customer meeting. This summary should be structured in JSON format, using the following exact fields:
       
@@ -185,6 +194,56 @@ export class FormJsonService {
     } catch (error) {
       this.logger.error(`Failed to parse JSON: ${error.message}`);
       throw new Error('Invalid JSON format received from LLM');
+    }
+  }
+  private async summarizeTranscript(
+    transcript: string,
+    projectName: string,
+    userId: string,
+  ): Promise<string> {
+    const summaryPrompt = `
+      You are an AI assistant tasked with summarizing a lengthy meeting transcript. Focus on actionable items, key decisions, and any details directly relevant to the project goals and action items.
+      
+      Transcript:
+      ${transcript}
+      
+      Please return a concise summary that highlights only the actionable and relevant details.
+    `;
+
+    const config = {
+      provider: 'openai',
+      model: 'gpt-4o-mini',
+      temperature: 0.5,
+      maxTokens: 1500,
+      frequencyPenalty: 0,
+      presencePenalty: 0,
+    };
+
+    try {
+      this.logger.log(
+        'Summarizing long transcript for manageable processing...',
+      );
+      const response = await this.agentServiceRequest.sendAgentRequest(
+        summaryPrompt,
+        'Return only the summary text.',
+        config,
+        projectName,
+        userId,
+      );
+
+      if (response?.messageContent?.content) {
+        const summarizedTranscript = response.messageContent.content.trim();
+        this.logger.debug(`Summarized transcript: ${summarizedTranscript}`);
+        return summarizedTranscript;
+      } else {
+        throw new Error(`Invalid response: ${JSON.stringify(response)}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error summarizing transcript: ${error.message}`,
+        error.stack,
+      );
+      throw new Error('Failed to summarize transcript');
     }
   }
 }
