@@ -121,7 +121,7 @@ export class SyncAssetsService {
       const updatedPlannerResponse =
         await this.agentServiceRequest.sendAgentRequest(
           projectPlannerUpdatePrompt,
-          'Generate an updated Project Planner based on the difference analysis.',
+          'Only return the updated Project Planner in JSON format. No additional content is allowed.',
           {
             provider: 'openai',
             model: 'gpt-4o-mini',
