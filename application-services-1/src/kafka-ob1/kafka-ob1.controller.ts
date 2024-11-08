@@ -197,7 +197,7 @@ export class KafkaOb1Controller implements OnModuleInit {
       // Define content generation rules for different page names
       const contentGenerationRules = {
         'OB1-pages-filterPage1': ['SOW', 'Email'],
-        'OB1-pages-inputPage2': ['Email'],
+        'OB1-pages-inputPage2': [], // ['Email'],
         // Add other pageNames and content types as needed
       };
       const contentTypesToGenerate = contentGenerationRules[pageName] || [];
@@ -221,6 +221,31 @@ export class KafkaOb1Controller implements OnModuleInit {
         }
       }
       // SAME FOR CONTENT UPDATES
+      const contentUpdateRules = {
+        'OB1-pages-filterPage1': [],
+        'OB1-pages-inputPage2': ['SOW'],
+        // Add other pageNames and content types as needed
+      };
+      const contentTypesToUpdate = contentUpdateRules[pageName] || [];
+      // Iterate over content types for this page and generate each
+      for (const contentType of contentTypesToUpdate) {
+        try {
+          const documentId = await this.contentService.updateContent(
+            projectName,
+            instanceName,
+            { sowData: message.messageContent, pageName },
+            userEmail,
+            contentType,
+          );
+          this.logger.log(
+            `Successfully updated ${contentType} content with document ID: ${documentId}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Error updating ${contentType} for page ${pageName}: ${error.message}`,
+          );
+        }
+      }
     } catch (error) {
       this.logger.error(
         `Error processing broadcast content: ${error.message}`,
