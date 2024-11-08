@@ -156,19 +156,17 @@ export class SowUpdateService {
         instanceName,
         userId,
       );
-
-      // Step 2: Parse the LLM response to extract only updated sections
-      const updatedSections = sowResponse.messageContent?.content
-        ? JSON.parse(
-            sowResponse.messageContent.content
-              .replace(/```json|```/g, '')
-              .trim(),
-          )
-        : {};
-      if (!updatedSections || Object.keys(updatedSections).length === 0) {
-        this.logger.warn('No changes detected in SOW update');
-        return existingSowContent; // Return the original content if no updates
+      const updatedSowContent = sowResponse.messageContent?.content;
+      if (!updatedSowContent) {
+        this.logger.warn('No updates detected in SOW');
+        return existingSowContent;
       }
+      // Step 2: Parse the LLM response to extract only updated sections
+      const updatedSections = await this.sowSectionService.splitSowIntoSections(
+        instanceName,
+        userId,
+        updatedSowContent,
+      );
       // Step 3: Replace the relevant sections with updated content
       for (const section in updatedSections) {
         if (
@@ -186,24 +184,18 @@ export class SowUpdateService {
         'Desired Deliverables',
         'Timeline and Milestones',
       ];
-      let updatedSowContent = '**Statement of Work (SOW)**\n\n';
+      let finalSowContent = '**Statement of Work (SOW)**\n\n';
 
       for (const section of sectionOrder) {
         if (sowSections[section]) {
-          updatedSowContent += `## **${section}**\n${sowSections[section]}\n\n`;
+          finalSowContent += `## **${section}**\n${sowSections[section]}\n\n`;
         }
       }
-
-      // const updatedSowContent = sowResponse.messageContent?.content;
-      // if (!updatedSowContent) {
-      //   this.logger.error(`Failed to generate updated SOW content`);
-      //   throw new Error('Error in generating updated SOW content');
-      // }
 
       this.logger.log(
         `Successfully generated updated SOW for project ${pageName}`,
       );
-      return updatedSowContent;
+      return finalSowContent;
     } catch (error) {
       this.logger.error(`Error in updating SOW: ${error.message}`);
       throw new Error('Failed to update SOW');
