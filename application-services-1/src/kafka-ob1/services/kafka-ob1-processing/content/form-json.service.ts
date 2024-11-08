@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AgentServiceRequest } from '../agent-service-request.service';
-import { FormJson, ActionItemsJson } from 'src/interfaces/form-json.interfaces';
+import {
+  validateActionItemsJson,
+  validateFormJson,
+} from 'src/interfaces/form-json.interfaces';
 
 @Injectable()
 export class FormJsonService {
@@ -57,7 +60,7 @@ export class FormJsonService {
         const resultJson = this.cleanAndParseJson(
           llmOutput.messageContent.content,
         );
-        this.validateFormJson(resultJson);
+        validateFormJson(resultJson);
         this.logger.debug(`Generated form JSON: ${JSON.stringify(resultJson)}`);
         return resultJson;
       } else {
@@ -79,13 +82,13 @@ export class FormJsonService {
     projectName: string,
   ): Promise<any> {
     const actionPrompt = `
-      Based on the customer meeting transcript, generate JSON-formatted action items that align with the project goals. Use this structure:
+      Based on the customer meeting transcript, generate JSON-formatted action items that align with the project goals.
 
       Output must be a JSON object with an "action_items" array containing strings of action items.
 
       Input Details:
       Clean Transcript: ${transcript},
-      Action Items: ${actionItems}
+      Cosultant Recorded Action Items: ${actionItems}
     `;
 
     const config = {
@@ -111,7 +114,7 @@ export class FormJsonService {
         const actionResultJson = this.cleanAndParseJson(
           actionLlmOutput.messageContent.content,
         );
-        this.validateActionItemsJson(actionResultJson);
+        validateActionItemsJson(actionResultJson);
         this.logger.debug(
           `Generated action items JSON: ${JSON.stringify(actionResultJson)}`,
         );
@@ -182,29 +185,6 @@ export class FormJsonService {
     } catch (error) {
       this.logger.error(`Failed to parse JSON: ${error.message}`);
       throw new Error('Invalid JSON format received from LLM');
-    }
-  }
-  private validateFormJson(data: any): asserts data is FormJson {
-    const requiredKeys = [
-      'consultant_role',
-      'consultant_name',
-      'primary_client_name',
-      'primary_client_role',
-      'DD',
-      'KC1',
-      'KC2',
-      'PO',
-      'company_name',
-    ];
-    const missingKeys = requiredKeys.filter((key) => !(key in data));
-    if (missingKeys.length > 0) {
-      throw new Error(`Form JSON is missing keys: ${missingKeys.join(', ')}`);
-    }
-  }
-
-  private validateActionItemsJson(data: any): asserts data is ActionItemsJson {
-    if (!data.action_items || !Array.isArray(data.action_items)) {
-      throw new Error('Action Items JSON is missing the "action_items" array');
     }
   }
 }

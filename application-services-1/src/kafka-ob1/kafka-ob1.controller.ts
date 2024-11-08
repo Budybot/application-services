@@ -197,7 +197,7 @@ export class KafkaOb1Controller implements OnModuleInit {
       // Define content generation rules for different page names
       const contentGenerationRules = {
         'OB1-pages-filterPage1': ['SOW', 'Email'],
-        'OB1-pages-inputPage2': [], // ['Email'],
+        'OB1-pages-inputPage2': ['Email'],
         // Add other pageNames and content types as needed
       };
       const contentTypesToGenerate = contentGenerationRules[pageName] || [];

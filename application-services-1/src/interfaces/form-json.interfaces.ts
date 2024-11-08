@@ -14,3 +14,28 @@ export interface FormJson {
 export interface ActionItemsJson {
   action_items: string[];
 }
+export function validateFormJson(data: any): asserts data is FormJson {
+  const requiredKeys = [
+    'consultant_role',
+    'consultant_name',
+    'primary_client_name',
+    'primary_client_role',
+    'DD',
+    'KC1',
+    'KC2',
+    'PO',
+    'company_name',
+  ];
+  const missingKeys = requiredKeys.filter((key) => !(key in data));
+  if (missingKeys.length > 0) {
+    throw new Error(`Form JSON is missing keys: ${missingKeys.join(', ')}`);
+  }
+}
+
+export function validateActionItemsJson(
+  data: any,
+): asserts data is ActionItemsJson {
+  if (!data.action_items || !Array.isArray(data.action_items)) {
+    throw new Error('Action Items JSON is missing the "action_items" array');
+  }
+}
