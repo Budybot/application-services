@@ -43,13 +43,12 @@ export class AgentServiceRequest {
       this.logger.error(`Validation failed: ${validationError.message}`);
       throw new Error('Invalid request data; please check your input');
     }
-    this.logger.log(
-      'Sending request to LLM service with the following payload:',
-    );
-    this.logger.debug(`System Prompt: ${systemPrompt}`);
-    this.logger.debug(`Config: ${JSON.stringify(config)}`);
-    this.logger.debug(`Instance Name: ${instanceName}, User ID: ${messageKey}`);
-
+    // this.logger.log(
+    //   'Sending request to LLM service with the following payload:',
+    // );
+    // this.logger.debug(`System Prompt: ${systemPrompt}`);
+    // this.logger.debug(`Config: ${JSON.stringify(config)}`);
+    // this.logger.debug(`Instance Name: ${instanceName}, User ID: ${messageKey}`);
 
     try {
       const response = await this.kafkaOb1Service.sendRequest(
