@@ -24,6 +24,7 @@ export class SowSectionService {
         - **Project Scope**
         - **Roles and Responsibilities**
         - **Desired Deliverables**
+        - **Timeline and Milestones**
 
         Please parse the document below into these sections and return each as a map in JSON format where the keys are the section titles and the values are the corresponding section contents. If any section is missing, please leave it empty.
 
@@ -37,6 +38,7 @@ export class SowSectionService {
           "Project Scope": "Content here...",
           "Roles and Responsibilities": "Content here...",
           "Desired Deliverables": "Content here..."
+          "Timeline and Milestones": "Content here..."
         }
       `;
 

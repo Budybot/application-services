@@ -52,7 +52,7 @@ export class SowUpdateService {
       const scopeAnalysisResponse =
         await this.agentServiceRequest.sendAgentRequest(
           scopeAnalysisPrompt,
-        'Return scope analysis based on the provided questions.',
+          'Return scope analysis based on the provided questions.',
           {
             provider: 'openai',
             model: 'gpt-4o-mini',
@@ -123,26 +123,28 @@ export class SowUpdateService {
       `;
 
       const sowUpdatePrompt = `
-        Update the Statement of Work (SOW) based on recent project insights. Integrate any changes in scope, objectives, and timeline using the following:
-        
-        Meeting Summary: ${combinedMeetingAnalysis}
-        Project Objectives and Key Challenges: ${objectivesChallenges}
-        Project Scope: ${projectScope}
-        
-        SOW Structure:
-        1. Project Overview
-        2. Project Objectives and Key Challenges
-        3. Project Scope
-        4. Desired Deliverables
-        5. Timeline and Milestones
+      Update the Statement of Work (SOW) based on recent project insights. Only return sections with changes.
+      
+      Meeting Summary: ${combinedMeetingAnalysis}
+      Project Objectives and Key Challenges: ${objectivesChallenges}
+      Project Scope: ${projectScope}
+      Desired Deliverables: ${desiredDeliverables}
 
-        If sections have no changes, state “no change.”
+      SOW Structure:
+      1. Project Overview
+      2. Project Objectives and Key Challenges
+      3. Project Scope
+      4. Desired Deliverables
+      5. Timeline and Milestones
+
+      If sections have no changes, omit them or state "no change".
       `;
 
       this.logger.log(`Generating updated SOW based on meeting analysis`);
+      // Step 1: Send prompt to LLM
       const sowResponse = await this.agentServiceRequest.sendAgentRequest(
         sowUpdatePrompt,
-        'Return the updated SOW content.',
+        'Return the updated SOW content only without any other comments.',
         {
           provider: 'openai',
           model: 'gpt-4o-mini',
@@ -155,11 +157,48 @@ export class SowUpdateService {
         userId,
       );
 
-      const updatedSowContent = sowResponse.messageContent?.content;
-      if (!updatedSowContent) {
-        this.logger.error(`Failed to generate updated SOW content`);
-        throw new Error('Error in generating updated SOW content');
+      // Step 2: Parse the LLM response to extract only updated sections
+      const updatedSections = sowResponse.messageContent?.content
+        ? JSON.parse(
+            sowResponse.messageContent.content
+              .replace(/```json|```/g, '')
+              .trim(),
+          )
+        : {};
+      if (!updatedSections || Object.keys(updatedSections).length === 0) {
+        this.logger.warn('No changes detected in SOW update');
+        return existingSowContent; // Return the original content if no updates
       }
+      // Step 3: Replace the relevant sections with updated content
+      for (const section in updatedSections) {
+        if (
+          updatedSections[section] &&
+          updatedSections[section] !== 'no change'
+        ) {
+          sowSections[section] = updatedSections[section];
+        }
+      }
+      // Step 4: Reassemble the SOW
+      const sectionOrder = [
+        'Project Overview',
+        'Project Objectives and Key Challenges',
+        'Project Scope',
+        'Desired Deliverables',
+        'Timeline and Milestones',
+      ];
+      let updatedSowContent = '**Statement of Work (SOW)**\n\n';
+
+      for (const section of sectionOrder) {
+        if (sowSections[section]) {
+          updatedSowContent += `## **${section}**\n${sowSections[section]}\n\n`;
+        }
+      }
+
+      // const updatedSowContent = sowResponse.messageContent?.content;
+      // if (!updatedSowContent) {
+      //   this.logger.error(`Failed to generate updated SOW content`);
+      //   throw new Error('Error in generating updated SOW content');
+      // }
 
       this.logger.log(
         `Successfully generated updated SOW for project ${pageName}`,
