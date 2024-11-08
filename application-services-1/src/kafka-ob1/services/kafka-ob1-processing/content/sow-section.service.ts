@@ -59,10 +59,13 @@ export class SowSectionService {
         userId,
       );
 
-      // Parse response to extract sections map
-      const sectionsMap = response.messageContent?.content
-        ? JSON.parse(response.messageContent.content)
-        : null;
+      // Clean and parse the response
+      let cleanedContent = response.messageContent?.content || '';
+
+      // Remove ```json and ``` if they exist
+      cleanedContent = cleanedContent.replace(/```json|```/g, '').trim();
+
+      const sectionsMap = JSON.parse(cleanedContent);
 
       if (!sectionsMap) {
         this.logger.error('Failed to retrieve SOW sections map.');
