@@ -45,10 +45,12 @@ export class SowUpdateService {
         
         If there are additional relevant factors not covered above, please include them in your analysis. For each point, if there is no change, simply state “no change,” and if it was not discussed, simply state "not discussed."
       `;
+      const testPrompt = `Let's generate a meeting analysis for the SOW update on ${pageName}`;
 
       this.logger.log(`Running meeting analysis for SOW update on ${pageName}`);
       const analysisResponse = await this.agentServiceRequest.sendAgentRequest(
-        meetingAnalysisPrompt,
+        // meetingAnalysisPrompt,
+        testPrompt,
         'Return meeting analysis with answers to the outlined questions.',
         {
           provider: 'openai',
