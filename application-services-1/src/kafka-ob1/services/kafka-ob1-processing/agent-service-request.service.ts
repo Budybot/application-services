@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { KafkaOb1Service } from 'src/kafka-ob1/kafka-ob1.service';
-import { AgentServiceRequestBody, validateAgentServiceRequestBody } from 'src/interfaces/ob1-message.interfaces';
+import { validateAgentServiceRequestBody } from 'src/interfaces/agent-service.interfaces';
 
 @Injectable()
 export class AgentServiceRequest {
@@ -36,7 +36,9 @@ export class AgentServiceRequest {
     };
 
     try {
-      validateAgentServiceRequestBody(messageInput);
+      validateAgentServiceRequestBody(
+        messageInput.messageContent.functionInput,
+      );
     } catch (validationError) {
       this.logger.error(`Validation failed: ${validationError.message}`);
       throw new Error('Invalid request data; please check your input');

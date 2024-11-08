@@ -19,8 +19,6 @@ export interface AgentServiceRequestBody {
   systemPrompt: string;
   userPrompt: string;
   config: LLMConfig;
-  instanceName: string;
-  userEmail: string;
 }
 
 // Function to validate required fields in LLMConfig
@@ -45,13 +43,7 @@ export function validateLLMConfig(config: LLMConfig): void {
 export function validateAgentServiceRequestBody(
   requestBody: AgentServiceRequestBody,
 ): void {
-  const requiredFields = [
-    'systemPrompt',
-    'userPrompt',
-    'config',
-    'instanceName',
-    'userEmail',
-  ];
+  const requiredFields = ['systemPrompt', 'userPrompt', 'config'];
   requiredFields.forEach((field) => {
     if (requestBody[field] === undefined || requestBody[field] === null) {
       logger.error(
