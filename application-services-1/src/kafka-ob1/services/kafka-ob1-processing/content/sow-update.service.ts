@@ -77,7 +77,7 @@ export class SowUpdateService {
         Based on recent client discussions, assess any changes or updates affecting the project timeline:
         • Meeting Transcript: ${pageContent.transcript}
         • Current Action Items: ${pageContent.action_items}
-        • Completed Action Items from Previous Call: ${pageContent.completed_action_items}
+        • Completed Action Items from Previous Call: ${pageContent.action_items_completed}
         • Desired Deliverables: ${desiredDeliverables}
         
         Answer the following:
@@ -126,16 +126,21 @@ export class SowUpdateService {
       Update the Statement of Work (SOW) based on recent project insights. Only return sections with changes.
       
       Meeting Summary: ${combinedMeetingAnalysis}
-      Project Objectives and Key Challenges: ${objectivesChallenges}
-      Project Scope: ${projectScope}
-      Desired Deliverables: ${desiredDeliverables}
+      Existing SOW: ${existingSowContent}
 
       SOW Structure:
       1. Project Overview
-      2. Project Objectives and Key Challenges
-      3. Project Scope
-      4. Desired Deliverables
-      5. Timeline and Milestones
+      2. Project Objectives
+      3. Key Challenges
+      4. Project Scope
+      5. Desired Deliverables
+      6. Timeline and Milestones
+
+      Return a JSON of the format:
+      {
+        sectionName : {"add": "new content", "remove": "old content"},
+        ...
+      }
 
       If sections have no changes, omit them or state "no change".
       `;
@@ -161,44 +166,96 @@ export class SowUpdateService {
         this.logger.warn('No updates detected in SOW');
         return existingSowContent;
       }
-      // Step 2: Parse the LLM response to extract only updated sections
-      const updatedSections = await this.sowSectionService.splitSowIntoSections(
-        instanceName,
-        userId,
-        updatedSowContent,
-      );
-      // Step 3: Replace the relevant sections with updated content
-      for (const section in updatedSections) {
-        if (
-          updatedSections[section] &&
-          updatedSections[section] !== 'no change'
-        ) {
-          sowSections[section] = updatedSections[section];
+      // Step 1: Clean and parse the JSON response
+      const parsedUpdate = this.cleanAndParseJson(updatedSowContent);
+
+      // Step 3: Apply updates to existing sections or add new sections
+      for (const [section, changes] of Object.entries(parsedUpdate) as [
+        string,
+        { add?: string; remove?: string; update?: string },
+      ][]) {
+        if (sowSections[section]) {
+          // Existing section: apply add/remove logic
+          if (changes.add) sowSections[section] += ` ${changes.add}`;
+          if (changes.remove)
+            sowSections[section] = sowSections[section].replace(
+              changes.remove,
+              '',
+            );
+          if (changes.update) sowSections[section] = changes.update;
+        } else {
+          // New section: add it entirely
+          sowSections[section] = changes.add || changes.update || '';
         }
       }
-      // Step 4: Reassemble the SOW
+      // Step 4: Reassemble the final SOW content
       const sectionOrder = [
         'Project Overview',
-        'Project Objectives and Key Challenges',
+        'Project Objectives',
+        'Key Challenges',
         'Project Scope',
         'Desired Deliverables',
         'Timeline and Milestones',
       ];
-      let finalSowContent = '**Statement of Work (SOW)**\n\n';
 
+      let finalSowContent = '**Statement of Work (SOW)**\n\n';
       for (const section of sectionOrder) {
         if (sowSections[section]) {
           finalSowContent += `## **${section}**\n${sowSections[section]}\n\n`;
         }
       }
-
       this.logger.log(
         `Successfully generated updated SOW for project ${pageName}`,
       );
       return finalSowContent;
+
+      // // Step 2: Parse the LLM response to extract only updated sections
+      // const updatedSections = await this.sowSectionService.splitSowIntoSections(
+      //   instanceName,
+      //   userId,
+      //   updatedSowContent,
+      // );
+      // // Step 3: Replace the relevant sections with updated content
+      // for (const section in updatedSections) {
+      //   if (
+      //     updatedSections[section] &&
+      //     updatedSections[section] !== 'no change'
+      //   ) {
+      //     sowSections[section] = updatedSections[section];
+      //   }
+      // }
+      // // Step 4: Reassemble the SOW
+      // const sectionOrder = [
+      //   'Project Overview',
+      //   'Project Objectives and Key Challenges',
+      //   'Project Scope',
+      //   'Desired Deliverables',
+      //   'Timeline and Milestones',
+      // ];
+      // let finalSowContent = '**Statement of Work (SOW)**\n\n';
+
+      // for (const section of sectionOrder) {
+      //   if (sowSections[section]) {
+      //     finalSowContent += `## **${section}**\n${sowSections[section]}\n\n`;
+      //   }
+      // }
+
+      // this.logger.log(
+      //   `Successfully generated updated SOW for project ${pageName}`,
+      // );
+      // return finalSowContent;
     } catch (error) {
       this.logger.error(`Error in updating SOW: ${error.message}`);
       throw new Error('Failed to update SOW');
+    }
+  }
+  private cleanAndParseJson(output: string): any {
+    try {
+      const sanitizedOutput = output.replace(/```json|```/g, '').trim();
+      return JSON.parse(sanitizedOutput);
+    } catch (error) {
+      this.logger.error(`Failed to parse JSON: ${error.message}`);
+      throw new Error('Invalid JSON format received from LLM');
     }
   }
 }

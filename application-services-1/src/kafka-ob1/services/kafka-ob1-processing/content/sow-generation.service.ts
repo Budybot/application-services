@@ -63,24 +63,25 @@ export class SowGenerationService {
       Project Title
       Project Background
       
-      2. Project Objectives and Key Challenges:
+      2. Project Objectives:
 
-      Project Objectives
-      Key Challenges
-      [Bullet points for each objective/challenge identified]
+      [Bullet points for each objective identified]
       
-      3. Project Scope:
+      3. Key Challenges
+      [Bullet points for each challenge identified]
+      
+      4. Project Scope:
 
       Current process evaluation
       Process co-design with client
       Iteration on solution prototypes
       
-      4. Roles and Responsibilities:
+      5. Roles and Responsibilities:
 
       Consultant Team: Paragraph detailing responsibilities
       Client Team: Paragraph detailing responsibilities
       
-      5. Desired Deliverables:
+      6. Desired Deliverables:
 
       Bullet point list with elements from one or more of the following categories:
       Software system implementation
