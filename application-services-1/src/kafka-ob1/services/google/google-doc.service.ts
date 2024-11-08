@@ -71,9 +71,9 @@ export class GoogleDocService {
     parentFolderId?: string,
   ): Promise<string> {
     try {
-      this.logger.log(
-        `Current OAuth2 Credentials: ${JSON.stringify(this.oAuth2Client.credentials)}`,
-      );
+      // this.logger.log(
+      //   `Current OAuth2 Credentials: ${JSON.stringify(this.oAuth2Client.credentials)}`,
+      // );
 
       // Check if the access token is expired or missing, and refresh if needed
       if (
@@ -100,9 +100,9 @@ export class GoogleDocService {
       };
 
       // Log the request data before making the call
-      this.logger.debug(
-        `Folder creation request data: ${JSON.stringify(folderMetadata)}`,
-      );
+      // this.logger.debug(
+      //   `Folder creation request data: ${JSON.stringify(folderMetadata)}`,
+      // );
 
       // Create the folder in Google Drive
       const folder = await driveService.files.create({
@@ -164,7 +164,7 @@ export class GoogleDocService {
           removeParents: previousParents,
           fields: 'id, parents',
         });
-        this.logger.log(`Document moved to folder ID: ${folderId}`);
+        this.logger.debug(`Document moved to folder ID: ${folderId}`);
       }
 
       // Step 3: Share the Document (Optional)

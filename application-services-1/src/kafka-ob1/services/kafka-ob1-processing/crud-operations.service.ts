@@ -41,7 +41,7 @@ export class CrudOperationsService {
       this.logger.log(
         `Fetched data from table ${tableEntity} for project ${projectName}`,
       );
-      this.logger.debug(response);
+      // this.logger.debug(response);
       return response;
     } catch (error) {
       this.logger.error(`Error fetching data: ${error.message}`);

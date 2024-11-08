@@ -61,8 +61,8 @@ export class KafkaOb1ProcessingService {
           };
           break;
         case 'page-submitted':
-          this.logger.log('Handling page submitted event');
-          this.logger.debug(`Function input: ${JSON.stringify(functionInput)}`);
+          // this.logger.log('Handling page submitted event');
+          // this.logger.debug(`Function input: ${JSON.stringify(functionInput)}`);
           response = await this.pageSubmittedService.handlePageSubmitted(
             functionInput,
             userEmail,
@@ -71,7 +71,7 @@ export class KafkaOb1ProcessingService {
           break;
         case 'create-project-plan':
           const { projectName } = functionInput;
-          this.logger.log(`Creating project plan for ${projectName}`);
+          // this.logger.log(`Creating project plan for ${projectName}`);
           const projectPlanId =
             await this.createProjectPlanService.createProjectPlan(
               projectName,

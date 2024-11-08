@@ -63,9 +63,9 @@ export class AgentServiceRequest {
         messageKey,
         topic,
       );
-      this.logger.log(
-        `Agent request sent for instance ${instanceName} with user prompt: ${userPrompt}`,
-      );
+      // this.logger.log(
+      //   `Agent request sent for instance ${instanceName} with user prompt: ${userPrompt}`,
+      // );
       this.logger.debug(response);
       return response;
     } catch (error) {

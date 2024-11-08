@@ -47,7 +47,7 @@ export class FormJsonService {
     };
 
     try {
-      this.logger.log('Requesting form JSON generation from LLM...');
+      // this.logger.log('Requesting form JSON generation from LLM...');
       const llmOutput = await this.agentServiceRequest.sendAgentRequest(
         formPrompt,
         'Ensure the output of this call is only JSON.',
@@ -61,7 +61,7 @@ export class FormJsonService {
           llmOutput.messageContent.content,
         );
         validateFormJson(resultJson);
-        this.logger.debug(`Generated form JSON: ${JSON.stringify(resultJson)}`);
+        // this.logger.debug(`Generated form JSON: ${JSON.stringify(resultJson)}`);
         return resultJson;
       } else {
         throw new Error(`Invalid response: ${JSON.stringify(llmOutput)}`);
@@ -101,7 +101,7 @@ export class FormJsonService {
     };
 
     try {
-      this.logger.log('Requesting action items JSON generation from LLM...');
+      // this.logger.log('Requesting action items JSON generation from LLM...');
       const actionLlmOutput = await this.agentServiceRequest.sendAgentRequest(
         actionPrompt,
         'Ensure the output of this call is only JSON.',
@@ -115,9 +115,9 @@ export class FormJsonService {
           actionLlmOutput.messageContent.content,
         );
         validateActionItemsJson(actionResultJson);
-        this.logger.debug(
-          `Generated action items JSON: ${JSON.stringify(actionResultJson)}`,
-        );
+        // this.logger.debug(
+        //   `Generated action items JSON: ${JSON.stringify(actionResultJson)}`,
+        // );
         return actionResultJson;
       } else {
         throw new Error(`Invalid response: ${JSON.stringify(actionLlmOutput)}`);
@@ -162,9 +162,9 @@ export class FormJsonService {
       );
 
       const combinedOutput = { ...llmOutput, ...actionLlmOutput };
-      this.logger.log(
-        `Processed JSON result: ${JSON.stringify(combinedOutput)}`,
-      );
+      // this.logger.log(
+      //   `Processed JSON result: ${JSON.stringify(combinedOutput)}`,
+      // );
       return combinedOutput;
     } catch (error) {
       this.logger.error(

@@ -85,9 +85,9 @@ export class EmailGenerationService {
       };
 
       try {
-        this.logger.log(
-          'Requesting email generation from AgentServiceRequest...',
-        );
+        // this.logger.log(
+        //   'Requesting email generation from AgentServiceRequest...',
+        // );
         const response = await this.agentServiceRequest.sendAgentRequest(
           systemPrompt,
           'Only return the email and nothing else',
@@ -97,7 +97,7 @@ export class EmailGenerationService {
         );
         if (response?.messageContent?.content) {
           const generatedEmail = response.messageContent.content;
-          this.logger.debug(`Generated email: ${generatedEmail}`);
+          // this.logger.debug(`Generated email: ${generatedEmail}`);
           return generatedEmail;
         } else {
           throw new Error(`Invalid response: ${JSON.stringify(response)}`);
@@ -175,7 +175,7 @@ export class EmailGenerationService {
       };
 
       try {
-        this.logger.log('Requesting email generation for inputPage2...');
+        // this.logger.log('Requesting email generation for inputPage2...');
         const response = await this.agentServiceRequest.sendAgentRequest(
           inputPage2Prompt,
           'Only return the email and nothing else.',
@@ -186,9 +186,9 @@ export class EmailGenerationService {
 
         if (response?.messageContent?.content) {
           const generatedEmail = response.messageContent.content;
-          this.logger.debug(
-            `Generated email for inputPage2: ${generatedEmail}`,
-          );
+          // this.logger.debug(
+          //   `Generated email for inputPage2: ${generatedEmail}`,
+          // );
           return generatedEmail;
         } else {
           throw new Error(`Invalid response: ${JSON.stringify(response)}`);

@@ -38,9 +38,9 @@ export class CleanTranscriptService {
       presencePenalty: 0,
     };
     try {
-      this.logger.log(
-        'Requesting cleaned transcript from AgentServiceRequest...',
-      );
+      // this.logger.log(
+      //   'Requesting cleaned transcript from AgentServiceRequest...',
+      // );
       const response = await this.agentServiceRequest.sendAgentRequest(
         systemPrompt,
         transcriptWithoutTimestamps,
@@ -67,9 +67,9 @@ export class CleanTranscriptService {
     const transcriptWithoutTimestamps = transcript
       .replace(timestampRegex, '')
       .trim();
-    this.logger.debug(
-      `Transcript without timestamps: ${transcriptWithoutTimestamps}`,
-    );
+    // this.logger.debug(
+    //   `Transcript without timestamps: ${transcriptWithoutTimestamps}`,
+    // );
     return transcriptWithoutTimestamps;
   }
 }

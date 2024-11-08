@@ -28,9 +28,9 @@ export class PageSubmittedService {
 
     try {
       // Fetch data from Postgres
-      this.logger.log(
-        `Fetching data from ${tableEntity} for project ${projectName}`,
-      );
+      // this.logger.log(
+      //   `Fetching data from ${tableEntity} for project ${projectName}`,
+      // );
       const fetchDataResponse = await this.crudOperationsService.fetchData(
         tableEntity,
         projectName,
@@ -52,9 +52,9 @@ export class PageSubmittedService {
       // Decide action based on tableEntity
       if (tableEntity === 'OB1-pages-inputPage1') {
         // Call LLM service to generate form JSON
-        this.logger.log(
-          `Generating form JSON using LLM for project ${projectName}`,
-        );
+        // this.logger.log(
+        //   `Generating form JSON using LLM for project ${projectName}`,
+        // );
         const generatedFormJson =
           await this.formJsonService.generateCombinedJson(
             pageData.transcript,
@@ -65,9 +65,9 @@ export class PageSubmittedService {
             projectName,
           );
         // Post the generated form JSON to the next page
-        this.logger.log(
-          `Posting generated form JSON to OB1-pages-filterPage1 for project ${projectName}`,
-        );
+        // this.logger.log(
+        //   `Posting generated form JSON to OB1-pages-filterPage1 for project ${projectName}`,
+        // );
         return await this.crudOperationsService.postData(
           'OB1-pages-filterPage1',
           projectName,

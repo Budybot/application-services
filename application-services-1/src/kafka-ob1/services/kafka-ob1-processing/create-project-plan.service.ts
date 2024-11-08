@@ -22,9 +22,9 @@ export class CreateProjectPlanService {
 
     try {
       // Step 1: Fetch data from Postgres
-      this.logger.log(
-        `Fetching data from ${tableEntity} for project ${projectName}`,
-      );
+      // this.logger.log(
+      //   `Fetching data from ${tableEntity} for project ${projectName}`,
+      // );
       const fetchDataResponse = await this.crudOperationsService.fetchData(
         tableEntity,
         projectName,
@@ -40,9 +40,9 @@ export class CreateProjectPlanService {
       const plannerData = fetchDataResponse.messageContent[0];
 
       // Step 2: Generate Project Planner by calling generateContent from ContentService
-      this.logger.log(
-        `Calling ContentService to generate Project Planner for project ${projectName}`,
-      );
+      // this.logger.log(
+      //   `Calling ContentService to generate Project Planner for project ${projectName}`,
+      // );
       const sheetId = await this.contentService.generateContent(
         projectName,
         instanceName,

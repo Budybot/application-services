@@ -33,9 +33,9 @@ export class CompletedActionItemsService {
     };
 
     try {
-      this.logger.log(
-        `Extracting completed action items for instance ${instanceName}`,
-      );
+      // this.logger.log(
+      //   `Extracting completed action items for instance ${instanceName}`,
+      // );
       const response = await this.agentServiceRequest.sendAgentRequest(
         systemPrompt,
         'Return only the completed action items as a bullet-point list.',

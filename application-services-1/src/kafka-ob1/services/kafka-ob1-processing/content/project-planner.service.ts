@@ -115,9 +115,9 @@ export class ProjectPlannerService {
     };
 
     try {
-      this.logger.log(
-        'Requesting Project Plan generation from AgentServiceRequest...',
-      );
+      // this.logger.log(
+      //   'Requesting Project Plan generation from AgentServiceRequest...',
+      // );
       const response = await this.agentServiceRequest.sendAgentRequest(
         systemPrompt,
         'Ensure the response is in valid JSON format.',
@@ -128,12 +128,11 @@ export class ProjectPlannerService {
 
       if (response?.messageContent?.content) {
         const generatedPlan = response.messageContent.content;
-        this.logger.debug(`Generated Project Plan from LLM: ${generatedPlan}`);
+        // this.logger.debug(`Generated Project Plan from LLM: ${generatedPlan}`);
         // const parsedData = this.parseCsvToArray(generatedPlan);
         const parsedData = this.parseOutputTo2DArray(generatedPlan);
         this.logger.debug(
           `Parsed Project Plan into 2D array format: ${JSON.stringify(parsedData)}`,
-            // `Parsed Project Plan into 2D array format: ${JSON.stringify(generatedPlan)}`,
         );
         // return generatedPlan; 
         return parsedData;

@@ -107,7 +107,7 @@ export class GoogleSheetService {
           addParents: folderId,
           fields: 'id, parents',
         });
-        this.logger.log(`Sheet moved to folder ID: ${folderId}`);
+        this.logger.debug(`Sheet moved to folder ID: ${folderId}`);
       }
 
       // Share the Sheet (Optional)

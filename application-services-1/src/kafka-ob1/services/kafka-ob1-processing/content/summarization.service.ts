@@ -43,7 +43,7 @@ export class SummarizationService {
 
       if (response?.messageContent?.content) {
         const summary = response.messageContent.content;
-        this.logger.debug(`Generated ${sectionName} summary: ${summary}`);
+        // this.logger.debug(`Generated ${sectionName} summary: ${summary}`);
         return summary;
       } else {
         throw new Error(`Invalid response: ${JSON.stringify(response)}`);
@@ -93,9 +93,9 @@ export class SummarizationService {
 
       if (response?.messageContent?.content) {
         const summary = response.messageContent.content;
-        this.logger.debug(
-          `Generated ${sectionName} summary from sheet: ${summary}`,
-        );
+        // this.logger.debug(
+        //   `Generated ${sectionName} summary from sheet: ${summary}`,
+        // );
         return summary;
       } else {
         throw new Error(`Invalid response: ${JSON.stringify(response)}`);

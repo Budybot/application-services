@@ -25,7 +25,7 @@ export class SowGenerationService {
       DD,
       action_items,
     } = sowData;
-    this.logger.debug(`Extracted sowData: ${JSON.stringify(sowData)}`);
+    // this.logger.debug(`Extracted sowData: ${JSON.stringify(sowData)}`);
 
     const sowDetails = {
       consultantName: consultant_name,
@@ -94,7 +94,7 @@ export class SowGenerationService {
     };
 
     try {
-      this.logger.log('Requesting SOW generation from AgentServiceRequest...');
+      // this.logger.log('Requesting SOW generation from AgentServiceRequest...');
       const response = await this.agentServiceRequest.sendAgentRequest(
         systemPrompt,
         'Only return the SOW and nothing else',
@@ -104,7 +104,7 @@ export class SowGenerationService {
       );
       if (response?.messageContent?.content) {
         const generatedSow = response.messageContent.content;
-        this.logger.debug(`Generated SOW: ${generatedSow}`);
+        // this.logger.debug(`Generated SOW: ${generatedSow}`);
         return generatedSow;
       } else {
         throw new Error(`Invalid response: ${JSON.stringify(response)}`);

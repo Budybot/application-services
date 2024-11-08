@@ -42,9 +42,9 @@ export class SowSectionService {
         }
       `;
 
-      this.logger.log(
-        `Requesting SOW split into sections for instance ${instanceName}`,
-      );
+      // this.logger.log(
+      //   `Requesting SOW split into sections for instance ${instanceName}`,
+      // );
 
       const response = await this.agentServiceRequest.sendAgentRequest(
         splitSowPrompt,
