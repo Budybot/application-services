@@ -16,6 +16,9 @@ export class FormJsonService {
     transcript: string,
     consultantInput: string,
     projectDescription: string,
+    projectType: string,
+    userRoles: string,
+    userOrgDescription: string,
     userId: string,
     projectName: string,
   ): Promise<any> {
@@ -30,7 +33,7 @@ export class FormJsonService {
     const formPrompt = `
       You are an AI consultant responsible for documenting and summarizing a recent customer meeting. This summary should be structured in JSON format, using the following exact fields:
       
-      "consultant_role": "primary",
+      "consultant_role": "",
       "consultant_name": "",
       "primary_client_name": "",
       "primary_client_role": "",
@@ -38,12 +41,19 @@ export class FormJsonService {
       "KC1": ["key challenge item 1", "key challenge item 2", "key challenge item 3"],
       "KC2": ["key problem item 1", "key problem item 2", "key problem item 3"],
       "PO": ["objective item 1", "objective item 2", "objective item 3"],
-      "company_name": "Biggest company"
+      "company_name": "",
+      "project_type": "",
       
       Input Details:
       Clean Transcript: ${transcript},
       Consultant Input: ${consultantInput},
-      Project Description: ${projectDescription}
+      Project Description: ${projectDescription},
+      Project Type: ${projectType},
+      User roles: ${userRoles},
+      Client Company Description: ${userOrgDescription},
+
+      
+
     `;
 
     const config = {
@@ -144,6 +154,9 @@ export class FormJsonService {
     transcript: string,
     consultantInput: string,
     projectDescription: string,
+    projectType: string,
+    userRoles: string,
+    userOrgDescription: string,
     actionItems: any,
     userEmail: string,
     projectName: string,
@@ -159,6 +172,9 @@ export class FormJsonService {
         transcript,
         consultantInput,
         projectDescription,
+        projectType,
+        userRoles,
+        userOrgDescription,
         userEmail,
         projectName,
       );
