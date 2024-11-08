@@ -8,7 +8,7 @@ import {
 @Injectable()
 export class FormJsonService {
   private readonly logger = new Logger(FormJsonService.name);
-  private readonly maxTranscriptLength = 5000;
+  private readonly maxTranscriptLength = 1500;
 
   constructor(private readonly agentServiceRequest: AgentServiceRequest) {}
 
