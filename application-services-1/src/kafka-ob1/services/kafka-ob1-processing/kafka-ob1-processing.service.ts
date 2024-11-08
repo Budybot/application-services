@@ -61,6 +61,8 @@ export class KafkaOb1ProcessingService {
           };
           break;
         case 'page-submitted':
+          this.logger.log('Handling page submitted event');
+          this.logger.debug(`Function input: ${JSON.stringify(functionInput)}`);
           response = await this.pageSubmittedService.handlePageSubmitted(
             functionInput,
             userEmail,
