@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SowGenerationService } from './sow-generation.service';
 import { EmailGenerationService } from './email-generation.service';
 import { ProjectPlannerService } from './project-planner.service';
-import { ContentAssetsService } from '../content-assets.service';
+import { ContentAssetsService } from './content-assets.service';
 import { GoogleDocService } from '../../google/google-doc.service';
 import { GoogleSheetService } from '../../google/google-sheet.service';
 import { SowUpdateService } from './sow-update.service';

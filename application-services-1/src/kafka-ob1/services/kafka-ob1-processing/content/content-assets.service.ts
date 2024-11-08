@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { CrudOperationsService } from './crud-operations.service';
+import { CrudOperationsService } from '../crud-operations.service';
 
 @Injectable()
 export class ContentAssetsService {

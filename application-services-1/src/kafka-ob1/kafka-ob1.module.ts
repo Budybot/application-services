@@ -5,24 +5,25 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { KafkaOb1Controller } from './kafka-ob1.controller';
 import { KafkaOb1ProcessingService } from './services/kafka-ob1-processing/kafka-ob1-processing.service';
 import { CrudOperationsService } from './services/kafka-ob1-processing/crud-operations.service';
-import { PageSubmittedService } from './services/kafka-ob1-processing/page-submitted.service';
-import { CleanTranscriptService } from './services/kafka-ob1-processing/clean-transcript.service';
-import { GetParticipantsService } from './services/kafka-ob1-processing/get-participants.service';
+import { PageSubmittedService } from './services/kafka-ob1-processing/functions/page-submitted.service';
+import { CleanTranscriptService } from './services/kafka-ob1-processing/functions/clean-transcript.service';
+import { GetParticipantsService } from './services/kafka-ob1-processing/functions/get-participants.service';
 import { AgentServiceRequest } from './services/kafka-ob1-processing/agent-service-request.service';
 import { KafkaOb1Service } from './kafka-ob1.service';
 import { SowGenerationService } from './services/kafka-ob1-processing/content/sow-generation.service';
-import { ContentAssetsService } from './services/kafka-ob1-processing/content-assets.service';
+import { ContentAssetsService } from './services/kafka-ob1-processing/content/content-assets.service';
 import { ContentService } from './services/kafka-ob1-processing/content/content.service';
 import { GoogleDocService } from './services/google/google-doc.service';
 import { GoogleSheetService } from './services/google/google-sheet.service';
 import { FormJsonService } from './services/kafka-ob1-processing/content/form-json.service';
 import { EmailGenerationService } from './services/kafka-ob1-processing/content/email-generation.service';
 import { ProjectPlannerService } from './services/kafka-ob1-processing/content/project-planner.service';
-import { CreateProjectPlanService } from './services/kafka-ob1-processing/create-project-plan.service';
+import { CreateProjectPlanService } from './services/kafka-ob1-processing/functions/create-project-plan.service';
 import { SowUpdateService } from './services/kafka-ob1-processing/content/sow-update.service';
 import { SummarizationService } from './services/kafka-ob1-processing/content/summarization.service';
-import { CompletedActionItemsService } from './services/kafka-ob1-processing/completed-action-items.service';
+import { CompletedActionItemsService } from './services/kafka-ob1-processing/functions/completed-action-items.service';
 import { SowSectionService } from './services/kafka-ob1-processing/content/sow-section.service';
+import { SyncAssetsService } from './services/kafka-ob1-processing/functions/sync-assets.service';
 @Module({
   imports: [
     HttpModule,
@@ -69,6 +70,7 @@ import { SowSectionService } from './services/kafka-ob1-processing/content/sow-s
     SummarizationService,
     CompletedActionItemsService,
     SowSectionService,
+    SyncAssetsService,
   ],
   controllers: [KafkaOb1Controller],
 })

@@ -1,12 +1,12 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { CrudOperationsService } from './crud-operations.service';
+import { CrudOperationsService } from '../crud-operations.service';
 import { ClientKafka } from '@nestjs/microservices';
 import {
   OB1MessageValue,
   OB1MessageHeader,
   CURRENT_SCHEMA_VERSION,
 } from 'src/interfaces/ob1-message.interfaces';
-import { FormJsonService } from './content/form-json.service';
+import { FormJsonService } from '../content/form-json.service';
 
 @Injectable()
 export class PageSubmittedService {

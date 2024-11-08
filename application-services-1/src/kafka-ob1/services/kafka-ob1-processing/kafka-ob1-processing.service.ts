@@ -1,30 +1,28 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-// import { CrudOperationsService } from './crud-operations.service';
 import {
   OB1MessageValue,
 //   OB1MessageHeader,
 } from 'src/interfaces/ob1-message.interfaces';
 // import { ClientKafka } from '@nestjs/microservices';
 import { KafkaContext } from '@nestjs/microservices';
-// import { LlmFormGenerationService } from './llm-services/llm-form-generation.service';
-import { CleanTranscriptService } from './clean-transcript.service';
-import { GetParticipantsService } from './get-participants.service';
-import { PageSubmittedService } from './page-submitted.service';
-import { CreateProjectPlanService } from './create-project-plan.service';
-import { CompletedActionItemsService } from './completed-action-items.service';
+import { CleanTranscriptService } from './functions/clean-transcript.service';
+import { GetParticipantsService } from './functions/get-participants.service';
+import { PageSubmittedService } from './functions/page-submitted.service';
+import { CreateProjectPlanService } from './functions/create-project-plan.service';
+import { CompletedActionItemsService } from './functions/completed-action-items.service';
+import { SyncAssetsService } from './functions/sync-assets.service';
 
 @Injectable()
 export class KafkaOb1ProcessingService {
   private readonly logger = new Logger(KafkaOb1ProcessingService.name);
 
   constructor(
-    // private readonly crudOperationsService: CrudOperationsService,
-    // private readonly llmFormGenerationService: LlmFormGenerationService,
     private readonly cleanTranscriptService: CleanTranscriptService,
     private readonly getParticipantsService: GetParticipantsService,
     private readonly pageSubmittedService: PageSubmittedService,
     private readonly createProjectPlanService: CreateProjectPlanService,
     private readonly completedActionItemsService: CompletedActionItemsService,
+    private readonly syncAssetsService: SyncAssetsService,
     // @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
   ) {}
 
@@ -92,6 +90,19 @@ export class KafkaOb1ProcessingService {
             );
           response = {
             messageContent: { completedActions: completedActionItems },
+          };
+          break;
+        case 'sync-assets':
+          const { syncTo, syncFrom } = functionInput;
+          const syncResult = await this.syncAssetsService.syncAssets(
+            syncTo,
+            syncFrom,
+            functionInput.projectName,
+            instanceName,
+            userEmail,
+          );
+          response = {
+            messageContent: { syncResult: syncResult },
           };
           break;
         default:

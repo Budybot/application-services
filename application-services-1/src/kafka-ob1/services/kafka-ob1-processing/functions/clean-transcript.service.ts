@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AgentServiceRequest } from './agent-service-request.service';
+import { AgentServiceRequest } from '../agent-service-request.service';
 
 @Injectable()
 export class CleanTranscriptService {

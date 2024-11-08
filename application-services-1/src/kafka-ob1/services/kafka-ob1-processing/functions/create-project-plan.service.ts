@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { CrudOperationsService } from './crud-operations.service';
-import { ContentService } from './content/content.service';
-import { SowUpdateService } from './content/sow-update.service';
+import { CrudOperationsService } from '../crud-operations.service';
+import { ContentService } from '../content/content.service';
+import { SowUpdateService } from '../content/sow-update.service';
 
 @Injectable()
 export class CreateProjectPlanService {
