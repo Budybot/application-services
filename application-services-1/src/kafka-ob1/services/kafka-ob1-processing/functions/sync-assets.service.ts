@@ -85,6 +85,7 @@ export class SyncAssetsService {
         Project Planner Data: ${JSON.stringify(syncToContent)}
         
         Provide a very brief analysis that highlights only the key points, specifically indicating any items that need to be added, removed, or adjusted. Your response should focus on actionable changes, such as specific deliverables or timeline items that are missing, misaligned, or redundant, to guide a precise update of the Project Planner.
+        Do not add any formatting or additional content to the response. Just provide a concise analysis of the differences using bullet points or short sentences.
       `;
 
       const comparisonResponse =
