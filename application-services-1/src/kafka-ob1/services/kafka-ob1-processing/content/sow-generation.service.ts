@@ -58,25 +58,29 @@ export class SowGenerationService {
 
       SOW Structure:
 
-      Project Overview:
+      1. Project Overview:
 
       Project Title
       Project Background
-      Project Objectives and Key Challenges:
+      
+      2. Project Objectives and Key Challenges:
 
-      Bullet points for each objective/challenge identified
-      Project Scope:
+      Project Objectives
+      Key Challenges
+      [Bullet points for each objective/challenge identified]
+      
+      3. Project Scope:
 
       Current process evaluation
       Process co-design with client
       Iteration on solution prototypes
       
-      Roles and Responsibilities:
+      4. Roles and Responsibilities:
 
       Consultant Team: Paragraph detailing responsibilities
       Client Team: Paragraph detailing responsibilities
-      Collaboration: Paragraph defining how communication and collaboration will work
-      Desired Deliverables:
+      
+      5. Desired Deliverables:
 
       Bullet point list with elements from one or more of the following categories:
       Software system implementation
