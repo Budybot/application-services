@@ -77,7 +77,8 @@ export class EmailGenerationService {
             3b Actions for the primary user
             3c Actions for any additional parties
         4. Closing: End with a thank you, reiterating your commitment to supporting their needs, and propose a time for the next meeting based on the available slots.
-      `;
+        "Please structure the email with titles as specified but exclude any numbering or labels like 'Body:', '1. Opening:', etc."
+        `;
 
       const config = {
         provider: 'openai',
