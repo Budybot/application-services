@@ -58,8 +58,8 @@ export class SowUpdateService {
           frequencyPenalty: 0,
           presencePenalty: 0,
         },
-        pageContent.instanceName,
-        pageContent.userEmail,
+        instanceName,
+        userId,
       );
 
       const meetingAnalysis = analysisResponse.messageContent?.content;
