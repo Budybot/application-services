@@ -95,7 +95,7 @@ export class FormJsonService {
       provider: 'openai',
       model: 'gpt-4o-mini',
       temperature: 0.25,
-      maxTokens: 2048,
+      maxTokens: 4096,
       frequencyPenalty: 0,
       presencePenalty: 0,
     };
@@ -139,11 +139,11 @@ export class FormJsonService {
     userEmail: string,
     projectName: string,
   ): Promise<any> {
-    this.logger.debug(`Action Items: ${JSON.stringify(actionItems)}`);
-    this.logger.debug(`Transcript: ${transcript}`);
-    this.logger.debug(`Consultant Input: ${consultantInput}`);
-    this.logger.debug(`Project Description: ${projectDescription}`);
-    this.logger.debug(`User Email: ${userEmail}`);
+    // this.logger.debug(`Action Items: ${JSON.stringify(actionItems)}`);
+    // this.logger.debug(`Transcript: ${transcript}`);
+    // this.logger.debug(`Consultant Input: ${consultantInput}`);
+    // this.logger.debug(`Project Description: ${projectDescription}`);
+    // this.logger.debug(`User Email: ${userEmail}`);
     try {
       // Call your LLM function here
       const llmOutput = await this.generateFormJson(
