@@ -84,7 +84,7 @@ export class SyncAssetsService {
         
         Project Planner Data: ${JSON.stringify(syncToContent)}
         
-        Identify discrepancies and suggest updates to align Project Planner with SOW.
+        Provide a very brief analysis that highlights only the key points, specifically indicating any items that need to be added, removed, or adjusted. Your response should focus on actionable changes, such as specific deliverables or timeline items that are missing, misaligned, or redundant, to guide a precise update of the Project Planner.
       `;
 
       const comparisonResponse =
