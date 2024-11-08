@@ -80,7 +80,7 @@ export class KafkaOb1ProcessingService {
             messageContent: { projectPlanId: projectPlanId },
           };
           break;
-        case 'completed-action-items':
+        case 'completed-actions':
           const { transcript } = functionInput;
           const completedActionItems =
             await this.completedActionItemsService.extractCompletedActionItems(
@@ -89,7 +89,7 @@ export class KafkaOb1ProcessingService {
               transcript,
             );
           response = {
-            messageContent: { completedActionItems: completedActionItems },
+            messageContent: { completedActions: completedActionItems },
           };
           break;
         default:
