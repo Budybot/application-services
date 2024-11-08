@@ -172,6 +172,8 @@ export class ContentService {
       if (contentType === 'SOW') {
         this.logger.log(`Updating SOW content for project: ${projectName}`);
         updatedContent = await this.sowUpdateService.updateSow(
+          instanceName,
+          userEmail,
           existingContent,
           contentData.sowData,
           contentData.pageName,

@@ -9,6 +9,8 @@ export class SowUpdateService {
 
   // Update SOW with insights from meeting analysis
   async updateSow(
+    instanceName: string,
+    userId: string,
     existingSowContent: string,
     pageContent: any,
     pageName: string,
@@ -106,8 +108,8 @@ export class SowUpdateService {
           frequencyPenalty: 0,
           presencePenalty: 0,
         },
-        pageContent.instanceName,
-        pageContent.userEmail,
+        instanceName,
+        userId,
       );
 
       const updatedSowContent = sowResponse.messageContent?.content;
