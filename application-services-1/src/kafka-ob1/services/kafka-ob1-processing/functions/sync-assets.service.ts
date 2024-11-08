@@ -139,6 +139,7 @@ export class SyncAssetsService {
         this.logger.error(`Failed to generate updated Project Planner content`);
         throw new Error('Error in generating updated Project Planner');
       }
+      updatedOutput = updatedOutput.replace(/```json|```/g, '').trim();
     }
 
     // Step 7: Rewrite syncTo asset with updatedOutput
