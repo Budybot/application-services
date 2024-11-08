@@ -1,13 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AgentServiceRequest } from '../agent-service-request.service';
+import { SowSectionService } from './sow-section.service';
 
 @Injectable()
 export class SowUpdateService {
   private readonly logger = new Logger(SowUpdateService.name);
 
-  constructor(private readonly agentServiceRequest: AgentServiceRequest) {}
+  constructor(
+    private readonly agentServiceRequest: AgentServiceRequest,
+    private readonly sowSectionService: SowSectionService,
+  ) {}
 
-  // Update SOW with insights from meeting analysis
   async updateSow(
     instanceName: string,
     userId: string,
@@ -16,42 +19,51 @@ export class SowUpdateService {
     pageName: string,
   ): Promise<string> {
     try {
-      // Step 1a: Generate Scope Analysis
-      const scopeAnalysisPrompt = `
-        You are collaborating with another consultant to assess the current state of an ongoing project following a recent client meeting. This is not the initial meeting, and the project is already underway. Analyze any shifts in project scope, challenges, and stakeholder alignment based on the provided details:
-        • Meeting Transcript: ${pageContent.transcript}
-        • Existing SOW: ${existingSowContent}
-        • Action Items: ${pageContent.action_items}
-        • Consultant’s Input: ${pageContent.consultant_input}
-        • Meeting Type: ${pageContent.event_type}
-        
-        Address the following questions:
-        1. Scope Changes:
-           - Has the project scope changed? If yes, how?
-           - Is the project focus or priority shifting?
-           - Are there budgetary changes affecting feasibility?
-           - What key challenges have emerged or evolved?
-           - Have goals or deliverables been reprioritized?
-           - Are there new stakeholders or shifts in support?
-           - Are there new dependencies or bottlenecks affecting project completion?
-
-        For each question, if there is no change, state “no change”; if not discussed, state "not discussed."
-      `;
-      this.logger.log(`Running scope analysis for SOW update on ${pageName}`);
-      const scopeAnalysisResponse = await this.agentServiceRequest.sendAgentRequest(
-        scopeAnalysisPrompt,
-        'Return scope analysis based on the provided questions.',
-        {
-          provider: 'openai',
-          model: 'gpt-4o-mini',
-          temperature: 0.7,
-          maxTokens: 4096,
-          frequencyPenalty: 0,
-          presencePenalty: 0,
-        },
+      // Step 1: Split the SOW into sections
+      const sowSections = await this.sowSectionService.splitSowIntoSections(
         instanceName,
         userId,
+        existingSowContent,
       );
+
+      // Extract relevant sections
+      const objectivesChallenges =
+        sowSections['Project Objectives and Key Challenges'];
+      const projectScope = sowSections['Project Scope'];
+
+      // Step 2a: Generate Scope Analysis
+      const scopeAnalysisPrompt = `
+        You are collaborating with another consultant to assess the current state of an ongoing project following a recent client meeting. Focus on any shifts in project objectives, challenges, and scope based on the details provided:
+        
+        • Meeting Transcript: ${pageContent.transcript}
+        • Project Objectives and Key Challenges: ${objectivesChallenges}
+        • Project Scope: ${projectScope}
+        • Consultant’s Input: ${pageContent.consultant_input}
+        
+        Address the following questions:
+        - Has the project scope changed? If yes, how?
+        - What key challenges have emerged or evolved?
+        - Are there new dependencies or bottlenecks affecting project completion?
+        
+        For each question, if there is no change, state “no change”; if not discussed, state "not discussed."
+      `;
+
+      this.logger.log(`Running scope analysis for SOW update on ${pageName}`);
+      const scopeAnalysisResponse =
+        await this.agentServiceRequest.sendAgentRequest(
+          scopeAnalysisPrompt,
+        'Return scope analysis based on the provided questions.',
+          {
+            provider: 'openai',
+            model: 'gpt-4o-mini',
+            temperature: 0.7,
+            maxTokens: 4096,
+            frequencyPenalty: 0,
+            presencePenalty: 0,
+          },
+          instanceName,
+          userId,
+        );
 
       const scopeAnalysis = scopeAnalysisResponse.messageContent?.content;
       if (!scopeAnalysis) {
@@ -59,37 +71,41 @@ export class SowUpdateService {
         throw new Error('Error in generating scope analysis');
       }
 
-      // Step 1b: Generate Timeline Analysis
+      // Step 2b: Generate Timeline Analysis
+      const desiredDeliverables = sowSections['Desired Deliverables'];
       const timelineAnalysisPrompt = `
-        As a follow-up to the recent meeting, analyze any changes or considerations affecting the project timeline. Use the details below to provide insights:
+        Based on recent client discussions, assess any changes or updates affecting the project timeline:
         • Meeting Transcript: ${pageContent.transcript}
         • Current Action Items: ${pageContent.action_items}
         • Completed Action Items from Previous Call: ${pageContent.completed_action_items}
-        • Next Scheduled Meeting: ${pageContent.meeting_slot}
+        • Desired Deliverables: ${desiredDeliverables}
         
-        Address the following questions:
-        1. Timeline Changes:
-           - Has the project end date changed?
-           - Have any interim milestones been adjusted?
-           - Are there contingency plans for newly identified risks?
+        Answer the following:
+        - Has the project end date changed?
+        - Have interim milestones been adjusted?
+        - Are there contingency plans for new risks?
 
-        For each question, if there is no change, state “no change”; if not discussed, state "not discussed."
+        If there is no change, state “no change”; if not discussed, state "not discussed."
       `;
-      this.logger.log(`Running timeline analysis for SOW update on ${pageName}`);
-      const timelineAnalysisResponse = await this.agentServiceRequest.sendAgentRequest(
-        timelineAnalysisPrompt,
-        'Return timeline analysis based on the provided questions.',
-        {
-          provider: 'openai',
-          model: 'gpt-4o-mini',
-          temperature: 0.7,
-          maxTokens: 4096,
-          frequencyPenalty: 0,
-          presencePenalty: 0,
-        },
-        instanceName,
-        userId,
+
+      this.logger.log(
+        `Running timeline analysis for SOW update on ${pageName}`,
       );
+      const timelineAnalysisResponse =
+        await this.agentServiceRequest.sendAgentRequest(
+          timelineAnalysisPrompt,
+          'Return timeline analysis based on the provided questions.',
+          {
+            provider: 'openai',
+            model: 'gpt-4o-mini',
+            temperature: 0.7,
+            maxTokens: 4096,
+            frequencyPenalty: 0,
+            presencePenalty: 0,
+          },
+          instanceName,
+          userId,
+        );
 
       const timelineAnalysis = timelineAnalysisResponse.messageContent?.content;
       if (!timelineAnalysis) {
@@ -97,7 +113,7 @@ export class SowUpdateService {
         throw new Error('Error in generating timeline analysis');
       }
 
-      // Combine analyses for SOW update prompt
+      // Step 3: Generate Updated SOW Document
       const combinedMeetingAnalysis = `
         Scope Analysis:
         ${scopeAnalysis}
@@ -106,39 +122,27 @@ export class SowUpdateService {
         ${timelineAnalysis}
       `;
 
-      // Step 2: Generate Updated SOW Document
       const sowUpdatePrompt = `
-        You are updating an existing Statement of Work (SOW) based on recent project insights. Integrate any changes in scope, objectives, deliverables, or timeline using the details below:
+        Update the Statement of Work (SOW) based on recent project insights. Integrate any changes in scope, objectives, and timeline using the following:
         
         Meeting Summary: ${combinedMeetingAnalysis}
-        Existing SOW: ${existingSowContent}
-        
-        Provide updates to the SOW using the structure below:
+        Project Objectives and Key Challenges: ${objectivesChallenges}
+        Project Scope: ${projectScope}
         
         SOW Structure:
-          1. Project Overview
-             Project Title: [Specify or confirm any changes in title]
-             Project Background: [Update based on recent context]
-          2. Project Objectives and Key Challenges
-             Updated Objectives: Bullet points for each new or updated objective
-             Key Challenges: Bullet points for any new or evolving challenges
-          3. Project Scope
-             Process Evaluation: [Updates based on recent findings]
-             Co-Design with Client: [Modifications based on client feedback]
-             Prototyping Iterations: [Updates on prototypes or changes]
-          4. Desired Deliverables
-             Deliverables List: [Add new deliverables or specifications for existing ones]
-          5. Timeline and Milestones
-             Project End Date: [Revised end date, if applicable]
-             Phases & Milestones: [Updated list of milestones and phases]
-        
-        If there are relevant points from the meeting analysis that don’t directly fit into the categories, include them under a new section called Additional Insights. If sections have no changes, state “no change.”
+        1. Project Overview
+        2. Project Objectives and Key Challenges
+        3. Project Scope
+        4. Desired Deliverables
+        5. Timeline and Milestones
+
+        If sections have no changes, state “no change.”
       `;
-      
-      this.logger.log(`Generating updated SOW based on combined meeting analysis`);
+
+      this.logger.log(`Generating updated SOW based on meeting analysis`);
       const sowResponse = await this.agentServiceRequest.sendAgentRequest(
         sowUpdatePrompt,
-        'Return the updated SOW content based on the meeting summary.',
+        'Return the updated SOW content.',
         {
           provider: 'openai',
           model: 'gpt-4o-mini',

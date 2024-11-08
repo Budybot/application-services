@@ -22,6 +22,7 @@ import { CreateProjectPlanService } from './services/kafka-ob1-processing/create
 import { SowUpdateService } from './services/kafka-ob1-processing/content/sow-update.service';
 import { SummarizationService } from './services/kafka-ob1-processing/content/summarization.service';
 import { CompletedActionItemsService } from './services/kafka-ob1-processing/completed-action-items.service';
+import { SowSectionService } from './services/kafka-ob1-processing/content/sow-section.service';
 @Module({
   imports: [
     HttpModule,
@@ -67,6 +68,7 @@ import { CompletedActionItemsService } from './services/kafka-ob1-processing/com
     SowUpdateService,
     SummarizationService,
     CompletedActionItemsService,
+    SowSectionService,
   ],
   controllers: [KafkaOb1Controller],
 })
