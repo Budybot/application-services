@@ -235,7 +235,7 @@ export class GoogleDocService {
         const removeMatch = line.startsWith('Remove:');
 
         if (addMatch || removeMatch) {
-          const color = addMatch ? { green: 1.0 } : { red: 1.0 }; // Green for "Add:", Red for "Remove:"
+          const color = addMatch ? { blue: 1.0 } : { red: 1.0 };
 
           requests.push({
             updateTextStyle: {
