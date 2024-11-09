@@ -228,6 +228,31 @@ export class GoogleDocService {
         },
       });
 
+      // Add styling based on patterns
+      let cursorIndex = 1; // Start after insertion point
+      content.split('\n').forEach((line) => {
+        const addMatch = line.startsWith('Add:');
+        const removeMatch = line.startsWith('Remove:');
+
+        if (addMatch || removeMatch) {
+          const color = addMatch ? { green: 1.0 } : { red: 1.0 }; // Green for "Add:", Red for "Remove:"
+
+          requests.push({
+            updateTextStyle: {
+              range: {
+                startIndex: cursorIndex,
+                endIndex: cursorIndex + line.length,
+              },
+              textStyle: {
+                foregroundColor: { color: { rgbColor: color } },
+              },
+              fields: 'foregroundColor',
+            },
+          });
+        }
+        cursorIndex += line.length + 1; // Update cursorIndex (+1 for the newline character)
+      });
+
       await docsService.documents.batchUpdate({
         documentId,
         requestBody: { requests },

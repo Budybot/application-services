@@ -204,15 +204,26 @@ export class SowUpdateService {
         string,
         { add?: string; remove?: string; update?: string },
       ][]) {
-        if (sowSections[section]) {
-          if (changes.add) sowSections[section] += `\n ${changes.add}`;
-          if (changes.remove)
-            sowSections[section] = sowSections[section].replace(
-              changes.remove,
-              '',
-            );
-        } else {
-          sowSections[section] = changes.add || '';
+        if (!sowSections[section]) {
+          sowSections[section] = ''; // Initialize the section if it doesn't exist
+        }
+
+        // Handle "add" changes
+        if (changes.add) {
+          const addLines = changes.add
+            .split('\n')
+            .map((line) => `Add: ${line}`)
+            .join('\n');
+          sowSections[section] += `\n${addLines}`;
+        }
+
+        // Handle "remove" changes
+        if (changes.remove) {
+          const removeLines = changes.remove
+            .split('\n')
+            .map((line) => `Remove: ${line}`)
+            .join('\n');
+          sowSections[section] += `\n${removeLines}`;
         }
       }
       // Step 5: Reassemble the SOW
