@@ -54,7 +54,7 @@ export class SowGenerationService {
       Phase 2: Definition – Detailing the problem, specifying deliverables, and planning.
       Phase 3: Implementation – Executing the plan and delivering solutions.
       Current Phase: ${sowDetails.currentPhase}
-      If the current phase is Phase 1, omit sections 6-9.
+      If the current phase is Phase 1, omit sections 7-9.
 
       SOW Structure:
 
