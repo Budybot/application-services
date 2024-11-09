@@ -125,10 +125,14 @@ export class SowUpdateService {
         "sectionName": {"add": "new content only", "remove": "old content"},
         ...
       }
-      Format most content with bullet points (-). If adding only, use "" for remove. If removing only, use "" for add.
-      Ensure the changes are concise, without duplicating, repeating, or conflicting with existing section content.
+      Instructions:
 
-      Omit sections with no changes from the response.
+      Do not repeat existing content: Only list under "add" content that is completely new and not already present in the SOW.
+      Avoid duplicating bullet points: Verify that items listed under "add" are distinct from current content.
+      Use bullet points (-) where possible.
+      If only adding content, set "remove" to "". If only removing content, set "add" to "".
+      Exclude sections with no changes.
+      Generate a concise response, free of any redundant, duplicate, or conflicting entries.
       `;
 
       const scopeResponse = await this.agentServiceRequest.sendAgentRequest(
@@ -163,9 +167,14 @@ export class SowUpdateService {
           "sectionName": {"add": "new content only", "remove": "old content"},
           ...
         }
-        Format most content with bullet points (-). If adding only, use "" for remove. If removing only, use "" for add.
-        Ensure the changes are concise, without duplicating, repeating, or conflicting with existing section content.
+        Instructions:
 
+        Do not repeat existing content: Only list under "add" content that is completely new and not already present in the SOW.
+        Avoid duplicating bullet points: Verify that items listed under "add" are distinct from current content.
+        Use bullet points (-) where possible.
+        If only adding content, set "remove" to "". If only removing content, set "add" to "".
+        Exclude sections with no changes.
+        Generate a concise response, free of any redundant, duplicate, or conflicting entries.
         If there is no Timeline and Milestones section in the SOW, add it with the new content.
 
       `;
