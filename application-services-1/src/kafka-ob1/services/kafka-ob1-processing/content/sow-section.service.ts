@@ -55,7 +55,7 @@ export class SowSectionService {
           provider: 'openai',
           model: 'gpt-4o-mini',
           temperature: 0.5,
-          maxTokens: 2048,
+          maxTokens: 4096,
           frequencyPenalty: 0,
           presencePenalty: 0,
         },
