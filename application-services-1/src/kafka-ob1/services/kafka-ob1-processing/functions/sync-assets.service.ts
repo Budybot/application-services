@@ -51,21 +51,21 @@ export class SyncAssetsService {
         ? await this.googleDocService.readDocumentContent(syncToAssetId)
         : await this.googleSheetService.readSheetData(syncToAssetId);
 
-    // Step 3: If either asset is SOW, split into sections for that asset
-    const sowSections =
-      syncFrom === 'SOW'
-        ? await this.sowSectionService.splitSowIntoSections(
-            instanceName,
-            userEmail,
-            syncFromContent as string,
-          )
-        : syncTo === 'SOW'
-          ? await this.sowSectionService.splitSowIntoSections(
-              instanceName,
-              userEmail,
-              syncToContent as string,
-            )
-          : null;
+    // // Step 3: If either asset is SOW, split into sections for that asset
+    // const sowSections =
+    //   syncFrom === 'SOW'
+    //     ? await this.sowSectionService.splitSowIntoSections(
+    //         instanceName,
+    //         userEmail,
+    //         syncFromContent as string,
+    //       )
+    //     : syncTo === 'SOW'
+    //       ? await this.sowSectionService.splitSowIntoSections(
+    //           instanceName,
+    //           userEmail,
+    //           syncToContent as string,
+    //         )
+    //       : null;
 
     const sowDelta =
       syncFrom === 'SOW' || syncTo === 'SOW'
@@ -105,7 +105,12 @@ export class SyncAssetsService {
           ],
           "add": [
             {
-              "New Task ID": "New task description"
+              "Task ID": "New Task ID",
+              "Task Name": "Task name",
+              "Dependency": "Dependency description",
+              "Description": "Task description",
+              "Action on Completion": "Action to be taken upon completion",
+              "Deadline": "Task deadline"
             },
             ...
           ]
@@ -137,34 +142,36 @@ export class SyncAssetsService {
         throw new Error('Error in generating difference analysis');
       }
       this.logger.debug(`Difference Analysis: ${differenceAnalysis}`);
-      return;
 
-      // Step 6: LLM Call to Generate Updated Project Planner
-      const projectPlannerUpdatePrompt = `
-        Using the difference analysis provided, generate an updated Project Planner.
-        Difference Analysis: ${differenceAnalysis}
-        Existing Project Planner: ${JSON.stringify(syncToContent)}
+      // Update Project Planner with the difference analysis
+      updatedOutput = await updateProjectPlanner(sowDelta, syncToContent);
+
+      // // Step 6: LLM Call to Generate Updated Project Planner
+      // const projectPlannerUpdatePrompt = `
+      //   Using the difference analysis provided, generate an updated Project Planner.
+      //   Difference Analysis: ${differenceAnalysis}
+      //   Existing Project Planner: ${JSON.stringify(syncToContent)}
         
-        Ensure the output is structured in JSON format compatible with Google Sheets.
-      `;
+      //   Ensure the output is structured in JSON format compatible with Google Sheets.
+      // `;
 
-      const updatedPlannerResponse =
-        await this.agentServiceRequest.sendAgentRequest(
-          projectPlannerUpdatePrompt,
-          'Only return the updated Project Planner in JSON format. No additional content is allowed.',
-          {
-            provider: 'openai',
-            model: 'gpt-4o-mini',
-            temperature: 0.7,
-            maxTokens: 4096,
-            frequencyPenalty: 0,
-            presencePenalty: 0,
-          },
-          instanceName,
-          userEmail,
-        );
+      // const updatedPlannerResponse =
+      //   await this.agentServiceRequest.sendAgentRequest(
+      //     projectPlannerUpdatePrompt,
+      //     'Only return the updated Project Planner in JSON format. No additional content is allowed.',
+      //     {
+      //       provider: 'openai',
+      //       model: 'gpt-4o-mini',
+      //       temperature: 0.7,
+      //       maxTokens: 4096,
+      //       frequencyPenalty: 0,
+      //       presencePenalty: 0,
+      //     },
+      //     instanceName,
+      //     userEmail,
+      //   );
 
-      updatedOutput = updatedPlannerResponse.messageContent?.content;
+      // updatedOutput = updatedPlannerResponse.messageContent?.content;
       if (!updatedOutput) {
         this.logger.error(`Failed to generate updated Project Planner content`);
         throw new Error('Error in generating updated Project Planner');
@@ -194,4 +201,51 @@ export class SyncAssetsService {
 
     this.logger.log(`Successfully synchronized ${syncFrom} to ${syncTo}`);
   }
+}
+// Function to process JSON and reassemble table data
+async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
+  // Extract and parse JSON input for `edit`, `remove`, and `add` sections
+  const { edit, remove, add } = sowDelta;
+
+  // Convert syncToContent (assuming it's a JSON string) to an array of rows
+  const plannerData = JSON.parse(syncToContent);
+
+  // Create a new 'Budy Notes' column in each row
+  plannerData.forEach((row) => (row['Budy Notes'] = ''));
+
+  // Handle 'remove' tasks
+  remove.forEach((taskId) => {
+    const taskRow = plannerData.find((row) => row['Task ID'] === taskId);
+    if (taskRow) {
+      taskRow['Budy Notes'] = 'Remove';
+    }
+  });
+
+  // Handle 'edit' tasks
+  for (const [taskId, editDescription] of Object.entries(edit)) {
+    const taskRow = plannerData.find((row) => row['Task ID'] === taskId);
+    if (taskRow) {
+      taskRow['Budy Notes'] = `Edit: ${editDescription}`;
+    }
+  }
+
+  // Handle 'add' tasks
+  add.forEach((newTask) => {
+    const newRow = {
+      'Task ID': newTask['Task ID'],
+      'Task Name': newTask['Task Name'] || '',
+      Dependency: newTask['Dependency'] || '',
+      Description: newTask['Description'] || '',
+      'Action on Completion': newTask['Action on Completion'] || '',
+      Deadline: newTask['Deadline'] || '',
+      'Budy Notes': 'Add',
+    };
+    plannerData.push(newRow);
+  });
+
+  // Sort plannerData by Task ID to maintain row order
+  plannerData.sort((a, b) => a['Task ID'].localeCompare(b['Task ID']));
+
+  // Convert back to JSON or your desired format for further processing
+  return plannerData;
 }
