@@ -124,6 +124,9 @@ export class SowUpdateService {
           "sectionName": {"add": "new content", "remove": "old content"},
           ...
         }
+        If sections have no changes, omit them.
+        If there is nothing to add or remove, state "" for the respective field.
+        Make sure the changes are not duplicated, conflicting, redundant or repetitive.
 
         If sections have no changes, omit them.
       `;
@@ -161,6 +164,11 @@ export class SowUpdateService {
         }
 
         If sections have no changes, omit them.
+        If there is nothing to add or remove, state "" for the respective field.
+        Make sure the changes are not duplicated, conflicting, redundant or repetitive.
+        
+        If there is no Timelines and Milestones section in the SOW, add it with the new content.
+
       `;
 
       const timelineResponse = await this.agentServiceRequest.sendAgentRequest(
@@ -189,7 +197,7 @@ export class SowUpdateService {
         { add?: string; remove?: string; update?: string },
       ][]) {
         if (sowSections[section]) {
-          if (changes.add) sowSections[section] += ` ${changes.add}`;
+          if (changes.add) sowSections[section] += `\n ${changes.add}`;
           if (changes.remove)
             sowSections[section] = sowSections[section].replace(
               changes.remove,
