@@ -174,6 +174,7 @@ export class ContentService {
         updatedContent = await this.sowUpdateService.updateSow(
           instanceName,
           userEmail,
+          projectName,
           existingContent,
           contentData.sowData,
           contentData.pageName,

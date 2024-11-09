@@ -67,6 +67,17 @@ export class SyncAssetsService {
             )
           : null;
 
+    const sowDelta =
+      syncFrom === 'SOW' || syncTo === 'SOW'
+        ? await this.contentAssetsService.getAssetId(
+            'SOWDelta',
+            projectName,
+            instanceName,
+            userEmail,
+          )
+        : null;
+    this.logger.debug(`SOW Delta: ${sowDelta}`);
+
     // Step 4: Fork for specific sync cases - Implement SOW to ProjectPlanner
     let updatedOutput;
     if (syncFrom === 'ProjectPlanner' && syncTo === 'SOW') {

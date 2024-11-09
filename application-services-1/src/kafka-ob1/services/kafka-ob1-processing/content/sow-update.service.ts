@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AgentServiceRequest } from '../agent-service-request.service';
 import { SowSectionService } from './sow-section.service';
+import { ContentAssetsService } from './content-assets.service';
 
 @Injectable()
 export class SowUpdateService {
@@ -9,11 +10,13 @@ export class SowUpdateService {
   constructor(
     private readonly agentServiceRequest: AgentServiceRequest,
     private readonly sowSectionService: SowSectionService,
+    private readonly contentAssetsService: ContentAssetsService
   ) {}
 
   async updateSow(
     instanceName: string,
     userId: string,
+    projectName: string,
     existingSowContent: string,
     pageContent: any,
     pageName: string,
@@ -200,6 +203,17 @@ export class SowUpdateService {
 
       // Step 4: Merge scope and timeline updates
       const allUpdates = { ...scopeUpdates, ...timelineUpdates };
+      // Bonus: Post updates to database
+      await this.contentAssetsService.saveDocumentAsset(
+        'SOWDelta',
+        'json',
+        '',
+        '',
+        JSON.stringify(allUpdates),
+        projectName,
+        instanceName,
+        userId,
+      );
       for (const [section, changes] of Object.entries(allUpdates) as [
         string,
         { add?: string; remove?: string; update?: string },
