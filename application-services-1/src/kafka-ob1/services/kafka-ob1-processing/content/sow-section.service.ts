@@ -26,7 +26,7 @@ export class SowSectionService {
 
       // Regular expression to match each section and capture its content
       const sectionRegex = new RegExp(
-        `(${sections.join('|')})\\s*\\n+((.|\\n)+?)(?=(\\n{2,}|$))`,
+        `## \\*\\*((${sections.join('|')}))\\*\\*\\n+((.|\\n)+?)(?=(## \\*\\*|$))`,
         'g',
       );
 
