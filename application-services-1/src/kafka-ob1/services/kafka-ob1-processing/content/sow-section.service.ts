@@ -26,8 +26,8 @@ export class SowSectionService {
 
       // Regular expression to match each section and capture its content
       const sectionRegex = new RegExp(
-        `## \\*\\*((${sections.join('|')}))\\*\\*\\n+((.|\\n)+?)(?=(## \\*\\*|$))`,
-        'g',
+        `## \\*\\*(${sections.join('|')})\\*\\*\\s*\\n+([\\s\\S]*?)(?=\\n## \\*\\*|$)`,
+        'g'
       );
 
       const sectionsMap: Record<string, string> = {};
