@@ -123,7 +123,7 @@ export class SyncAssetsService {
       const comparisonResponse =
         await this.agentServiceRequest.sendAgentRequest(
           comparisonPrompt,
-          'Identify and outline differences for synchronization.',
+          'Only return the difference analysis in JSON format. No additional content is allowed.',
           {
             provider: 'openai',
             model: 'gpt-4o-mini',
@@ -151,7 +151,7 @@ export class SyncAssetsService {
       //   Using the difference analysis provided, generate an updated Project Planner.
       //   Difference Analysis: ${differenceAnalysis}
       //   Existing Project Planner: ${JSON.stringify(syncToContent)}
-        
+
       //   Ensure the output is structured in JSON format compatible with Google Sheets.
       // `;
 
@@ -203,49 +203,108 @@ export class SyncAssetsService {
   }
 }
 // Function to process JSON and reassemble table data
+// async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
+//   // Extract and parse JSON input for `edit`, `remove`, and `add` sections
+//   const { edit, remove, add } = sowDelta;
+
+//   // Convert syncToContent (assuming it's a JSON string) to an array of rows
+//   const plannerData = JSON.parse(syncToContent);
+
+//   // Create a new 'Budy Notes' column in each row
+//   plannerData.forEach((row) => (row['Budy Notes'] = ''));
+
+//   // Handle 'remove' tasks
+//   remove.forEach((taskId) => {
+//     const taskRow = plannerData.find((row) => row['Task ID'] === taskId);
+//     if (taskRow) {
+//       taskRow['Budy Notes'] = 'Remove';
+//     }
+//   });
+
+//   // Handle 'edit' tasks
+//   for (const [taskId, editDescription] of Object.entries(edit)) {
+//     const taskRow = plannerData.find((row) => row['Task ID'] === taskId);
+//     if (taskRow) {
+//       taskRow['Budy Notes'] = `Edit: ${editDescription}`;
+//     }
+//   }
+
+//   // Handle 'add' tasks
+//   add.forEach((newTask) => {
+//     const newRow = {
+//       'Task ID': newTask['Task ID'],
+//       'Task Name': newTask['Task Name'] || '',
+//       Dependency: newTask['Dependency'] || '',
+//       Description: newTask['Description'] || '',
+//       'Action on Completion': newTask['Action on Completion'] || '',
+//       Deadline: newTask['Deadline'] || '',
+//       'Budy Notes': 'Add',
+//     };
+//     plannerData.push(newRow);
+//   });
+
+//   // Sort plannerData by Task ID to maintain row order
+//   plannerData.sort((a, b) => a['Task ID'].localeCompare(b['Task ID']));
+
+//   // Convert back to JSON or your desired format for further processing
+//   return plannerData;
+// }
+function parseSyncToContent(syncToContent: string): any[] {
+  // Convert string to JSON-compatible format by wrapping with []
+  const formattedContent = `[${syncToContent.replace(/\[/g, '').replace(/\]/g, '')}]`;
+
+  // Parse the formatted content
+  return JSON.parse(formattedContent);
+}
+
 async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
-  // Extract and parse JSON input for `edit`, `remove`, and `add` sections
+  // Step 1: Parse the syncToContent string into an array of rows
+  const plannerData = parseSyncToContent(syncToContent);
+
+  // Extract header and rows separately
+  const headers = plannerData[0];
+  const rows = plannerData.slice(1);
+
+  // Step 2: Extract and parse JSON input for `edit`, `remove`, and `add` sections
   const { edit, remove, add } = sowDelta;
 
-  // Convert syncToContent (assuming it's a JSON string) to an array of rows
-  const plannerData = JSON.parse(syncToContent);
+  // Step 3: Initialize 'Budy Notes' column in each row
+  headers.push('Budy Notes');
+  const updatedRows = rows.map((row) => [...row, '']);
 
-  // Create a new 'Budy Notes' column in each row
-  plannerData.forEach((row) => (row['Budy Notes'] = ''));
-
-  // Handle 'remove' tasks
+  // Step 4: Process `remove` items by marking them in the 'Budy Notes' column
   remove.forEach((taskId) => {
-    const taskRow = plannerData.find((row) => row['Task ID'] === taskId);
+    const taskRow = updatedRows.find((row) => row[0] === taskId);
     if (taskRow) {
-      taskRow['Budy Notes'] = 'Remove';
+      taskRow[headers.length - 1] = 'Remove';
     }
   });
 
-  // Handle 'edit' tasks
+  // Step 5: Process `edit` items by adding edit descriptions in the 'Budy Notes' column
   for (const [taskId, editDescription] of Object.entries(edit)) {
-    const taskRow = plannerData.find((row) => row['Task ID'] === taskId);
+    const taskRow = updatedRows.find((row) => row[0] === taskId);
     if (taskRow) {
-      taskRow['Budy Notes'] = `Edit: ${editDescription}`;
+      taskRow[headers.length - 1] = `Edit: ${editDescription}`;
     }
   }
 
-  // Handle 'add' tasks
+  // Step 6: Process `add` items by creating new rows with all required columns
   add.forEach((newTask) => {
-    const newRow = {
-      'Task ID': newTask['Task ID'],
-      'Task Name': newTask['Task Name'] || '',
-      Dependency: newTask['Dependency'] || '',
-      Description: newTask['Description'] || '',
-      'Action on Completion': newTask['Action on Completion'] || '',
-      Deadline: newTask['Deadline'] || '',
-      'Budy Notes': 'Add',
-    };
-    plannerData.push(newRow);
+    const newRow = [
+      newTask['Task ID'],
+      newTask['Task Name'] || '',
+      newTask['Dependency'] || '',
+      newTask['Description'] || '',
+      newTask['Action on Completion'] || '',
+      newTask['Deadline'] || '',
+      'Add',
+    ];
+    updatedRows.push(newRow);
   });
 
-  // Sort plannerData by Task ID to maintain row order
-  plannerData.sort((a, b) => a['Task ID'].localeCompare(b['Task ID']));
+  // Step 7: Sort the rows by `Task ID` to maintain correct order
+  updatedRows.sort((a, b) => a[0].localeCompare(b[0]));
 
-  // Convert back to JSON or your desired format for further processing
-  return plannerData;
+  // Step 8: Return the updated planner data, including headers
+  return [headers, ...updatedRows];
 }
