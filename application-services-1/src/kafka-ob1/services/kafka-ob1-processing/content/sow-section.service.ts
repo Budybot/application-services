@@ -20,7 +20,8 @@ export class SowSectionService {
 
         The document structure typically includes:
         - **Project Overview**
-        - **Project Objectives and Key Challenges**
+        - **Project Objectives**
+        - **Key Challenges**
         - **Project Scope**
         - **Roles and Responsibilities**
         - **Desired Deliverables**
@@ -34,7 +35,8 @@ export class SowSectionService {
         Return format:
         {
           "Project Overview": "Content here...",
-          "Project Objectives and Key Challenges": "Content here...",
+          "Project Objectives": "Content here...",
+          "Key Challenges": "Content here...",
           "Project Scope": "Content here...",
           "Roles and Responsibilities": "Content here...",
           "Desired Deliverables": "Content here..."
