@@ -114,22 +114,21 @@ export class SowUpdateService {
 
       // Step 3a: Scope Analysis Update
       const scopeUpdatePrompt = `
-        Update the relevant sections of the Statement of Work (SOW) based on the scope analysis. Only return sections with changes.
-        
-        Scope Analysis: ${pageContent.scopeAnalysis}
-        Existing SOW: ${existingSowContent}
+      Update relevant sections of the Statement of Work (SOW) based on the scope analysis. Only return sections that require changes.
 
-        Return a JSON with changes:
-        {
-          "sectionName": {"add": "new content", "remove": "old content"},
-          ...
-        }
-        Format most content with bullet points (-).
-        If you only want to add content, state "" for the remove field.
-        If you only want to remove content, state "" for the add field.
-        Make sure the changes are not duplicated, conflicting, redundant or repetitive.
+      Scope Analysis: ${pageContent.scopeAnalysis}
+      Existing SOW: ${existingSowContent}
 
-        If you do not plan to make any changes to a section, omit it from the response.
+      Return a JSON object with only the changes:
+
+      {
+        "sectionName": {"add": "new content only", "remove": "old content"},
+        ...
+      }
+      Format most content with bullet points (-). If adding only, use "" for remove. If removing only, use "" for add.
+      Ensure the changes are concise, without duplicating, repeating, or conflicting with existing section content.
+
+      Omit sections with no changes from the response.
       `;
 
       const scopeResponse = await this.agentServiceRequest.sendAgentRequest(
@@ -158,19 +157,15 @@ export class SowUpdateService {
         Timeline Analysis: ${pageContent.timelineAnalysis}
         Existing SOW: ${existingSowContent}
 
-        Return a JSON with changes:
+        Return a JSON object with only the changes:
+
         {
-          "sectionName": {"add": "new content", "remove": "old content"},
+          "sectionName": {"add": "new content only", "remove": "old content"},
           ...
         }
+        Format most content with bullet points (-). If adding only, use "" for remove. If removing only, use "" for add.
+        Ensure the changes are concise, without duplicating, repeating, or conflicting with existing section content.
 
-        Format most content with bullet points (-).
-        If you only want to add content, state "" for the remove field.
-        If you only want to remove content, state "" for the add field.
-        Make sure the changes are not duplicated, conflicting, redundant or repetitive.
-
-        If you do not plan to make any changes to a section, omit it from the response.
-        
         If there is no Timeline and Milestones section in the SOW, add it with the new content.
 
       `;
