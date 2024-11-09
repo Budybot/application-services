@@ -75,7 +75,6 @@ export class SowUpdateService {
       const desiredDeliverables = sowSections['Desired Deliverables'];
       const timelineAnalysisPrompt = `
         Based on recent client discussions, assess any changes or updates affecting the project timeline:
-        • Meeting Transcript: ${pageContent.transcript}
         • Current Action Items: ${pageContent.action_items}
         • Completed Action Items from Previous Call: ${pageContent.action_items_completed}
         • Desired Deliverables: ${desiredDeliverables}
