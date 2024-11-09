@@ -22,7 +22,7 @@ import { CreateProjectPlanService } from './services/kafka-ob1-processing/functi
 import { SowUpdateService } from './services/kafka-ob1-processing/content/sow-update.service';
 import { SummarizationService } from './services/kafka-ob1-processing/content/summarization.service';
 import { CompletedActionItemsService } from './services/kafka-ob1-processing/functions/completed-action-items.service';
-import { SowSectionService } from './services/kafka-ob1-processing/content/sow-section.service';
+import { SowSectionService } from './services/kafka-ob1-processing/content/sow-section-llm.service';
 import { SyncAssetsService } from './services/kafka-ob1-processing/functions/sync-assets.service';
 @Module({
   imports: [

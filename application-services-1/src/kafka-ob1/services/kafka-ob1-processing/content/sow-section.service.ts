@@ -1,11 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AgentServiceRequest } from '../agent-service-request.service';
 
 @Injectable()
 export class SowSectionService {
   private readonly logger = new Logger(SowSectionService.name);
 
-  constructor(private readonly agentServiceRequest: AgentServiceRequest) {}
+  constructor() {}
 
   // Function to split SOW document into sections
   async splitSowIntoSections(
@@ -14,67 +13,39 @@ export class SowSectionService {
     sowContent: string,
   ): Promise<Record<string, string>> {
     try {
-      // Define the prompt to split the SOW content by sections
-      const splitSowPrompt = `
-        You are assisting in analyzing a Statement of Work (SOW) document. The document provided has multiple sections, and your task is to extract each section individually. 
+      // Define the expected section headers
+      const sections = [
+        "Project Overview",
+        "Project Objectives",
+        "Key Challenges",
+        "Project Scope",
+        "Roles and Responsibilities",
+        "Desired Deliverables",
+        "Timeline and Milestones"
+      ];
 
-        The document structure typically includes:
-        - **Project Overview**
-        - **Project Objectives**
-        - **Key Challenges**
-        - **Project Scope**
-        - **Roles and Responsibilities**
-        - **Desired Deliverables**
-        - **Timeline and Milestones**
-
-        Please parse the document below into these sections and return each as a map in JSON format where the keys are the section titles and the values are the corresponding section contents. If any section is missing, please leave it empty.
-
-        Document Content:
-        ${sowContent}
-
-        Return format:
-        {
-          "Project Overview": "Content here...",
-          "Project Objectives": "Content here...",
-          "Key Challenges": "Content here...",
-          "Project Scope": "Content here...",
-          "Roles and Responsibilities": "Content here...",
-          "Desired Deliverables": "Content here..."
-          "Timeline and Milestones": "Content here..."
-        }
-      `;
-
-      // this.logger.log(
-      //   `Requesting SOW split into sections for instance ${instanceName}`,
-      // );
-
-      const response = await this.agentServiceRequest.sendAgentRequest(
-        splitSowPrompt,
-        'Return the SOW sections as a JSON map.',
-        {
-          provider: 'openai',
-          model: 'gpt-4o',
-          temperature: 0.5,
-          maxTokens: 8192,
-          frequencyPenalty: 0,
-          presencePenalty: 0,
-        },
-        instanceName,
-        userId,
+      // Regular expression to match each section and capture its content
+      const sectionRegex = new RegExp(
+        `(${sections.join('|')})\\s*\\n+((.|\\n)+?)(?=(\\n{2,}|$))`,
+        'g',
       );
 
-      // Clean and parse the response
-      let cleanedContent = response.messageContent?.content || '';
+      const sectionsMap: Record<string, string> = {};
+      let match;
 
-      // Remove ```json and ``` if they exist
-      cleanedContent = cleanedContent.replace(/```json|```/g, '').trim();
-
-      const sectionsMap = JSON.parse(cleanedContent);
-
-      if (!sectionsMap) {
-        this.logger.error('Failed to retrieve SOW sections map.');
-        throw new Error('Error parsing SOW into sections');
+      // Extract each section's content
+      while ((match = sectionRegex.exec(sowContent)) !== null) {
+        const sectionTitle = match[1];
+        const sectionContent = match[2].trim();
+        sectionsMap[sectionTitle] = sectionContent;
       }
+
+      // Ensure all sections are present in the output, even if empty
+      sections.forEach((section) => {
+        if (!sectionsMap[section]) {
+          sectionsMap[section] = ''; // Assign empty string if section is missing
+        }
+      });
 
       this.logger.log('Successfully split SOW into sections');
       return sectionsMap;
