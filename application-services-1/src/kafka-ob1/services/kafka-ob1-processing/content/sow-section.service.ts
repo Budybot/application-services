@@ -53,9 +53,9 @@ export class SowSectionService {
         'Return the SOW sections as a JSON map.',
         {
           provider: 'openai',
-          model: 'gpt-4o-mini',
+          model: 'gpt-4o',
           temperature: 0.5,
-          maxTokens: 4096,
+          maxTokens: 8192,
           frequencyPenalty: 0,
           presencePenalty: 0,
         },
