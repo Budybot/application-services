@@ -47,7 +47,8 @@ export class SowSectionService {
         }
       });
 
-      this.logger.log('Successfully split SOW into sections');
+      this.logger.log('Successfully split SOW into sections:');
+      this.logger.log(sectionsMap);
       return sectionsMap;
     } catch (error) {
       this.logger.error(`Error splitting SOW into sections: ${error.message}`);
