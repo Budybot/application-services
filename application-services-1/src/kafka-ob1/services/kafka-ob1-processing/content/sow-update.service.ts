@@ -124,6 +124,7 @@ export class SowUpdateService {
           "sectionName": {"add": "new content", "remove": "old content"},
           ...
         }
+        Most content is formatted with bullet points (-).
         If sections have no changes, omit them.
         If there is nothing to add or remove, state "" for the respective field.
         Make sure the changes are not duplicated, conflicting, redundant or repetitive.
@@ -163,11 +164,12 @@ export class SowUpdateService {
           ...
         }
 
+        Most content is formatted with bullet points (-).
         If sections have no changes, omit them.
         If there is nothing to add or remove, state "" for the respective field.
         Make sure the changes are not duplicated, conflicting, redundant or repetitive.
         
-        If there is no Timelines and Milestones section in the SOW, add it with the new content.
+        If there is no Timeline and Milestones section in the SOW, add it with the new content.
 
       `;
 
