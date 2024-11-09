@@ -206,6 +206,7 @@ export class SowUpdateService {
         'Project Objectives',
         'Key Challenges',
         'Project Scope',
+        'Roles and Responsibilities',
         'Desired Deliverables',
         'Timeline and Milestones',
       ];
