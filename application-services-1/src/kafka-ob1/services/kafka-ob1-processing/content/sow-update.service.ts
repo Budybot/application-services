@@ -124,12 +124,12 @@ export class SowUpdateService {
           "sectionName": {"add": "new content", "remove": "old content"},
           ...
         }
-        Most content is formatted with bullet points (-).
-        If sections have no changes, omit them.
-        If there is nothing to add or remove, state "" for the respective field.
+        Format most content with bullet points (-).
+        If you only want to add content, state "" for the remove field.
+        If you only want to remove content, state "" for the add field.
         Make sure the changes are not duplicated, conflicting, redundant or repetitive.
 
-        If sections have no changes, omit them.
+        If you do not plan to make any changes to a section, omit it from the response.
       `;
 
       const scopeResponse = await this.agentServiceRequest.sendAgentRequest(
@@ -164,10 +164,12 @@ export class SowUpdateService {
           ...
         }
 
-        Most content is formatted with bullet points (-).
-        If sections have no changes, omit them.
-        If there is nothing to add or remove, state "" for the respective field.
+        Format most content with bullet points (-).
+        If you only want to add content, state "" for the remove field.
+        If you only want to remove content, state "" for the add field.
         Make sure the changes are not duplicated, conflicting, redundant or repetitive.
+
+        If you do not plan to make any changes to a section, omit it from the response.
         
         If there is no Timeline and Milestones section in the SOW, add it with the new content.
 
