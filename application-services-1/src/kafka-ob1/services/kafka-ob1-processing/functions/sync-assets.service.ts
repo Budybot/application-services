@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ContentAssetsService } from '../content/content-assets.service';
 import { GoogleDocService } from '../../google/google-doc.service';
 import { GoogleSheetService } from '../../google/google-sheet.service';
-import { SowSectionService } from '../content/sow-section-llm.service';
+import { SowSectionService } from '../content/sow-section.service';
 import { AgentServiceRequest } from '../agent-service-request.service';
 
 @Injectable()

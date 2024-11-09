@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AgentServiceRequest } from '../agent-service-request.service';
-import { SowSectionService } from './sow-section-llm.service';
+import { SowSectionService } from './sow-section.service';
 
 @Injectable()
 export class SowUpdateService {
