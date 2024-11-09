@@ -88,16 +88,32 @@ export class SyncAssetsService {
 
       // Step 5: Compare "Desired Deliverables" and "Timeline" in SOW sections with ProjectPlanner data
       const comparisonPrompt = `
-        Analyze the differences between SOW Desired Deliverables and Timeline & Milestones with the Project Planner content.
-        
-        SOW - Desired Deliverables: ${sowSections['Desired Deliverables']}
-        SOW - Timeline & Milestones: ${sowSections['Timeline and Milestones']}
-        
+        Analyze the differences between the Project Planner content and the latest client feedback, as found in sowDelta.assetDescription.
+
         Project Planner Data: ${JSON.stringify(syncToContent)}
-        
-        Provide a very brief analysis that highlights only the key points, specifically indicating any items that need to be added, removed, or adjusted. Your response should focus on actionable changes, such as specific deliverables or timeline items that are missing, misaligned, or redundant, to guide a precise update of the Project Planner.
-        Do not add any formatting or additional content to the response. Just provide a concise analysis of the differences using bullet points or short sentences.
-      `;
+
+        Based on the updated client needs and changes, provide an analysis of differences in the following JSON format:
+
+        {
+          "edit": {
+            "Task ID to be edited": "edit description",
+            ...
+          },
+          "remove": [
+            "Task ID to be removed",
+            ...
+          ],
+          "add": [
+            {
+              "New Task ID": "New task description"
+            },
+            ...
+          ]
+        }
+        For additions, insert new Task IDs without overwriting existing ones. Use decimal notation to fit new tasks between current Task IDs. For example, if IDs 1.2 and 1.3 already exist and a task needs to be added between them, assign it ID 1.2.1.
+        For edits and removals, directly list the affected Task IDs and provide concise descriptions for edits or deletions as appropriate.
+        Only highlight key changes that involve specific deliverables or timeline adjustments that are missing, redundant, or misaligned. Avoid unnecessary detail.
+        `;
 
       const comparisonResponse =
         await this.agentServiceRequest.sendAgentRequest(
@@ -120,6 +136,8 @@ export class SyncAssetsService {
         this.logger.error(`Failed to generate difference analysis`);
         throw new Error('Error in generating difference analysis');
       }
+      this.logger.debug(`Difference Analysis: ${differenceAnalysis}`);
+      return;
 
       // Step 6: LLM Call to Generate Updated Project Planner
       const projectPlannerUpdatePrompt = `
