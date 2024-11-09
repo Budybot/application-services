@@ -145,6 +145,9 @@ export class SyncAssetsService {
 
       // Update Project Planner with the difference analysis
       updatedOutput = await updateProjectPlanner(sowDelta, syncToContent);
+      this.logger.debug(
+        `Updated Project Planner: ${JSON.stringify(updatedOutput)}`,
+      );
 
       // // Step 6: LLM Call to Generate Updated Project Planner
       // const projectPlannerUpdatePrompt = `
@@ -176,8 +179,8 @@ export class SyncAssetsService {
         this.logger.error(`Failed to generate updated Project Planner content`);
         throw new Error('Error in generating updated Project Planner');
       }
-      updatedOutput = updatedOutput.replace(/```json|```/g, '').trim();
-      updatedOutput = JSON.parse(updatedOutput);
+      // updatedOutput = updatedOutput.replace(/```json|```/g, '').trim();
+      // updatedOutput = JSON.parse(updatedOutput);
     }
 
     // Step 7: Rewrite syncTo asset with updatedOutput
@@ -259,7 +262,9 @@ function parseSyncToContent(syncToContent: string): any[] {
 
 async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
   // Step 1: Parse the syncToContent string into an array of rows
-  const plannerData = parseSyncToContent(syncToContent);
+  // const plannerData = parseSyncToContent(syncToContent);
+  console.log('Type of syncToContent:', typeof syncToContent);
+  const plannerData = syncToContent;
 
   // Extract header and rows separately
   const headers = plannerData[0];
