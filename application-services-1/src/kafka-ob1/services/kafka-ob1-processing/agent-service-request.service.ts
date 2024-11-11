@@ -29,7 +29,7 @@ export class AgentServiceRequest {
         `System prompt exceeds token limit of ${tokenThreshold} tokens`,
       );
       config.model = '4o';
-      config.maxTokens = 10000;
+      config.maxTokens = 12000;
     }
 
     const messageInput = {
@@ -43,6 +43,7 @@ export class AgentServiceRequest {
       },
       messageType: 'REQUEST',
     };
+    this.logger.log(`Config: ${JSON.stringify(config)}`);
 
     try {
       validateAgentServiceRequestBody(
