@@ -28,7 +28,7 @@ export class AgentServiceRequest {
       this.logger.warn(
         `System prompt exceeds token limit of ${tokenThreshold} tokens`,
       );
-      config.model = '4o';
+      config.model = 'gpt-4o';
       config.maxTokens = 12000;
     }
 
