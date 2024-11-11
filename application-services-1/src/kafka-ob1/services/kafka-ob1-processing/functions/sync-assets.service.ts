@@ -281,36 +281,42 @@ async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
 
   // Step 4: Process `remove` items by marking them in the 'Budy Notes' column
   console.log('Remove:', remove);
-  remove.forEach((taskId) => {
-    const taskRow = updatedRows.find((row) => row[0] === taskId);
-    if (taskRow) {
-      taskRow[headers.length - 1] = 'Remove';
-    }
-  });
+  if (remove) {
+    remove.forEach((taskId) => {
+      const taskRow = updatedRows.find((row) => row[0] === taskId);
+      if (taskRow) {
+        taskRow[headers.length - 1] = 'Remove';
+      }
+    });
+  }
 
   // Step 5: Process `edit` items by adding edit descriptions in the 'Budy Notes' column
   console.log('Edit:', edit);
-  for (const [taskId, editDescription] of Object.entries(edit)) {
-    const taskRow = updatedRows.find((row) => row[0] === taskId);
-    if (taskRow) {
-      taskRow[headers.length - 1] = `Edit: ${editDescription}`;
+  if (edit) {
+    for (const [taskId, editDescription] of Object.entries(edit)) {
+      const taskRow = updatedRows.find((row) => row[0] === taskId);
+      if (taskRow) {
+        taskRow[headers.length - 1] = `Edit: ${editDescription}`;
+      }
     }
   }
 
   // Step 6: Process `add` items by creating new rows with all required columns
   console.log('Add:', add);
-  add.forEach((newTask) => {
-    const newRow = [
-      newTask['Task ID'],
-      newTask['Task Name'] || '',
-      newTask['Dependency'] || '',
-      newTask['Description'] || '',
-      newTask['Action on Completion'] || '',
-      newTask['Deadline'] || '',
-      'Add',
-    ];
-    updatedRows.push(newRow);
-  });
+  if (add) {
+    add.forEach((newTask) => {
+      const newRow = [
+        newTask['Task ID'],
+        newTask['Task Name'] || '',
+        newTask['Dependency'] || '',
+        newTask['Description'] || '',
+        newTask['Action on Completion'] || '',
+        newTask['Deadline'] || '',
+        'Add',
+      ];
+      updatedRows.push(newRow);
+    });
+  }
 
   // Step 7: Sort the rows by `Task ID` to maintain correct order
   updatedRows.sort((a, b) => a[0].localeCompare(b[0]));
