@@ -85,17 +85,16 @@ export class ProjectPlannerService {
     - **Task Name**: Descriptive name for each task.
     - **Dependency**: ID of the previous task in the sequence.
     - **Description**: Detailed task description.
-    - **Action on Completion**: Next step or milestone upon completion.
-  
+
     ### Example Output:
   
     [
-      ["Task ID", "Task Name", "Dependency", "Description", "Action on Completion"],
-      ["1", "Discovery", "", "Conduct initial meetings and research", "Proceed to Definition"],
-      ["1.1", "Stakeholder Interviews", "1", "Interview key stakeholders", "Document findings"],
-      ["1.2", "Requirements Gathering", "1.1", "Gather requirements from discussions", "Compile requirements document"],
-      ["2", "Definition", "1", "Define project scope and objectives", "Proceed to Implementation"],
-      ["2.1", "Scope Definition", "2", "Outline project scope and boundaries", "Finalize scope document"]
+      ["Task ID", "Task Name", "Dependency", "Description"],
+      ["1", "Discovery", "", "Conduct initial meetings and research"],
+      ["1.1", "Stakeholder Interviews", "1", "Interview key stakeholders"],
+      ["1.2", "Requirements Gathering", "1.1", "Gather requirements from discussions"],
+      ["2", "Definition", "1", "Define project scope and objectives"],
+      ["2.1", "Scope Definition", "2", "Outline project scope and boundaries"]
     ]
   
     Guidelines:
