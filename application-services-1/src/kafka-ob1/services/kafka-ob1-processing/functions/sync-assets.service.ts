@@ -111,8 +111,6 @@ export class SyncAssetsService {
               "Task Name": "Task name",
               "Dependency": "Dependency description",
               "Description": "Task description",
-              "Action on Completion": "Action to be taken upon completion",
-              "Deadline": "Task deadline"
             },
             ...
           ]
@@ -128,7 +126,7 @@ export class SyncAssetsService {
           'Only return the difference analysis in JSON format. No additional content is allowed.',
           {
             provider: 'openai',
-            model: 'gpt-4o',
+            model: 'gpt-4o-mini',
             temperature: 0.7,
             maxTokens: 4096,
             frequencyPenalty: 0,
@@ -320,8 +318,8 @@ async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
         newTask['Task Name'] || '',
         newTask['Dependency'] || '',
         newTask['Description'] || '',
-        newTask['Action on Completion'] || '',
-        newTask['Deadline'] || '',
+        // newTask['Action on Completion'] || '',
+        // newTask['Deadline'] || '',
         'Add',
       ];
       updatedRows.push(newRow);
