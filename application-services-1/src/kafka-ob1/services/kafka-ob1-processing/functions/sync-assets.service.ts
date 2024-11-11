@@ -128,7 +128,7 @@ export class SyncAssetsService {
           'Only return the difference analysis in JSON format. No additional content is allowed.',
           {
             provider: 'openai',
-            model: 'gpt-4o-mini',
+            model: 'gpt-4o',
             temperature: 0.7,
             maxTokens: 4096,
             frequencyPenalty: 0,
