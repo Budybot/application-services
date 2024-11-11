@@ -207,7 +207,7 @@ export class SowUpdateService {
       await this.contentAssetsService.saveDocumentAsset(
         'SOWDelta',
         'json',
-        '',
+        'SOWDelta',
         '',
         JSON.stringify(allUpdates),
         projectName,

@@ -88,7 +88,8 @@ export class SyncAssetsService {
 
       // Step 5: Compare "Desired Deliverables" and "Timeline" in SOW sections with ProjectPlanner data
       const comparisonPrompt = `
-        Analyze the differences between the Project Planner content and the latest client feedback, as found in sowDelta.assetDescription.
+        Analyze the differences between the Project Planner content and the latest client feedback:
+        Here is a summary of the latest client feedback: ${JSON.stringify(sowDelta)}
 
         Project Planner Data: ${JSON.stringify(syncToContent)}
 
@@ -269,7 +270,9 @@ export class SyncAssetsService {
 async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
   // Step 1: Parse the syncToContent string into an array of rows
   // const plannerData = parseSyncToContent(syncToContent);
-  console.log('Type of syncToContent:', typeof syncToContent);
+  // console.log('Type of syncToContent:', typeof syncToContent);
+  console.log('SOW Delta:', sowDelta);
+  console.log('Type of SOW Delta:', typeof sowDelta);
   const plannerData = syncToContent;
 
   // Extract header and rows separately
