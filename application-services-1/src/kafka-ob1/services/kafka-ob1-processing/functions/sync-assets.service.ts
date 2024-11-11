@@ -252,13 +252,13 @@ export class SyncAssetsService {
 //   // Convert back to JSON or your desired format for further processing
 //   return plannerData;
 // }
-function parseSyncToContent(syncToContent: string): any[] {
-  // Convert string to JSON-compatible format by wrapping with []
-  const formattedContent = `[${syncToContent.replace(/\[/g, '').replace(/\]/g, '')}]`;
+// function parseSyncToContent(syncToContent: string): any[] {
+//   // Convert string to JSON-compatible format by wrapping with []
+//   const formattedContent = `[${syncToContent.replace(/\[/g, '').replace(/\]/g, '')}]`;
 
-  // Parse the formatted content
-  return JSON.parse(formattedContent);
-}
+//   // Parse the formatted content
+//   return JSON.parse(formattedContent);
+// }
 
 async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
   // Step 1: Parse the syncToContent string into an array of rows
@@ -269,6 +269,8 @@ async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
   // Extract header and rows separately
   const headers = plannerData[0];
   const rows = plannerData.slice(1);
+  console.log('Headers:', headers);
+  console.log('Rows:', rows);
 
   // Step 2: Extract and parse JSON input for `edit`, `remove`, and `add` sections
   const { edit, remove, add } = sowDelta;
@@ -278,6 +280,7 @@ async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
   const updatedRows = rows.map((row) => [...row, '']);
 
   // Step 4: Process `remove` items by marking them in the 'Budy Notes' column
+  console.log('Remove:', remove);
   remove.forEach((taskId) => {
     const taskRow = updatedRows.find((row) => row[0] === taskId);
     if (taskRow) {
@@ -286,6 +289,7 @@ async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
   });
 
   // Step 5: Process `edit` items by adding edit descriptions in the 'Budy Notes' column
+  console.log('Edit:', edit);
   for (const [taskId, editDescription] of Object.entries(edit)) {
     const taskRow = updatedRows.find((row) => row[0] === taskId);
     if (taskRow) {
@@ -294,6 +298,7 @@ async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
   }
 
   // Step 6: Process `add` items by creating new rows with all required columns
+  console.log('Add:', add);
   add.forEach((newTask) => {
     const newRow = [
       newTask['Task ID'],
