@@ -69,11 +69,12 @@ export class SyncAssetsService {
 
     const sowDelta =
       syncFrom === 'SOW' || syncTo === 'SOW'
-        ? await this.contentAssetsService.getAssetId(
+        ? await this.contentAssetsService.getAssetField(
             'SOWDelta',
             projectName,
             instanceName,
             userEmail,
+            'assetDescription',
           )
         : null;
     this.logger.debug(`SOW Delta: ${sowDelta}`);
