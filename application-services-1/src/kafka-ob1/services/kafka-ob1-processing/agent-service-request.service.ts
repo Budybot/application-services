@@ -23,6 +23,15 @@ export class AgentServiceRequest {
     messageKey: string,
   ): Promise<any> {
     const topic = 'budyos-ob1-agentService';
+    const tokenThreshold = 2000;
+    if (systemPrompt.length > tokenThreshold) {
+      this.logger.warn(
+        `System prompt exceeds token limit of ${tokenThreshold} tokens`,
+      );
+      config.model = '4o';
+      config.maxTokens = 10000;
+    }
+
     const messageInput = {
       messageContent: {
         functionName: 'LLMgenerateResponse',
@@ -43,13 +52,6 @@ export class AgentServiceRequest {
       this.logger.error(`Validation failed: ${validationError.message}`);
       throw new Error('Invalid request data; please check your input');
     }
-    // this.logger.log(
-    //   'Sending request to LLM service with the following payload:',
-    // );
-    // this.logger.debug(`System Prompt: ${systemPrompt}`);
-    // this.logger.debug(`Config: ${JSON.stringify(config)}`);
-    // this.logger.debug(`Instance Name: ${instanceName}, User ID: ${messageKey}`);
-
     try {
       const response = await this.kafkaOb1Service.sendRequest(
         messageKey,
