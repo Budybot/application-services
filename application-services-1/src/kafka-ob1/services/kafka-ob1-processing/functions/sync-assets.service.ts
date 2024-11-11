@@ -142,9 +142,16 @@ export class SyncAssetsService {
         throw new Error('Error in generating difference analysis');
       }
       this.logger.debug(`Difference Analysis: ${differenceAnalysis}`);
+      this.logger.debug(
+        'Type of differenceAnalysis:',
+        typeof differenceAnalysis,
+      );
 
       // Update Project Planner with the difference analysis
-      updatedOutput = await updateProjectPlanner(sowDelta, syncToContent);
+      updatedOutput = await updateProjectPlanner(
+        differenceAnalysis,
+        syncToContent,
+      );
       this.logger.debug(
         `Updated Project Planner: ${JSON.stringify(updatedOutput)}`,
       );
