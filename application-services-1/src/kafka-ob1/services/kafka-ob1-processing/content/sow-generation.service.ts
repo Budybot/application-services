@@ -88,26 +88,44 @@ export class SowGenerationService {
     //   Dashboards creation
     //   Training & documentation
     //   `;
+    // const systemPrompt = `
+    //   You are acting as a consultant drafting a Statement of Work (SOW) for a client. Based on recent discussions, generate a structured SOW in the format: 
+
+    //   {
+    //     "Project Overview": "Content describing the project overview, including goals and initial background.",
+    //     "Project Objectives": "List the objectives here, using complete sentences.",
+    //     "Key Challenges": "List the key challenges identified, in a brief paragraph or bullet format if appropriate.",
+    //     "Project Scope": "Describe the project scope, with specific stages or processes if known.",
+    //     "Roles and Responsibilities": "Detail the roles and responsibilities for both the consultant and client teams.",
+    //     "Desired Deliverables": "List each deliverable clearly, such as dashboards, software implementations, or documentation."
+    //   }
+
+    //   Use this structure to guide your output. Provide concise content for each section, formatted as JSON only, and avoid extraneous content or instructions. Note:
+      
+    //   - Keep the total content within each section brief, using summaries where possible.
+      
+    //   **Context**: This project, led by ${sowDetails.consultantName}, ${sowDetails.consultantRole}, focuses on a ${sowDetails.projectType} solution for ${sowDetails.companyName}. The primary client contact is ${sowDetails.clientName}, ${sowDetails.clientRole}. Key takeaways include ${sowDetails.keyTakeaway1} and ${sowDetails.keyTakeaway2}. Objectives are ${sowDetails.projectObjectives}, with desired deliverables as ${sowDetails.desiredDeliverables}. Action items include ${sowDetails.actionItems}.
+
+    //   Return only the JSON in the specified format.
+    // `;
     const systemPrompt = `
-      You are acting as a consultant drafting a Statement of Work (SOW) for a client. Based on recent discussions, generate a structured SOW in the format: 
+      You are a consultant drafting a Statement of Work (SOW) for a client. Please generate an SOW structured as a JSON object with the following format:
 
       {
-        "Project Overview": "Content describing the project overview, including goals and initial background.",
-        "Project Objectives": "List the objectives here, using complete sentences.",
-        "Key Challenges": "List the key challenges identified, in a brief paragraph or bullet format if appropriate.",
+        "Project Overview": "Content for project overview, including goals and background.",
+        "Project Objectives": ["Objective 1", "Objective 2" ...],
+        "Key Challenges": ["Challenge 1", "Challenge 2" ...],
         "Project Scope": "Describe the project scope, with specific stages or processes if known.",
-        "Roles and Responsibilities": "Detail the roles and responsibilities for both the consultant and client teams.",
-        "Desired Deliverables": "List each deliverable clearly, such as dashboards, software implementations, or documentation."
+        "Roles and Responsibilities": {
+          "Consultant Team": "Responsibilities...",
+          "Client Team": "Responsibilities..."
+        },
+        "Desired Deliverables": ["Deliverable 1", "Deliverable 2" ...]
       }
-
-      Use this structure to guide your output. Provide concise content for each section, formatted as JSON only, and avoid extraneous content or instructions. Note:
-      
-      - Keep the total content within each section brief, using summaries where possible.
-      
       **Context**: This project, led by ${sowDetails.consultantName}, ${sowDetails.consultantRole}, focuses on a ${sowDetails.projectType} solution for ${sowDetails.companyName}. The primary client contact is ${sowDetails.clientName}, ${sowDetails.clientRole}. Key takeaways include ${sowDetails.keyTakeaway1} and ${sowDetails.keyTakeaway2}. Objectives are ${sowDetails.projectObjectives}, with desired deliverables as ${sowDetails.desiredDeliverables}. Action items include ${sowDetails.actionItems}.
-
-      Return only the JSON in the specified format.
-    `;
+      Keep the total content within each section brief, using summaries where possible.
+      Use bullet points where lists are appropriate (e.g., objectives, challenges, deliverables). Return only the JSON object and ensure it's properly formatted.
+      `;
 
     const config = {
       provider: 'openai',
@@ -132,6 +150,9 @@ export class SowGenerationService {
         .replace(/```/, ''); // Remove ending code block syntax
 
       const sowJson = JSON.parse(cleanJsonContent);
+      if (!sowJson || typeof sowJson !== 'object') {
+        throw new Error('Invalid JSON format from LLM response');
+      }
       return sowJson;
       // if (response?.messageContent?.content) {
       //   const generatedSow = response.messageContent.content;

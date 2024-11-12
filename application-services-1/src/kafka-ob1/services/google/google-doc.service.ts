@@ -478,86 +478,116 @@ export class GoogleDocService {
       },
     });
     requests.push({
-      updateTextStyle: {
+      updateParagraphStyle: {
         range: { startIndex: 1, endIndex: title.length + 1 },
-        textStyle: {
-          bold: true,
-          fontSize: { magnitude: 20, unit: 'PT' },
+        paragraphStyle: {
+          namedStyleType: 'TITLE',
         },
-        fields: 'bold,fontSize',
+        fields: 'namedStyleType',
       },
     });
 
-    // 2. Reverse the order of sections to add content sequentially from the top down
-    const sections = Object.entries(contentJson).reverse();
+    // 2. Initialize index after the title
+    let index = title.length + 2;
 
-    sections.forEach(([header, paragraph]) => {
-      // Add header for each section
+    // 3. Loop through each section in order
+    for (const [header, content] of Object.entries(contentJson)) {
+      // a. Add header
       requests.push({
         insertText: {
-          location: { index: 1 },
-          text: `\n${header}\n`,
+          location: { index },
+          text: `${header}\n`,
         },
       });
       requests.push({
-        updateTextStyle: {
-          range: { startIndex: 1, endIndex: header.length + 2 },
-          textStyle: {
-            bold: true,
-            fontSize: { magnitude: 14, unit: 'PT' },
+        updateParagraphStyle: {
+          range: { startIndex: index, endIndex: index + header.length + 1 },
+          paragraphStyle: {
+            namedStyleType: 'HEADING_1',
           },
-          fields: 'bold,fontSize',
+          fields: 'namedStyleType',
         },
       });
-      // 3. Handle bullet points and numbered lists based on content format
-      if (paragraph.includes('* ')) {
-        // Bullet point formatting
-        const bulletPoints = paragraph
-          .split('\n')
-          .map((line) => line.replace('* ', ''));
-        bulletPoints.forEach((point) => {
+      index += header.length + 1;
+
+      // b. Add content based on its type
+      if (Array.isArray(content)) {
+        // Content is a list (e.g., objectives, challenges)
+        for (const item of content) {
+          // Insert bullet point
           requests.push({
             insertText: {
-              location: { index: header.length + 2 },
-              text: `• ${point}\n`,
+              location: { index },
+              text: `${item}\n`,
             },
           });
-        });
-      } else if (paragraph.includes('1. ')) {
-        // Numbered list formatting
-        const numberedItems = paragraph
-          .split('\n')
-          .map((line) => line.replace(/^\d+\.\s/, ''));
-        numberedItems.forEach((item, index) => {
+          requests.push({
+            createParagraphBullets: {
+              range: {
+                startIndex: index,
+                endIndex: index + item.length + 1,
+              },
+              bulletPreset: 'BULLET_DISC_CIRCLE_SQUARE',
+            },
+          });
+          index += item.length + 1;
+        }
+      } else if (typeof content === 'object') {
+        // Content is a sub-section (e.g., roles and responsibilities)
+        for (const [subHeader, subContent] of Object.entries(content)) {
+          // Insert sub-header
           requests.push({
             insertText: {
-              location: { index: header.length + 2 },
-              text: `${index + 1}. ${item}\n`,
+              location: { index },
+              text: `${subHeader}\n`,
             },
           });
-        });
+          requests.push({
+            updateParagraphStyle: {
+              range: {
+                startIndex: index,
+                endIndex: index + subHeader.length + 1,
+              },
+              paragraphStyle: {
+                namedStyleType: 'HEADING_2',
+              },
+              fields: 'namedStyleType',
+            },
+          });
+          index += subHeader.length + 1;
+
+          // Insert sub-content
+          requests.push({
+            insertText: {
+              location: { index },
+              text: `${subContent}\n\n`,
+            },
+          });
+          index += subContent.length + 2;
+        }
       } else {
-        // Regular paragraph
+        // Content is a paragraph
         requests.push({
           insertText: {
-            location: { index: header.length + 2 },
-            text: `\n${paragraph}\n`,
+            location: { index },
+            text: `${content}\n\n`,
           },
         });
+        index += content.length + 2;
       }
-    });
+    }
 
-    // // Loop through each section header and paragraph content
-    // Object.entries(contentJson).forEach(([header, paragraph]) => {
-    //   // Add header
+    // // 2. Reverse the order of sections to add content sequentially from the top down
+    // const sections = Object.entries(contentJson).reverse();
+
+    // sections.forEach(([header, paragraph]) => {
+    //   // Add header for each section
     //   requests.push({
     //     insertText: {
-    //       location: { index: 1 }, // Inserts at the beginning each time, pushing content down
+    //       location: { index: 1 },
     //       text: `\n${header}\n`,
     //     },
     //   });
-
-    //   // Apply header style
     //   requests.push({
     //     updateTextStyle: {
     //       range: { startIndex: 1, endIndex: header.length + 2 },
@@ -568,14 +598,42 @@ export class GoogleDocService {
     //       fields: 'bold,fontSize',
     //     },
     //   });
-
-    //   // Add paragraph
-    //   requests.push({
-    //     insertText: {
-    //       location: { index: header.length + 2 },
-    //       text: `\n${paragraph}\n`,
-    //     },
-    //   });
+    //   // 3. Handle bullet points and numbered lists based on content format
+    //   if (paragraph.includes('* ')) {
+    //     // Bullet point formatting
+    //     const bulletPoints = paragraph
+    //       .split('\n')
+    //       .map((line) => line.replace('* ', ''));
+    //     bulletPoints.forEach((point) => {
+    //       requests.push({
+    //         insertText: {
+    //           location: { index: header.length + 2 },
+    //           text: `• ${point}\n`,
+    //         },
+    //       });
+    //     });
+    //   } else if (paragraph.includes('1. ')) {
+    //     // Numbered list formatting
+    //     const numberedItems = paragraph
+    //       .split('\n')
+    //       .map((line) => line.replace(/^\d+\.\s/, ''));
+    //     numberedItems.forEach((item, index) => {
+    //       requests.push({
+    //         insertText: {
+    //           location: { index: header.length + 2 },
+    //           text: `${index + 1}. ${item}\n`,
+    //         },
+    //       });
+    //     });
+    //   } else {
+    //     // Regular paragraph
+    //     requests.push({
+    //       insertText: {
+    //         location: { index: header.length + 2 },
+    //         text: `\n${paragraph}\n`,
+    //       },
+    //     });
+    //   }
     // });
 
     // Send the batch update request to Google Docs API
