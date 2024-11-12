@@ -713,7 +713,7 @@ export class GoogleDocService {
     return sections;
   }
 
-  async appendContentFromJson(
+  async appendRecommendations(
     documentId: string,
     contentJson: { [section: string]: any }, // Use 'any' to handle various content types
   ) {
