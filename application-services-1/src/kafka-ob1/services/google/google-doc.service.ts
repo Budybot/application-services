@@ -728,12 +728,29 @@ export class GoogleDocService {
       const removeContent =
         typeof changes.remove === 'string' ? changes.remove : '';
 
+      recommendationsContent += `${section}\n`;
+
+      let sectionHasContent = false; // Flag to check if the section has any recommendations
+
       if (addContent.trim()) {
-        recommendationsContent += addContent.trim() + '\n';
+        recommendationsContent += `Add:\n${addContent.trim()}\n`;
+        sectionHasContent = true;
       }
 
       if (removeContent.trim()) {
-        recommendationsContent += removeContent.trim() + '\n';
+        recommendationsContent += `Remove:\n${removeContent.trim()}\n`;
+        sectionHasContent = true;
+      }
+      if (!sectionHasContent) {
+        // Remove the section name that was just added
+        const sectionNameLength = `${section}\n`.length;
+        recommendationsContent = recommendationsContent.slice(
+          0,
+          -sectionNameLength,
+        );
+      } else {
+        // Add a separator between sections
+        recommendationsContent += '\n';
       }
     }
 

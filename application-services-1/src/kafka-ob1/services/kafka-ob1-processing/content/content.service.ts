@@ -203,7 +203,8 @@ export class ContentService {
 
       // Step 4: Write Updated Content to Document or Sheet
       if (contentType === 'SOW' || contentType === 'Email') {
-        await this.googleDocService.writeToDocument(assetId, updatedContent);
+        this.logger.log(`Writing updated content to asset ID: ${assetId}`);
+        // await this.googleDocService.writeToDocument(assetId, updatedContent);
       } else if (contentType === 'ProjectPlanner') {
         await this.googleSheetService.writeToSheet(assetId, updatedContent);
       }
