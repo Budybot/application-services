@@ -720,61 +720,83 @@ export class GoogleDocService {
     const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
     const doc = await docsService.documents.get({ documentId });
     const contentElements = doc.data.body?.content || [];
-
     const requests: any[] = [];
 
-    for (const [section, changes] of Object.entries(updates)) {
-      let sectionStartIndex = null;
-      let nextSectionStartIndex = null;
-
-      // Locate the section heading and mark start of the next section
-      for (let i = 0; i < contentElements.length; i++) {
-        const element = contentElements[i];
-
-        if (element.paragraph?.paragraphStyle?.namedStyleType === 'HEADING_1') {
-          const textContent = element.paragraph.elements
+    // Step 1: Handle missing sections first, adding them to the end of the document
+    for (const section of Object.keys(updates)) {
+      const sectionExists = contentElements.some(
+        (element) =>
+          element.paragraph?.paragraphStyle?.namedStyleType === 'HEADING_1' &&
+          element.paragraph.elements
             ?.map((tr) => tr.textRun?.content || '')
             .join('')
-            .trim();
+            .trim() === section,
+      );
 
-          if (textContent === section) {
-            sectionStartIndex = element.endIndex || 1;
-          } else if (sectionStartIndex && !nextSectionStartIndex) {
-            nextSectionStartIndex = element.startIndex || sectionStartIndex + 1;
-            break;
-          }
-        }
-      }
-
-      if (sectionStartIndex === null) {
+      if (!sectionExists) {
         this.logger.warn(`Section '${section}' not found. Adding it.`);
-        sectionStartIndex =
-          contentElements[contentElements.length - 1]?.endIndex || 1;
+        const endIndex = contentElements.slice(-1)[0]?.endIndex || 1;
 
-        // Insert the new section header
+        // Add the new section header at the document end
         requests.push({
           insertText: {
-            location: { index: sectionStartIndex },
+            location: { index: endIndex },
             text: `\n${section}\n`,
           },
         });
         requests.push({
           updateParagraphStyle: {
             range: {
-              startIndex: sectionStartIndex,
-              endIndex: sectionStartIndex + section.length + 1,
+              startIndex: endIndex,
+              endIndex: endIndex + section.length + 1,
             },
             paragraphStyle: { namedStyleType: 'HEADING_1' },
             fields: 'namedStyleType',
           },
         });
+      }
+    }
 
-        sectionStartIndex += section.length + 2;
+    // Execute batch update to add new sections
+    if (requests.length > 0) {
+      await docsService.documents.batchUpdate({
+        documentId,
+        requestBody: { requests },
+      });
+    }
+
+    // Step 2: Go backwards through the document to find each section and append recommendations
+    for (const [section, changes] of Object.entries(updates).reverse()) {
+      let sectionStartIndex: number | null = null;
+      let nextSectionStartIndex: number | null = null;
+
+      // Locate the section heading and start of the next section (if it exists)
+      for (let i = contentElements.length - 1; i >= 0; i--) {
+        const element = contentElements[i];
+        const textContent = element.paragraph?.elements
+          ?.map((tr) => tr.textRun?.content || '')
+          .join('')
+          .trim();
+
+        if (
+          textContent === section &&
+          element.paragraph?.paragraphStyle?.namedStyleType === 'HEADING_1'
+        ) {
+          sectionStartIndex = element.endIndex || 1;
+        } else if (sectionStartIndex && !nextSectionStartIndex) {
+          nextSectionStartIndex = element.startIndex || sectionStartIndex + 1;
+          break;
+        }
+      }
+
+      // Default to appending at the end of the document if the section wasn’t found
+      if (!sectionStartIndex) {
+        sectionStartIndex = contentElements.slice(-1)[0]?.endIndex || 1;
       }
 
       const insertIndex = nextSectionStartIndex || sectionStartIndex;
 
-      // Build the recommendation text
+      // Step 3: Build and insert recommendation text
       let updateText = '';
       if (changes.add) {
         updateText += changes.add
@@ -791,50 +813,54 @@ export class GoogleDocService {
             .join('\n');
       }
 
-      // Insert the recommendation text
-      requests.push({
-        insertText: {
-          location: { index: insertIndex },
-          text: `\n${updateText}\n`,
-        },
-      });
+      if (updateText) {
+        const textToInsert = `\n${updateText}\n`;
+        requests.push({
+          insertText: {
+            location: { index: insertIndex },
+            text: textToInsert,
+          },
+        });
 
-      // Apply color coding for "Add" and "Remove"
-      const addColor = { red: 0, green: 0, blue: 1 };
-      const removeColor = { red: 1, green: 0, blue: 0 };
-      let cursorIndex = insertIndex;
+        // Step 4: Apply color coding for "Add" and "Remove" labels
+        const addColor = { red: 0, green: 0, blue: 1 };
+        const removeColor = { red: 1, green: 0, blue: 0 };
+        let cursorIndex = insertIndex;
 
-      updateText.split('\n').forEach((line) => {
-        if (line.startsWith('Add:')) {
-          requests.push({
-            updateTextStyle: {
-              range: {
-                startIndex: cursorIndex,
-                endIndex: cursorIndex + 4,
+        updateText.split('\n').forEach((line) => {
+          if (line.startsWith('Add:')) {
+            requests.push({
+              updateTextStyle: {
+                range: {
+                  startIndex: cursorIndex,
+                  endIndex: cursorIndex + 4,
+                },
+                textStyle: {
+                  foregroundColor: { color: { rgbColor: addColor } },
+                },
+                fields: 'foregroundColor',
               },
-              textStyle: { foregroundColor: { color: { rgbColor: addColor } } },
-              fields: 'foregroundColor',
-            },
-          });
-        } else if (line.startsWith('Remove:')) {
-          requests.push({
-            updateTextStyle: {
-              range: {
-                startIndex: cursorIndex,
-                endIndex: cursorIndex + 7,
+            });
+          } else if (line.startsWith('Remove:')) {
+            requests.push({
+              updateTextStyle: {
+                range: {
+                  startIndex: cursorIndex,
+                  endIndex: cursorIndex + 7,
+                },
+                textStyle: {
+                  foregroundColor: { color: { rgbColor: removeColor } },
+                },
+                fields: 'foregroundColor',
               },
-              textStyle: {
-                foregroundColor: { color: { rgbColor: removeColor } },
-              },
-              fields: 'foregroundColor',
-            },
-          });
-        }
-        cursorIndex += line.length + 1;
-      });
+            });
+          }
+          cursorIndex += line.length + 1;
+        });
+      }
     }
 
-    // Execute the batch update
+    // Step 5: Execute the final batch update
     if (requests.length > 0) {
       await docsService.documents.batchUpdate({
         documentId,
