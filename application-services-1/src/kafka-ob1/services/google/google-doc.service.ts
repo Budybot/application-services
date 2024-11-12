@@ -720,7 +720,7 @@ export class GoogleDocService {
     const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
 
     const requests: any[] = [];
-    let recommendationsContent = '\n';
+    let recommendationsContent = 'RECOMMENDATIONS:\n\n';
 
     for (const [section, changes] of Object.entries(updates)) {
       recommendationsContent += `${section}\n`;
@@ -744,11 +744,27 @@ export class GoogleDocService {
         },
       });
 
-      // Set style for section headers
+      // Set style for "RECOMMENDATIONS:" header and section headers
       const lines = recommendationsContent.split('\n');
       let cursorIndex = 0;
 
-      for (const line of lines) {
+      // Apply HEADING_1 style to the "RECOMMENDATIONS:" title
+      requests.push({
+        updateParagraphStyle: {
+          range: {
+            startIndex: cursorIndex,
+            endIndex: cursorIndex + 'RECOMMENDATIONS:'.length,
+          },
+          paragraphStyle: { namedStyleType: 'HEADING_1' },
+          fields: 'namedStyleType',
+        },
+      });
+
+      cursorIndex += 'RECOMMENDATIONS:\n\n'.length;
+
+      // Apply HEADING_1 style to each section name
+      for (const line of lines.slice(2)) {
+        // Skip "RECOMMENDATIONS:" header
         if (Object.keys(updates).includes(line.trim())) {
           requests.push({
             updateParagraphStyle: {
