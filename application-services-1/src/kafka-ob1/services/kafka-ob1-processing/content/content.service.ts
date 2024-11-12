@@ -181,7 +181,7 @@ export class ContentService {
           instanceName,
           userEmail,
           projectName,
-          existingContent,
+          assetId,
           contentData.sowData,
           contentData.pageName,
         );
