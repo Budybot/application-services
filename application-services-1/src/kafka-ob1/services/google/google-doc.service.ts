@@ -722,11 +722,14 @@ export class GoogleDocService {
     const contentElements = doc.data.body?.content || [];
 
     const requests: any[] = [];
-    const sectionIndices: { [section: string]: number } = {};
+    const sectionIndices: {
+      [section: string]: { startIndex: number; endIndex: number };
+    } = {};
 
-    // Map section headers to their end indices
+    // Map section headers to their start and end indices
     let currentSection = '';
-    let currentIndex = 0;
+    let currentStartIndex = 0;
+    let currentEndIndex = 0;
 
     for (const element of contentElements) {
       if (element.paragraph) {
@@ -735,89 +738,182 @@ export class GoogleDocService {
         const textContent = textRuns
           .map((tr) => tr.textRun?.content || '')
           .join('');
+        const startIndex = element.startIndex || 1;
+        const endIndex = element.endIndex || startIndex;
 
         if (paragraph.paragraphStyle?.namedStyleType === 'HEADING_1') {
+          if (currentSection) {
+            sectionIndices[currentSection].endIndex = startIndex - 1;
+          }
           currentSection = textContent.trim();
-          sectionIndices[currentSection] = element.endIndex || currentIndex;
+          currentStartIndex = endIndex;
+          sectionIndices[currentSection] = {
+            startIndex: currentStartIndex,
+            endIndex: 0,
+          };
+        } else {
+          currentEndIndex = endIndex;
         }
       }
-      currentIndex = element.endIndex || currentIndex;
+    }
+
+    // Set endIndex for the last section
+    if (currentSection) {
+      sectionIndices[currentSection].endIndex = currentEndIndex;
     }
 
     // Append recommendations to each section
     for (const [section, changes] of Object.entries(updates)) {
-      const sectionEndIndex = sectionIndices[section];
+      let sectionInfo = sectionIndices[section];
 
-      if (sectionEndIndex) {
-        let updateText = '';
+      if (!sectionInfo) {
+        this.logger.warn(
+          `Section '${section}' not found in the document. Adding it.`,
+        );
+        // Get the end index of the document
+        const endIndex = doc.data.body?.content?.slice(-1)[0]?.endIndex || 1;
 
-        if (changes.add) {
-          const addLines = changes.add
-            .split('\n')
-            .map((line) => `Add: ${line}`)
-            .join('\n');
-          updateText += `\n${addLines}\n`;
-        }
-
-        if (changes.remove) {
-          const removeLines = changes.remove
-            .split('\n')
-            .map((line) => `Remove: ${line}`)
-            .join('\n');
-          updateText += `\n${removeLines}\n`;
-        }
-
-        if (updateText) {
-          requests.push({
-            insertText: {
-              location: { index: sectionEndIndex - 1 },
-              text: updateText,
+        // Insert the new section header
+        requests.push({
+          insertText: {
+            location: { index: endIndex - 1 },
+            text: `\n${section}\n`,
+          },
+        });
+        requests.push({
+          updateParagraphStyle: {
+            range: {
+              startIndex: endIndex,
+              endIndex: endIndex + section.length + 1,
             },
-          });
+            paragraphStyle: {
+              namedStyleType: 'HEADING_1',
+            },
+            fields: 'namedStyleType',
+          },
+        });
 
-          // Optionally, apply color styling to "Add:" and "Remove:"
-          const addLength = (changes.add || '')
-            .split('\n')
-            .reduce((acc, line) => acc + line.length + 1, 0);
-          const removeLength = (changes.remove || '')
-            .split('\n')
-            .reduce((acc, line) => acc + line.length + 1, 0);
-          let startIndex = sectionEndIndex - 1;
-
-          if (changes.add) {
-            requests.push({
-              updateTextStyle: {
-                range: {
-                  startIndex,
-                  endIndex: startIndex + addLength,
-                },
-                textStyle: {
-                  foregroundColor: { color: { rgbColor: { green: 0.5 } } },
-                },
-                fields: 'foregroundColor',
-              },
-            });
-            startIndex += addLength;
-          }
-
-          if (changes.remove) {
-            requests.push({
-              updateTextStyle: {
-                range: {
-                  startIndex,
-                  endIndex: startIndex + removeLength,
-                },
-                textStyle: {
-                  foregroundColor: { color: { rgbColor: { red: 0.5 } } },
-                },
-                fields: 'foregroundColor',
-              },
-            });
-          }
-        }
-      } else {
-        this.logger.warn(`Section '${section}' not found in the document.`);
+        // Update sectionInfo to point to the new section
+        sectionInfo = {
+          startIndex: endIndex + section.length + 1,
+          endIndex: endIndex + section.length + 1,
+        };
       }
+
+      // Prepare recommendations text
+      let updateText = '';
+
+      const addContent = changes.add || '';
+      const removeContent = changes.remove || '';
+
+      if (addContent) {
+        const addLines = addContent
+          .split('\n')
+          .map((line) => `Add: ${line}`)
+          .join('\n');
+        updateText += `\n${addLines}\n`;
+      }
+
+      if (removeContent) {
+        const removeLines = removeContent
+          .split('\n')
+          .map((line) => `Remove: ${line}`)
+          .join('\n');
+        updateText += `\n${removeLines}\n`;
+      }
+
+      if (updateText) {
+        const insertIndex = sectionInfo.endIndex - 1;
+        requests.push({
+          insertText: {
+            location: { index: insertIndex },
+            text: updateText,
+          },
+        });
+        requests.push({
+          updateParagraphStyle: {
+            range: {
+              startIndex: insertIndex,
+              endIndex: insertIndex + updateText.length,
+            },
+            paragraphStyle: {
+              namedStyleType: 'NORMAL_TEXT',
+            },
+            fields: 'namedStyleType',
+          },
+        });
+        const addColor = { red: 0, green: 0, blue: 1 }; // Blue for "Add:"
+        const removeColor = { red: 1, green: 0, blue: 0 }; // Red for "Remove:"
+
+        let cursorIndex = insertIndex;
+        updateText.split('\n').forEach((line) => {
+          if (line.startsWith('Add:')) {
+            requests.push({
+              updateTextStyle: {
+                range: {
+                  startIndex: cursorIndex,
+                  endIndex: cursorIndex + 4, // "Add:" is 4 characters
+                },
+                textStyle: {
+                  foregroundColor: { color: { rgbColor: addColor } },
+                },
+                fields: 'foregroundColor',
+              },
+            });
+          } else if (line.startsWith('Remove:')) {
+            requests.push({
+              updateTextStyle: {
+                range: {
+                  startIndex: cursorIndex,
+                  endIndex: cursorIndex + 7, // "Remove:" is 7 characters
+                },
+                textStyle: {
+                  foregroundColor: { color: { rgbColor: removeColor } },
+                },
+                fields: 'foregroundColor',
+              },
+            });
+          }
+          cursorIndex += line.length + 1; // Move to the next line (+1 for the newline character)
+        });
+
+        sectionInfo.endIndex += updateText.length;
+      }
+
+      // if (changes.add) {
+      //   requests.push({
+      //     updateTextStyle: {
+      //       range: {
+      //         startIndex,
+      //         endIndex: startIndex + addLength,
+      //       },
+      //       textStyle: {
+      //         foregroundColor: { color: { rgbColor: { green: 0.5 } } },
+      //       },
+      //       fields: 'foregroundColor',
+      //     },
+      //   });
+      //   startIndex += addLength;
+      // }
+
+      // if (changes.remove) {
+      //   requests.push({
+      //     updateTextStyle: {
+      //       range: {
+      //         startIndex,
+      //         endIndex: startIndex + removeLength,
+      //       },
+      //       textStyle: {
+      //         foregroundColor: { color: { rgbColor: { red: 0.5 } } },
+      //       },
+      //       fields: 'foregroundColor',
+      //     },
+      //   });
+      // }
+      //   }
+      // } else {
+      //   this.logger.warn(`Section '${section}' not found in the document.`);
+      // }
     }
 
     // Execute the batch update
