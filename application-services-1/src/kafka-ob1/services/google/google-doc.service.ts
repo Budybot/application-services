@@ -532,7 +532,7 @@ export class GoogleDocService {
           });
           index += item.length + 1;
         }
-      } else if (typeof content === 'object') {
+      } else if (typeof content === 'object' && content !== null) {
         // Content is a sub-section (e.g., roles and responsibilities)
         for (const [subHeader, subContent] of Object.entries(content)) {
           // Insert sub-header
@@ -544,10 +544,7 @@ export class GoogleDocService {
           });
           requests.push({
             updateParagraphStyle: {
-              range: {
-                startIndex: index,
-                endIndex: index + subHeader.length + 1,
-              },
+              range: { startIndex: index, endIndex: index + subHeader.length + 1 },
               paragraphStyle: {
                 namedStyleType: 'HEADING_2',
               },
@@ -555,17 +552,40 @@ export class GoogleDocService {
             },
           });
           index += subHeader.length + 1;
-
-          // Insert sub-content
-          requests.push({
-            insertText: {
-              location: { index },
-              text: `${subContent}\n\n`,
-            },
-          });
-          index += subContent.length + 2;
+  
+          // Check subContent type for flexible handling
+          if (Array.isArray(subContent)) {
+            // subContent is a list
+            for (const listItem of subContent) {
+              requests.push({
+                insertText: {
+                  location: { index },
+                  text: `${listItem}\n`,
+                },
+              });
+              requests.push({
+                createParagraphBullets: {
+                  range: {
+                    startIndex: index,
+                    endIndex: index + listItem.length + 1,
+                  },
+                  bulletPreset: 'BULLET_DISC_CIRCLE_SQUARE',
+                },
+              });
+              index += listItem.length + 1;
+            }
+          } else if (typeof subContent === 'string') {
+            // subContent is a paragraph
+            requests.push({
+              insertText: {
+                location: { index },
+                text: `${subContent}\n\n`,
+              },
+            });
+            index += subContent.length + 2;
+          }
         }
-      } else {
+      } else if (typeof content === 'string') {
         // Content is a paragraph
         requests.push({
           insertText: {

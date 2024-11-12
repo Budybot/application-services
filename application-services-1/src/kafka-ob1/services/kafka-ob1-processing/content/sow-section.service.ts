@@ -15,19 +15,19 @@ export class SowSectionService {
     try {
       // Define the expected section headers
       const sections = [
-        "Project Overview",
-        "Project Objectives",
-        "Key Challenges",
-        "Project Scope",
-        "Roles and Responsibilities",
-        "Desired Deliverables",
-        "Timeline and Milestones"
+        'Project Overview',
+        'Project Objectives',
+        'Key Challenges',
+        'Project Scope',
+        'Roles and Responsibilities',
+        'Desired Deliverables',
+        'Timeline and Milestones',
       ];
 
       // Regular expression to match each section and capture its content
       const sectionRegex = new RegExp(
         `## \\*\\*(${sections.join('|')})\\*\\*\\s*\\n+([\\s\\S]*?)(?=\\n## \\*\\*|$)`,
-        'g'
+        'g',
       );
 
       const sectionsMap: Record<string, string> = {};
