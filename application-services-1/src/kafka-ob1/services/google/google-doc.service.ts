@@ -754,58 +754,116 @@ export class GoogleDocService {
       //   recommendationsContent += '\n';
       // }
       if (sectionHasContent) {
-        recommendationsContent += sectionText + '\n';
-        const startIndex = recommendationsContent.length - sectionText.length;
-
-        // Add insertText for this section and its content
-        requests.push({
-          insertText: {
-            endOfSegmentLocation: {},
-            text: sectionText,
-          },
-        });
-
-        // Update paragraph style for the section heading
-        requests.push({
-          updateParagraphStyle: {
-            range: {
-              startIndex: startIndex,
-              endIndex: startIndex + section.length,
+        try {
+          // 1. Insert section title
+          await docsService.documents.batchUpdate({
+            documentId,
+            requestBody: {
+              requests: [
+                {
+                  insertText: {
+                    endOfSegmentLocation: {}, // Insert at the document end
+                    text: sectionText,
+                  },
+                },
+                {
+                  updateParagraphStyle: {
+                    range: {
+                      startIndex: -1, // Targets the last inserted section title
+                    },
+                    paragraphStyle: { namedStyleType: 'HEADING_1' },
+                    fields: 'namedStyleType',
+                  },
+                },
+              ],
             },
-            paragraphStyle: {
-              namedStyleType: 'HEADING_1',
-            },
-            fields: 'namedStyleType',
-          },
-        });
-      }
-    }
-
-    // Insert the recommendations at the end of the document
-    if (recommendationsContent.trim()) {
-      try {
+          });
+          // 2. Insert the section's content as normal text
+      if (addContent || removeContent) {
         await docsService.documents.batchUpdate({
           documentId,
-          requestBody: { requests },
-          //   requests: [
-          //     {
-          //       insertText: {
-          //         endOfSegmentLocation: {},
-          //         text: recommendationsContent,
-          //       },
-          //     },
-          //   ],
-          // },
+          requestBody: {
+            requests: [
+              {
+                insertText: {
+                  endOfSegmentLocation: {}, // Append content after the title
+                  text: `${addContent}${removeContent}\n`,
+                },
+              },
+              {
+                updateParagraphStyle: {
+                  range: {
+                    startIndex: -1, // Targets the last inserted content
+                  },
+                  paragraphStyle: { namedStyleType: 'NORMAL_TEXT' },
+                  fields: 'namedStyleType',
+                },
+              },
+            ],
+          },
         });
-        this.logger.log('Appended recommendations to the document.');
-      } catch (error) {
-        this.logger.error(`Failed to write to Google Doc: ${error.message}`);
-        throw error;
       }
-    } else {
-      this.logger.log('No recommendations to append.');
+    } catch (error) {
+      console.error(`Error inserting section '${section}': ${error.message}`);
+      throw error;
     }
   }
+  console.log('All recommendations appended successfully');
+}
+
+        
+        // recommendationsContent += sectionText + '\n';
+        // const startIndex = recommendationsContent.length - sectionText.length;
+
+        // // Add insertText for this section and its content
+        // requests.push({
+        //   insertText: {
+        //     endOfSegmentLocation: {},
+        //     text: sectionText,
+        //   },
+        // });
+
+        // // Update paragraph style for the section heading
+        // requests.push({
+        //   updateParagraphStyle: {
+        //     range: {
+        //       startIndex: startIndex,
+        //       endIndex: startIndex + section.length,
+        //     },
+        //     paragraphStyle: {
+        //       namedStyleType: 'HEADING_1',
+        //     },
+        //     fields: 'namedStyleType',
+        //   },
+        // });
+      }
+    }
+
+  //   // Insert the recommendations at the end of the document
+  //   if (recommendationsContent.trim()) {
+  //     try {
+  //       await docsService.documents.batchUpdate({
+  //         documentId,
+  //         requestBody: { requests },
+  //         //   requests: [
+  //         //     {
+  //         //       insertText: {
+  //         //         endOfSegmentLocation: {},
+  //         //         text: recommendationsContent,
+  //         //       },
+  //         //     },
+  //         //   ],
+  //         // },
+  //       });
+  //       this.logger.log('Appended recommendations to the document.');
+  //     } catch (error) {
+  //       this.logger.error(`Failed to write to Google Doc: ${error.message}`);
+  //       throw error;
+  //     }
+  //   } else {
+  //     this.logger.log('No recommendations to append.');
+  //   }
+  // }
 
   // async appendRecommendations(
   //   documentId: string,
