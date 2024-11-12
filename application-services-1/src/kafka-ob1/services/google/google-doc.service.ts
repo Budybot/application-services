@@ -725,7 +725,9 @@ export class GoogleDocService {
 
     // Step 1: Handle missing sections by adding them at the end of the document
     const lastElementEndIndex =
-      contentElements[contentElements.length - 1]?.endIndex || 1;
+      contentElements.length > 0
+        ? contentElements[contentElements.length - 1].endIndex
+        : 1;
     for (const section of Object.keys(updates)) {
       if (
         !contentElements.some(
@@ -742,15 +744,15 @@ export class GoogleDocService {
         // Insert the new section header at the end of the document
         requests.push({
           insertText: {
-            location: { index: lastElementEndIndex },
+            location: { index: lastElementEndIndex + 1 },
             text: `\n${section}\n`,
           },
         });
         requests.push({
           updateParagraphStyle: {
             range: {
-              startIndex: lastElementEndIndex,
-              endIndex: lastElementEndIndex + section.length + 1,
+              startIndex: lastElementEndIndex + 1,
+              endIndex: lastElementEndIndex + section.length + 2,
             },
             paragraphStyle: { namedStyleType: 'HEADING_1' },
             fields: 'namedStyleType',
