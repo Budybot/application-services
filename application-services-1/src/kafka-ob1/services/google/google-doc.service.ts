@@ -836,8 +836,7 @@ export class GoogleDocService {
         //     fields: 'namedStyleType',
         //   },
         // });
-      }
-    }
+  }
 
   //   // Insert the recommendations at the end of the document
   //   if (recommendationsContent.trim()) {
