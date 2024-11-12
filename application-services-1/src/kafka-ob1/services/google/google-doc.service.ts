@@ -718,74 +718,53 @@ export class GoogleDocService {
     updates: { [section: string]: { add?: string; remove?: string } },
   ) {
     const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+    const requests: any[] = [];
 
-    // Loop through each section and add it to the end of the document
     for (const [section, changes] of Object.entries(updates)) {
-      const sectionText = `${section}\n`;
-      const addContent = changes.add?.trim()
-        ? `Add:\n${changes.add.trim()}\n`
-        : '';
-      const removeContent = changes.remove?.trim()
-        ? `Remove:\n${changes.remove.trim()}\n`
-        : '';
-      const fullText = `${sectionText}${addContent}${removeContent}\n`;
+      // Step 1: Insert the section title as a heading
+      requests.push({
+        insertText: {
+          endOfSegmentLocation: {}, // Always insert at the end of the document
+          text: `${section}\n`,
+        },
+      });
+      requests.push({
+        updateParagraphStyle: {
+          range: { startIndex: -1 }, // Targets the last inserted section title
+          paragraphStyle: { namedStyleType: 'HEADING_1' },
+          fields: 'namedStyleType',
+        },
+      });
 
-      try {
-        // 1. Insert section title
-        await docsService.documents.batchUpdate({
-          documentId,
-          requestBody: {
-            requests: [
-              {
-                insertText: {
-                  endOfSegmentLocation: {}, // Insert at the document end
-                  text: sectionText,
-                },
-              },
-              {
-                updateParagraphStyle: {
-                  range: {
-                    startIndex: -1, // Targets the last inserted section title
-                  },
-                  paragraphStyle: { namedStyleType: 'HEADING_1' },
-                  fields: 'namedStyleType',
-                },
-              },
-            ],
+      // Step 2: Insert "Add" and "Remove" content as normal text
+      if (changes.add) {
+        requests.push({
+          insertText: {
+            endOfSegmentLocation: {},
+            text: `Add:\n${changes.add.trim()}\n\n`,
           },
         });
-
-        // 2. Insert the section's content as normal text
-        if (addContent || removeContent) {
-          await docsService.documents.batchUpdate({
-            documentId,
-            requestBody: {
-              requests: [
-                {
-                  insertText: {
-                    endOfSegmentLocation: {}, // Append content after the title
-                    text: `${addContent}${removeContent}\n`,
-                  },
-                },
-                {
-                  updateParagraphStyle: {
-                    range: {
-                      startIndex: -1, // Targets the last inserted content
-                    },
-                    paragraphStyle: { namedStyleType: 'NORMAL_TEXT' },
-                    fields: 'namedStyleType',
-                  },
-                },
-              ],
-            },
-          });
-        }
-      } catch (error) {
-        console.error(`Error inserting section '${section}': ${error.message}`);
-        throw error;
+      }
+      if (changes.remove) {
+        requests.push({
+          insertText: {
+            endOfSegmentLocation: {},
+            text: `Remove:\n${changes.remove.trim()}\n\n`,
+          },
+        });
       }
     }
 
-    console.log('All recommendations appended with correct formatting.');
+    // Execute all requests to batch update the document at once
+    try {
+      await docsService.documents.batchUpdate({
+        documentId,
+        requestBody: { requests },
+      });
+      this.logger.log('Appended structured recommendations to the document.');
+    } catch (error) {
+      this.logger.error(`Failed to write to Google Doc: ${error.message}`);
+      throw error;
+    }
   }
 }
