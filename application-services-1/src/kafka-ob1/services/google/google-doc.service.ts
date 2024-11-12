@@ -713,58 +713,139 @@ export class GoogleDocService {
     return sections;
   }
 
-  async appendRecommendations(
+  async appendContentFromJson(
     documentId: string,
-    updates: { [section: string]: { add?: string; remove?: string } },
+    contentJson: { [section: string]: any }, // Use 'any' to handle various content types
   ) {
     const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+    const doc = await docsService.documents.get({ documentId });
+    const bodyContent = doc.data.body?.content || [];
+
+    // Determine the end index of the document
+    const lastElement = bodyContent[bodyContent.length - 1];
+    const endIndex = lastElement?.endIndex || 1;
+
     const requests: any[] = [];
 
-    for (const [section, changes] of Object.entries(updates)) {
-      // Step 1: Insert the section title as a heading
+    // Initialize the insertion index to the end of the document
+    let index = endIndex;
+
+    // Loop through each section in order
+    for (const [header, content] of Object.entries(contentJson)) {
+      // a. Add header
       requests.push({
         insertText: {
-          endOfSegmentLocation: {}, // Always insert at the end of the document
-          text: `${section}\n`,
+          location: { index },
+          text: `${header}\n`,
         },
       });
       requests.push({
         updateParagraphStyle: {
-          range: { startIndex: -1 }, // Targets the last inserted section title
-          paragraphStyle: { namedStyleType: 'HEADING_1' },
+          range: { startIndex: index, endIndex: index + header.length + 1 },
+          paragraphStyle: {
+            namedStyleType: 'HEADING_1',
+          },
           fields: 'namedStyleType',
         },
       });
+      index += header.length + 1;
 
-      // Step 2: Insert "Add" and "Remove" content as normal text
-      if (changes.add) {
+      // b. Add content based on its type
+      if (Array.isArray(content)) {
+        // Content is a list (e.g., objectives, challenges)
+        for (const item of content) {
+          // Insert bullet point
+          requests.push({
+            insertText: {
+              location: { index },
+              text: `${item}\n`,
+            },
+          });
+          requests.push({
+            createParagraphBullets: {
+              range: {
+                startIndex: index,
+                endIndex: index + item.length + 1,
+              },
+              bulletPreset: 'BULLET_DISC_CIRCLE_SQUARE',
+            },
+          });
+          index += item.length + 1;
+        }
+      } else if (typeof content === 'object' && content !== null) {
+        // Content is a sub-section (e.g., roles and responsibilities)
+        for (const [subHeader, subContent] of Object.entries(content)) {
+          // Insert sub-header
+          requests.push({
+            insertText: {
+              location: { index },
+              text: `${subHeader}\n`,
+            },
+          });
+          requests.push({
+            updateParagraphStyle: {
+              range: {
+                startIndex: index,
+                endIndex: index + subHeader.length + 1,
+              },
+              paragraphStyle: {
+                namedStyleType: 'HEADING_2',
+              },
+              fields: 'namedStyleType',
+            },
+          });
+          index += subHeader.length + 1;
+
+          // Check subContent type for flexible handling
+          if (Array.isArray(subContent)) {
+            // subContent is a list
+            for (const listItem of subContent) {
+              requests.push({
+                insertText: {
+                  location: { index },
+                  text: `${listItem}\n`,
+                },
+              });
+              requests.push({
+                createParagraphBullets: {
+                  range: {
+                    startIndex: index,
+                    endIndex: index + listItem.length + 1,
+                  },
+                  bulletPreset: 'BULLET_DISC_CIRCLE_SQUARE',
+                },
+              });
+              index += listItem.length + 1;
+            }
+          } else if (typeof subContent === 'string') {
+            // subContent is a paragraph
+            requests.push({
+              insertText: {
+                location: { index },
+                text: `${subContent}\n\n`,
+              },
+            });
+            index += subContent.length + 2;
+          }
+        }
+      } else if (typeof content === 'string') {
+        // Content is a paragraph
         requests.push({
           insertText: {
-            endOfSegmentLocation: {},
-            text: `Add:\n${changes.add.trim()}\n\n`,
+            location: { index },
+            text: `${content}\n\n`,
           },
         });
-      }
-      if (changes.remove) {
-        requests.push({
-          insertText: {
-            endOfSegmentLocation: {},
-            text: `Remove:\n${changes.remove.trim()}\n\n`,
-          },
-        });
+        index += content.length + 2;
       }
     }
 
-    // Execute all requests to batch update the document at once
-    try {
-      await docsService.documents.batchUpdate({
-        documentId,
-        requestBody: { requests },
-      });
-      this.logger.log('Appended structured recommendations to the document.');
-    } catch (error) {
-      this.logger.error(`Failed to write to Google Doc: ${error.message}`);
-      throw error;
-    }
+    // Send the batch update request to Google Docs API
+    await docsService.documents.batchUpdate({
+      documentId,
+      requestBody: { requests },
+    });
+
+    this.logger.log(`Appended content to Google Doc ID: ${documentId}`);
   }
 }
