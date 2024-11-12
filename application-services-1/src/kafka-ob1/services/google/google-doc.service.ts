@@ -719,354 +719,73 @@ export class GoogleDocService {
   ) {
     const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
 
-    // Collect all recommendation texts
-    let recommendationsContent = '\n'; // Start with a newline to separate from existing content
-    const requests: any[] = [];
-
+    // Loop through each section and add it to the end of the document
     for (const [section, changes] of Object.entries(updates)) {
-      // Ensure changes.add and changes.remove are strings
-      const addContent = typeof changes.add === 'string' ? changes.add : '';
-      const removeContent =
-        typeof changes.remove === 'string' ? changes.remove : '';
+      const sectionText = `${section}\n`;
+      const addContent = changes.add?.trim()
+        ? `Add:\n${changes.add.trim()}\n`
+        : '';
+      const removeContent = changes.remove?.trim()
+        ? `Remove:\n${changes.remove.trim()}\n`
+        : '';
+      const fullText = `${sectionText}${addContent}${removeContent}\n`;
 
-      let sectionText = `${section}\n`;
-
-      let sectionHasContent = false; // Flag to check if the section has any recommendations
-
-      if (addContent.trim()) {
-        sectionText += `Add:\n${addContent.trim()}\n`;
-        sectionHasContent = true;
-      }
-
-      if (removeContent.trim()) {
-        sectionText += `Remove:\n${removeContent.trim()}\n`;
-        sectionHasContent = true;
-      }
-      // if (!sectionHasContent) {
-      //   // Remove the section name that was just added
-      //   const sectionNameLength = `${section}\n`.length;
-      //   recommendationsContent = recommendationsContent.slice(
-      //     0,
-      //     -sectionNameLength,
-      //   );
-      // } else {
-      //   // Add a separator between sections
-      //   recommendationsContent += '\n';
-      // }
-      if (sectionHasContent) {
-        try {
-          // 1. Insert section title
-          await docsService.documents.batchUpdate({
-            documentId,
-            requestBody: {
-              requests: [
-                {
-                  insertText: {
-                    endOfSegmentLocation: {}, // Insert at the document end
-                    text: sectionText,
-                  },
-                },
-                {
-                  updateParagraphStyle: {
-                    range: {
-                      startIndex: -1, // Targets the last inserted section title
-                    },
-                    paragraphStyle: { namedStyleType: 'HEADING_1' },
-                    fields: 'namedStyleType',
-                  },
-                },
-              ],
-            },
-          });
-          // 2. Insert the section's content as normal text
-      if (addContent || removeContent) {
+      try {
+        // 1. Insert section title
         await docsService.documents.batchUpdate({
           documentId,
           requestBody: {
             requests: [
               {
                 insertText: {
-                  endOfSegmentLocation: {}, // Append content after the title
-                  text: `${addContent}${removeContent}\n`,
+                  endOfSegmentLocation: {}, // Insert at the document end
+                  text: sectionText,
                 },
               },
               {
                 updateParagraphStyle: {
                   range: {
-                    startIndex: -1, // Targets the last inserted content
+                    startIndex: -1, // Targets the last inserted section title
                   },
-                  paragraphStyle: { namedStyleType: 'NORMAL_TEXT' },
+                  paragraphStyle: { namedStyleType: 'HEADING_1' },
                   fields: 'namedStyleType',
                 },
               },
             ],
           },
         });
+
+        // 2. Insert the section's content as normal text
+        if (addContent || removeContent) {
+          await docsService.documents.batchUpdate({
+            documentId,
+            requestBody: {
+              requests: [
+                {
+                  insertText: {
+                    endOfSegmentLocation: {}, // Append content after the title
+                    text: `${addContent}${removeContent}\n`,
+                  },
+                },
+                {
+                  updateParagraphStyle: {
+                    range: {
+                      startIndex: -1, // Targets the last inserted content
+                    },
+                    paragraphStyle: { namedStyleType: 'NORMAL_TEXT' },
+                    fields: 'namedStyleType',
+                  },
+                },
+              ],
+            },
+          });
+        }
+      } catch (error) {
+        console.error(`Error inserting section '${section}': ${error.message}`);
+        throw error;
       }
-    } catch (error) {
-      console.error(`Error inserting section '${section}': ${error.message}`);
-      throw error;
     }
+
+    console.log('All recommendations appended with correct formatting.');
   }
-  console.log('All recommendations appended successfully');
-}
-
-        
-        // recommendationsContent += sectionText + '\n';
-        // const startIndex = recommendationsContent.length - sectionText.length;
-
-        // // Add insertText for this section and its content
-        // requests.push({
-        //   insertText: {
-        //     endOfSegmentLocation: {},
-        //     text: sectionText,
-        //   },
-        // });
-
-        // // Update paragraph style for the section heading
-        // requests.push({
-        //   updateParagraphStyle: {
-        //     range: {
-        //       startIndex: startIndex,
-        //       endIndex: startIndex + section.length,
-        //     },
-        //     paragraphStyle: {
-        //       namedStyleType: 'HEADING_1',
-        //     },
-        //     fields: 'namedStyleType',
-        //   },
-        // });
-  }
-
-  //   // Insert the recommendations at the end of the document
-  //   if (recommendationsContent.trim()) {
-  //     try {
-  //       await docsService.documents.batchUpdate({
-  //         documentId,
-  //         requestBody: { requests },
-  //         //   requests: [
-  //         //     {
-  //         //       insertText: {
-  //         //         endOfSegmentLocation: {},
-  //         //         text: recommendationsContent,
-  //         //       },
-  //         //     },
-  //         //   ],
-  //         // },
-  //       });
-  //       this.logger.log('Appended recommendations to the document.');
-  //     } catch (error) {
-  //       this.logger.error(`Failed to write to Google Doc: ${error.message}`);
-  //       throw error;
-  //     }
-  //   } else {
-  //     this.logger.log('No recommendations to append.');
-  //   }
-  // }
-
-  // async appendRecommendations(
-  //   documentId: string,
-  //   updates: { [section: string]: { add?: string; remove?: string } },
-  // ) {
-  //   const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
-  //   const doc = await docsService.documents.get({ documentId });
-  //   const contentElements = doc.data.body?.content || [];
-
-  //   const requests: any[] = [];
-  //   const sectionIndices: {
-  //     [section: string]: { startIndex: number; endIndex: number };
-  //   } = {};
-
-  //   // Map section headers to their start and end indices
-  //   let currentSection = '';
-  //   let currentStartIndex = 0;
-  //   let currentEndIndex = 0;
-
-  //   for (const element of contentElements) {
-  //     if (element.paragraph) {
-  //       const paragraph = element.paragraph;
-  //       const textRuns = paragraph.elements || [];
-  //       const textContent = textRuns
-  //         .map((tr) => tr.textRun?.content || '')
-  //         .join('');
-  //       const startIndex = element.startIndex || 1;
-  //       const endIndex = element.endIndex || startIndex;
-
-  //       if (paragraph.paragraphStyle?.namedStyleType === 'HEADING_1') {
-  //         if (currentSection) {
-  //           sectionIndices[currentSection].endIndex = startIndex - 1;
-  //         }
-  //         currentSection = textContent.trim();
-  //         currentStartIndex = endIndex;
-  //         sectionIndices[currentSection] = {
-  //           startIndex: currentStartIndex,
-  //           endIndex: 0,
-  //         };
-  //       } else {
-  //         currentEndIndex = endIndex;
-  //       }
-  //     }
-  //   }
-
-  //   // Set endIndex for the last section
-  //   if (currentSection) {
-  //     sectionIndices[currentSection].endIndex = currentEndIndex;
-  //   }
-  //   const sortedSections = Object.entries(sectionIndices).sort(
-  //     ([, a], [, b]) => a.startIndex - b.startIndex,
-  //   );
-
-  //   // Append recommendations to each section
-  //   for (const [section, changes] of Object.entries(updates)) {
-  //     let sectionInfo = sectionIndices[section];
-
-  //     if (!sectionInfo) {
-  //       this.logger.warn(
-  //         `Section '${section}' not found in the document. Adding it.`,
-  //       );
-  //       // Get the end index of the document
-  //       const endIndex = doc.data.body?.content?.slice(-1)[0]?.endIndex || 1;
-
-  //       // Insert the new section header
-  //       requests.push({
-  //         insertText: {
-  //           location: { index: endIndex - 1 },
-  //           text: `\n${section}\n`,
-  //         },
-  //       });
-  //       requests.push({
-  //         updateParagraphStyle: {
-  //           range: {
-  //             startIndex: endIndex,
-  //             endIndex: endIndex + section.length + 1,
-  //           },
-  //           paragraphStyle: {
-  //             namedStyleType: 'HEADING_1',
-  //           },
-  //           fields: 'namedStyleType',
-  //         },
-  //       });
-
-  //       // Update sectionInfo to point to the new section
-  //       sectionInfo = {
-  //         startIndex: endIndex + section.length + 1,
-  //         endIndex: endIndex + section.length + 1,
-  //       };
-
-  //       // Add the new section to the sortedSections array
-  //       sortedSections.push([section, sectionInfo]);
-
-  //       // Sort the sections again
-  //       sortedSections.sort(([, a], [, b]) => a.startIndex - b.startIndex);
-  //     }
-
-  //     // Prepare recommendations text
-  //     let updateText = '';
-
-  //     const addContent = changes.add || '';
-  //     const removeContent = changes.remove || '';
-
-  //     if (addContent) {
-  //       const addLines = addContent
-  //         .split('\n')
-  //         .map((line) => `Add: ${line}`)
-  //         .join('\n');
-  //       updateText += `\n${addLines}\n`;
-  //     }
-
-  //     if (removeContent) {
-  //       const removeLines = removeContent
-  //         .split('\n')
-  //         .map((line) => `Remove: ${line}`)
-  //         .join('\n');
-  //       updateText += `\n${removeLines}\n`;
-  //     }
-
-  //     if (updateText) {
-  //       const textToInsert = `\n${updateText}`;
-  //       const insertIndex = sectionInfo.endIndex;
-  //       requests.push({
-  //         insertText: {
-  //           location: { index: insertIndex },
-  //           text: textToInsert,
-  //         },
-  //       });
-  //       requests.push({
-  //         updateParagraphStyle: {
-  //           range: {
-  //             startIndex: insertIndex,
-  //             endIndex: insertIndex + textToInsert.length,
-  //           },
-  //           paragraphStyle: {
-  //             namedStyleType: 'NORMAL_TEXT',
-  //           },
-  //           fields: 'namedStyleType',
-  //         },
-  //       });
-  //       const addColor = { red: 0, green: 0, blue: 1 }; // Blue for "Add:"
-  //       const removeColor = { red: 1, green: 0, blue: 0 }; // Red for "Remove:"
-
-  //       let cursorIndex = insertIndex;
-  //       updateText.split('\n').forEach((line) => {
-  //         if (line.startsWith('Add:')) {
-  //           requests.push({
-  //             updateTextStyle: {
-  //               range: {
-  //                 startIndex: cursorIndex,
-  //                 endIndex: cursorIndex + 4, // "Add:" is 4 characters
-  //               },
-  //               textStyle: {
-  //                 foregroundColor: { color: { rgbColor: addColor } },
-  //               },
-  //               fields: 'foregroundColor',
-  //             },
-  //           });
-  //         } else if (line.startsWith('Remove:')) {
-  //           requests.push({
-  //             updateTextStyle: {
-  //               range: {
-  //                 startIndex: cursorIndex,
-  //                 endIndex: cursorIndex + 7, // "Remove:" is 7 characters
-  //               },
-  //               textStyle: {
-  //                 foregroundColor: { color: { rgbColor: removeColor } },
-  //               },
-  //               fields: 'foregroundColor',
-  //             },
-  //           });
-  //         }
-  //         cursorIndex += line.length + 1; // Move to the next line (+1 for the newline character)
-  //       });
-
-  //       // Calculate the length of inserted text
-  //       const insertedTextLength = textToInsert.length;
-
-  //       // Update the endIndex of the current section
-  //       sectionInfo.endIndex += insertedTextLength;
-
-  //       // Update startIndex and endIndex of subsequent sections
-  //       for (const [nextSection, nextSectionInfo] of sortedSections) {
-  //         if (nextSectionInfo.startIndex > sectionInfo.startIndex) {
-  //           nextSectionInfo.startIndex += insertedTextLength;
-  //           nextSectionInfo.endIndex += insertedTextLength;
-  //         }
-  //       }
-  //     }
-  //   }
-
-  //   // Execute the batch update
-  //   if (requests.length > 0) {
-  //     await docsService.documents.batchUpdate({
-  //       documentId,
-  //       requestBody: { requests },
-  //     });
-  //     this.logger.log(`Appended recommendations to the document.`);
-  //   } else {
-  //     this.logger.log(`No updates to apply to the document.`);
-  //   }
-  // }
-
-  // async parseMarkdownFormat(content: string, startIndex: number = 1): Promise<any[]> {
-  //   // Parses markdown-style formatting for bold, italic, etc., and returns Google Docs API requests.
-  // }
 }
