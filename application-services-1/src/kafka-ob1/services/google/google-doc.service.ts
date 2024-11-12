@@ -474,7 +474,7 @@ export class GoogleDocService {
     requests.push({
       insertText: {
         location: { index: 1 },
-        text: `\n${title}\n\n`,
+        text: `${title}\n\n`,
       },
     });
     requests.push({
