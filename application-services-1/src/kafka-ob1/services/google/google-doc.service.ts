@@ -712,7 +712,7 @@ export class GoogleDocService {
 
     return sections;
   }
-  async appendRecommendationsAtEnd(
+  async appendRecommendations(
     documentId: string,
     updates: { [section: string]: { add?: string; remove?: string } },
   ) {
