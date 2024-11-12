@@ -51,6 +51,7 @@ export class ContentService {
         await this.googleDocService.createDocumentFromJson(
           documentId,
           sowContent,
+          'Statement of Work (SOW)',
         );
 
         await this.contentAssetsService.saveDocumentAsset(
