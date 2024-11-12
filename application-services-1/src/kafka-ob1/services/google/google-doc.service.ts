@@ -712,6 +712,7 @@ export class GoogleDocService {
 
     return sections;
   }
+
   async appendRecommendations(
     documentId: string,
     updates: { [section: string]: { add?: string; remove?: string } },
@@ -737,15 +738,18 @@ export class GoogleDocService {
         style: 'HEADING_2',
       });
 
+      // **Ensure changes.add and changes.remove are strings**
+      const addContent = typeof changes.add === 'string' ? changes.add : '';
+      const removeContent =
+        typeof changes.remove === 'string' ? changes.remove : '';
+
       // Prepare recommendation lines
-      const addLines =
-        changes.add && changes.add.trim()
-          ? changes.add.split('\n').map((line) => `Add: ${line}`)
-          : [];
-      const removeLines =
-        changes.remove && changes.remove.trim()
-          ? changes.remove.split('\n').map((line) => `Remove: ${line}`)
-          : [];
+      const addLines = addContent.trim()
+        ? addContent.split('\n').map((line) => `Add: ${line}`)
+        : [];
+      const removeLines = removeContent.trim()
+        ? removeContent.split('\n').map((line) => `Remove: ${line}`)
+        : [];
 
       // Append add lines
       for (const line of addLines) {
@@ -836,11 +840,16 @@ export class GoogleDocService {
 
     // Execute the batch update
     if (requests.length > 0) {
-      await docsService.documents.batchUpdate({
-        documentId,
-        requestBody: { requests },
-      });
-      this.logger.log('Appended recommendations to the document.');
+      try {
+        await docsService.documents.batchUpdate({
+          documentId,
+          requestBody: { requests },
+        });
+        this.logger.log('Appended recommendations to the document.');
+      } catch (error) {
+        this.logger.error(`Failed to write to Google Doc: ${error.message}`);
+        throw error;
+      }
     } else {
       this.logger.log('No updates to apply to the document.');
     }
