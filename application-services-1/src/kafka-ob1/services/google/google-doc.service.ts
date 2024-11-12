@@ -721,6 +721,7 @@ export class GoogleDocService {
 
     // Collect all recommendation texts
     let recommendationsContent = '\n'; // Start with a newline to separate from existing content
+    const requests: any[] = [];
 
     for (const [section, changes] of Object.entries(updates)) {
       // Ensure changes.add and changes.remove are strings
@@ -728,29 +729,55 @@ export class GoogleDocService {
       const removeContent =
         typeof changes.remove === 'string' ? changes.remove : '';
 
-      recommendationsContent += `${section}\n`;
+      let sectionText = `${section}\n`;
 
       let sectionHasContent = false; // Flag to check if the section has any recommendations
 
       if (addContent.trim()) {
-        recommendationsContent += `Add:\n${addContent.trim()}\n`;
+        sectionText += `Add:\n${addContent.trim()}\n`;
         sectionHasContent = true;
       }
 
       if (removeContent.trim()) {
-        recommendationsContent += `Remove:\n${removeContent.trim()}\n`;
+        sectionText += `Remove:\n${removeContent.trim()}\n`;
         sectionHasContent = true;
       }
-      if (!sectionHasContent) {
-        // Remove the section name that was just added
-        const sectionNameLength = `${section}\n`.length;
-        recommendationsContent = recommendationsContent.slice(
-          0,
-          -sectionNameLength,
-        );
-      } else {
-        // Add a separator between sections
-        recommendationsContent += '\n';
+      // if (!sectionHasContent) {
+      //   // Remove the section name that was just added
+      //   const sectionNameLength = `${section}\n`.length;
+      //   recommendationsContent = recommendationsContent.slice(
+      //     0,
+      //     -sectionNameLength,
+      //   );
+      // } else {
+      //   // Add a separator between sections
+      //   recommendationsContent += '\n';
+      // }
+      if (sectionHasContent) {
+        recommendationsContent += sectionText + '\n';
+        const startIndex = recommendationsContent.length - sectionText.length;
+
+        // Add insertText for this section and its content
+        requests.push({
+          insertText: {
+            endOfSegmentLocation: {},
+            text: sectionText,
+          },
+        });
+
+        // Update paragraph style for the section heading
+        requests.push({
+          updateParagraphStyle: {
+            range: {
+              startIndex: startIndex,
+              endIndex: startIndex + section.length,
+            },
+            paragraphStyle: {
+              namedStyleType: 'HEADING_1',
+            },
+            fields: 'namedStyleType',
+          },
+        });
       }
     }
 
@@ -759,16 +786,16 @@ export class GoogleDocService {
       try {
         await docsService.documents.batchUpdate({
           documentId,
-          requestBody: {
-            requests: [
-              {
-                insertText: {
-                  endOfSegmentLocation: {},
-                  text: recommendationsContent,
-                },
-              },
-            ],
-          },
+          requestBody: { requests },
+          //   requests: [
+          //     {
+          //       insertText: {
+          //         endOfSegmentLocation: {},
+          //         text: recommendationsContent,
+          //       },
+          //     },
+          //   ],
+          // },
         });
         this.logger.log('Appended recommendations to the document.');
       } catch (error) {
