@@ -719,9 +719,9 @@ export class GoogleDocService {
   ) {
     const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
 
-    const requests: any[] = [];
     let recommendationsContent = 'RECOMMENDATIONS:\n\n';
 
+    // Build the recommendations content with section headers and content
     for (const [section, changes] of Object.entries(updates)) {
       recommendationsContent += `${section}\n`;
 
@@ -736,53 +736,19 @@ export class GoogleDocService {
     }
 
     try {
-      // Insert recommendations at the end of the document
-      requests.push({
-        insertText: {
-          endOfSegmentLocation: {},
-          text: recommendationsContent,
-        },
-      });
-
-      // Set style for "RECOMMENDATIONS:" header and section headers
-      const lines = recommendationsContent.split('\n');
-      let cursorIndex = 0;
-
-      // Apply HEADING_1 style to the "RECOMMENDATIONS:" title
-      requests.push({
-        updateParagraphStyle: {
-          range: {
-            startIndex: cursorIndex,
-            endIndex: cursorIndex + 'RECOMMENDATIONS:'.length,
-          },
-          paragraphStyle: { namedStyleType: 'HEADING_1' },
-          fields: 'namedStyleType',
-        },
-      });
-
-      cursorIndex += 'RECOMMENDATIONS:\n\n'.length;
-
-      // Apply HEADING_1 style to each section name
-      for (const line of lines.slice(2)) {
-        // Skip "RECOMMENDATIONS:" header
-        if (Object.keys(updates).includes(line.trim())) {
-          requests.push({
-            updateParagraphStyle: {
-              range: {
-                startIndex: cursorIndex,
-                endIndex: cursorIndex + line.length,
-              },
-              paragraphStyle: { namedStyleType: 'HEADING_1' },
-              fields: 'namedStyleType',
-            },
-          });
-        }
-        cursorIndex += line.length + 1; // Move to the next line (+1 for newline)
-      }
-
+      // Insert recommendations content at the end of the document
       await docsService.documents.batchUpdate({
         documentId,
-        requestBody: { requests },
+        requestBody: {
+          requests: [
+            {
+              insertText: {
+                endOfSegmentLocation: {},
+                text: recommendationsContent,
+              },
+            },
+          ],
+        },
       });
 
       this.logger.log('Appended recommendations to the document.');
