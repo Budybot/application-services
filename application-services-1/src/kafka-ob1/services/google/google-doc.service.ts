@@ -712,128 +712,106 @@ export class GoogleDocService {
 
     return sections;
   }
-  async appendRecommendations(
+  async appendRecommendationsAtEnd(
     documentId: string,
     updates: { [section: string]: { add?: string; remove?: string } },
   ) {
     const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
     const doc = await docsService.documents.get({ documentId });
+    const contentElements = doc.data.body?.content || [];
+
+    // Calculate the last safe index for insertion
+    const lastElement = contentElements.slice(-1)[0];
+    const safeEndIndex = (lastElement?.endIndex || 1) - 1;
 
     const requests: any[] = [];
 
-    // Insert "Recommendations" heading at the end of the document
-    const endOfDocIndex = doc.data.body?.content?.slice(-1)[0]?.endIndex || 1;
+    // Step 1: Insert the main "Recommendations" heading
     requests.push({
       insertText: {
-        location: { index: endOfDocIndex },
-        text: `\nRecommendations\n`,
+        location: { index: safeEndIndex },
+        text: '\nRecommendations\n',
       },
     });
     requests.push({
       updateParagraphStyle: {
-        range: {
-          startIndex: endOfDocIndex,
-          endIndex: endOfDocIndex + 'Recommendations'.length + 1,
-        },
+        range: { startIndex: safeEndIndex, endIndex: safeEndIndex + 14 },
         paragraphStyle: { namedStyleType: 'HEADING_1' },
         fields: 'namedStyleType',
       },
     });
 
-    // Track the current insertion index
-    let cursorIndex = endOfDocIndex + 'Recommendations'.length + 2;
+    let currentIndex = safeEndIndex + 14;
 
+    // Step 2: Insert each section as a subheading with recommendations
     for (const [section, changes] of Object.entries(updates)) {
-      // Add subheading for each section under "Recommendations"
+      const sectionText = `\n${section}\n`;
       requests.push({
         insertText: {
-          location: { index: cursorIndex },
-          text: `\n${section}\n`,
+          location: { index: currentIndex },
+          text: sectionText,
         },
       });
       requests.push({
         updateParagraphStyle: {
           range: {
-            startIndex: cursorIndex,
-            endIndex: cursorIndex + section.length + 1,
+            startIndex: currentIndex,
+            endIndex: currentIndex + sectionText.length,
           },
           paragraphStyle: { namedStyleType: 'HEADING_2' },
           fields: 'namedStyleType',
         },
       });
 
-      cursorIndex += section.length + 2;
+      currentIndex += sectionText.length;
 
-      // Build recommendation text for "Add" and "Remove"
-      const addColor = { red: 0, green: 0, blue: 1 };
-      const removeColor = { red: 1, green: 0, blue: 0 };
-      let updateText = '';
-
-      // Add recommendations
-      if (changes.add && changes.add.trim() !== '') {
-        const addLines = changes.add
-          .split('\n')
-          .map((line) => `Add: ${line}`)
-          .join('\n');
-        updateText += `\n${addLines}\n`;
-
-        requests.push({
-          insertText: {
-            location: { index: cursorIndex },
-            text: addLines + '\n',
-          },
-        });
-        // Apply color coding for "Add"
-        addLines.split('\n').forEach((line) => {
-          if (line.startsWith('Add:')) {
-            requests.push({
-              updateTextStyle: {
-                range: {
-                  startIndex: cursorIndex,
-                  endIndex: cursorIndex + 4,
+      // Step 3: Add each "Add" and "Remove" item with color coding
+      if (changes.add) {
+        const addLines = changes.add.split('\n').map((line) => `Add: ${line}`);
+        addLines.forEach((line) => {
+          requests.push({
+            insertText: {
+              location: { index: currentIndex },
+              text: `${line}\n`,
+            },
+          });
+          requests.push({
+            updateTextStyle: {
+              range: { startIndex: currentIndex, endIndex: currentIndex + 4 },
+              textStyle: {
+                foregroundColor: {
+                  color: { rgbColor: { red: 0, green: 0, blue: 1 } },
                 },
-                textStyle: {
-                  foregroundColor: { color: { rgbColor: addColor } },
-                },
-                fields: 'foregroundColor',
               },
-            });
-          }
-          cursorIndex += line.length + 1; // Update cursor for each line
+              fields: 'foregroundColor',
+            },
+          });
+          currentIndex += line.length + 1;
         });
       }
-
-      // Remove recommendations
-      if (changes.remove && changes.remove.trim() !== '') {
+      if (changes.remove) {
         const removeLines = changes.remove
           .split('\n')
-          .map((line) => `Remove: ${line}`)
-          .join('\n');
-        updateText += `\n${removeLines}\n`;
-
-        requests.push({
-          insertText: {
-            location: { index: cursorIndex },
-            text: removeLines + '\n',
-          },
-        });
-        // Apply color coding for "Remove"
-        removeLines.split('\n').forEach((line) => {
-          if (line.startsWith('Remove:')) {
-            requests.push({
-              updateTextStyle: {
-                range: {
-                  startIndex: cursorIndex,
-                  endIndex: cursorIndex + 7,
+          .map((line) => `Remove: ${line}`);
+        removeLines.forEach((line) => {
+          requests.push({
+            insertText: {
+              location: { index: currentIndex },
+              text: `${line}\n`,
+            },
+          });
+          requests.push({
+            updateTextStyle: {
+              range: { startIndex: currentIndex, endIndex: currentIndex + 7 },
+              textStyle: {
+                foregroundColor: {
+                  color: { rgbColor: { red: 1, green: 0, blue: 0 } },
                 },
-                textStyle: {
-                  foregroundColor: { color: { rgbColor: removeColor } },
-                },
-                fields: 'foregroundColor',
               },
-            });
-          }
-          cursorIndex += line.length + 1; // Update cursor for each line
+              fields: 'foregroundColor',
+            },
+          });
+          currentIndex += line.length + 1;
         });
       }
     }
@@ -844,9 +822,9 @@ export class GoogleDocService {
         documentId,
         requestBody: { requests },
       });
-      this.logger.log(`Appended recommendations to the document.`);
+      this.logger.log('Appended recommendations to the document.');
     } else {
-      this.logger.log(`No updates to apply to the document.`);
+      this.logger.log('No updates to apply to the document.');
     }
   }
 
