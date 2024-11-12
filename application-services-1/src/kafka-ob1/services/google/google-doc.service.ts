@@ -23,7 +23,8 @@ export class GoogleDocService {
     try {
       const credentials = JSON.parse(tokenData);
 
-      const { client_id, client_secret, token_uri, refresh_token } = credentials;
+      const { client_id, client_secret, token_uri, refresh_token } =
+        credentials;
       this.oAuth2Client = new google.auth.OAuth2(
         client_id,
         client_secret,
@@ -71,10 +72,6 @@ export class GoogleDocService {
     parentFolderId?: string,
   ): Promise<string> {
     try {
-      // this.logger.log(
-      //   `Current OAuth2 Credentials: ${JSON.stringify(this.oAuth2Client.credentials)}`,
-      // );
-
       // Check if the access token is expired or missing, and refresh if needed
       if (
         !this.oAuth2Client.credentials.access_token ||
@@ -98,11 +95,6 @@ export class GoogleDocService {
         mimeType: 'application/vnd.google-apps.folder',
         ...(parentFolderId && { parents: [parentFolderId] }), // Add parent folder if specified
       };
-
-      // Log the request data before making the call
-      // this.logger.debug(
-      //   `Folder creation request data: ${JSON.stringify(folderMetadata)}`,
-      // );
 
       // Create the folder in Google Drive
       const folder = await driveService.files.create({
@@ -132,7 +124,6 @@ export class GoogleDocService {
     role: string = 'writer',
   ) {
     try {
-      // const auth = await this.getCredentials();
       const docsService = google.docs({
         version: 'v1',
         auth: this.oAuth2Client,
@@ -196,7 +187,6 @@ export class GoogleDocService {
     rewrite: boolean = true,
   ) {
     try {
-      // const auth = await this.getCredentials();
       const docsService = google.docs({
         version: 'v1',
         auth: this.oAuth2Client,
@@ -295,6 +285,230 @@ export class GoogleDocService {
       this.logger.error(`Failed to read Google Doc content: ${error}`);
       throw new Error('Failed to read Google Doc content');
     }
+  }
+
+  /**
+   * Creates a section with a header and initial content paragraphs.
+   */
+  async createSection(
+    documentId: string,
+    header: string,
+    paragraphs: string[],
+  ) {
+    const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+    const requests: any[] = [];
+
+    // Add header
+    requests.push({
+      insertText: {
+        location: { index: 1 },
+        text: `\n${header}\n`,
+      },
+    });
+
+    // Style as header
+    requests.push({
+      updateTextStyle: {
+        range: {
+          startIndex: 1,
+          endIndex: header.length + 2, // account for newline
+        },
+        textStyle: {
+          bold: true,
+          fontSize: { magnitude: 14, unit: 'PT' },
+          foregroundColor: {
+            color: { rgbColor: { blue: 0.5, green: 0.5, red: 0.2 } },
+          },
+        },
+        fields: 'bold,fontSize,foregroundColor',
+      },
+    });
+
+    // Add paragraphs
+    let cursorIndex = header.length + 2;
+    paragraphs.forEach((paragraph) => {
+      requests.push({
+        insertText: {
+          location: { index: cursorIndex },
+          text: `\n${paragraph}\n`,
+        },
+      });
+      cursorIndex += paragraph.length + 2; // account for newline
+    });
+
+    await docsService.documents.batchUpdate({
+      documentId,
+      requestBody: { requests },
+    });
+    this.logger.log(`Section '${header}' created with paragraphs`);
+  }
+
+  /**
+   * Writes to a specific paragraph under a given header.
+   */
+  async writeToParagraph(
+    documentId: string,
+    header: string,
+    paragraphIndex: number,
+    content: string,
+    replace = true,
+  ) {
+    const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+
+    // Locate the header and its paragraphs
+    const doc = await docsService.documents.get({ documentId });
+    const contentElements = doc.data.body?.content || [];
+
+    let startIdx = null;
+    let paraIdx = 0;
+    for (let i = 0; i < contentElements.length; i++) {
+      const element = contentElements[i];
+      if (
+        element.paragraph &&
+        element.paragraph.elements?.[0]?.textRun?.content.trim() === header
+      ) {
+        startIdx = i + 1; // start after header
+        break;
+      }
+    }
+
+    if (startIdx === null) throw new Error(`Header '${header}' not found`);
+
+    // Locate the specific paragraph index under the header
+    for (let i = startIdx; i < contentElements.length; i++) {
+      const element = contentElements[i];
+      if (element.paragraph && paraIdx === paragraphIndex) {
+        const endIndex = element.endIndex;
+        const requests = [];
+
+        if (replace) {
+          requests.push({
+            deleteContentRange: {
+              range: { startIndex: element.startIndex, endIndex },
+            },
+          });
+        }
+
+        requests.push({
+          insertText: {
+            location: { index: element.startIndex },
+            text: content,
+          },
+        });
+
+        await docsService.documents.batchUpdate({
+          documentId,
+          requestBody: { requests },
+        });
+        this.logger.log(
+          `Paragraph ${paragraphIndex} under header '${header}' updated`,
+        );
+        return;
+      }
+      paraIdx++;
+    }
+
+    throw new Error(
+      `Paragraph index ${paragraphIndex} under header '${header}' not found`,
+    );
+  }
+
+  /**
+   * Reads content from a specific paragraph under a given header.
+   */
+  async readFromParagraph(
+    documentId: string,
+    header: string,
+    paragraphIndex: number,
+  ): Promise<string> {
+    const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+
+    // Locate the header and paragraphs
+    const doc = await docsService.documents.get({ documentId });
+    const contentElements = doc.data.body?.content || [];
+
+    let startIdx = null;
+    let paraIdx = 0;
+    for (let i = 0; i < contentElements.length; i++) {
+      const element = contentElements[i];
+      if (
+        element.paragraph &&
+        element.paragraph.elements?.[0]?.textRun?.content.trim() === header
+      ) {
+        startIdx = i + 1; // start after header
+        break;
+      }
+    }
+
+    if (startIdx === null) throw new Error(`Header '${header}' not found`);
+
+    // Locate the specific paragraph index under the header
+    for (let i = startIdx; i < contentElements.length; i++) {
+      const element = contentElements[i];
+      if (element.paragraph && paraIdx === paragraphIndex) {
+        const paragraphText = element.paragraph.elements
+          ?.map((el) => el.textRun?.content || '')
+          .join('');
+        this.logger.log(
+          `Read from paragraph ${paragraphIndex} under header '${header}'`,
+        );
+        return paragraphText || '';
+      }
+      paraIdx++;
+    }
+
+    throw new Error(
+      `Paragraph index ${paragraphIndex} under header '${header}' not found`,
+    );
+  }
+
+  async createDocumentFromJson(
+    documentId: string,
+    contentJson: { [section: string]: string },
+  ) {
+    const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+    const requests: any[] = [];
+
+    // Loop through each section header and paragraph content
+    Object.entries(contentJson).forEach(([header, paragraph]) => {
+      // Add header
+      requests.push({
+        insertText: {
+          location: { index: 1 }, // Inserts at the beginning each time, pushing content down
+          text: `\n${header}\n`,
+        },
+      });
+
+      // Apply header style
+      requests.push({
+        updateTextStyle: {
+          range: { startIndex: 1, endIndex: header.length + 2 },
+          textStyle: {
+            bold: true,
+            fontSize: { magnitude: 14, unit: 'PT' },
+          },
+          fields: 'bold,fontSize',
+        },
+      });
+
+      // Add paragraph
+      requests.push({
+        insertText: {
+          location: { index: header.length + 2 },
+          text: `\n${paragraph}\n`,
+        },
+      });
+    });
+
+    // Send the batch update request to Google Docs API
+    await docsService.documents.batchUpdate({
+      documentId,
+      requestBody: { requests },
+    });
+
+    this.logger.log(
+      `Document created with structured sections in Google Doc ID: ${documentId}`,
+    );
   }
 
   // async parseMarkdownFormat(content: string, startIndex: number = 1): Promise<any[]> {

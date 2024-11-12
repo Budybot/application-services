@@ -47,7 +47,12 @@ export class ContentService {
           userEmail,
         );
 
-        await this.googleDocService.writeToDocument(documentId, sowContent);
+        // await this.googleDocService.writeToDocument(documentId, sowContent);
+        await this.googleDocService.createDocumentFromJson(
+          documentId,
+          sowContent,
+        );
+
         await this.contentAssetsService.saveDocumentAsset(
           'SOW',
           'google doc',
