@@ -720,9 +720,11 @@ export class GoogleDocService {
     const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
     const doc = await docsService.documents.get({ documentId });
     const contentElements = doc.data.body?.content || [];
+
     const requests: any[] = [];
 
-    // Step 1: Handle missing sections first, adding them to the end of the document
+    // Step 1: Handle missing sections first by adding them near the end of the document
+    const docEndIndex = contentElements.slice(-1)[0]?.endIndex || 1;
     for (const section of Object.keys(updates)) {
       const sectionExists = contentElements.some(
         (element) =>
@@ -735,20 +737,21 @@ export class GoogleDocService {
 
       if (!sectionExists) {
         this.logger.warn(`Section '${section}' not found. Adding it.`);
-        const endIndex = contentElements.slice(-1)[0]?.endIndex || 1;
 
-        // Add the new section header at the document end
+        // Insert the new section header just before the document end
+        const insertPosition = Math.max(docEndIndex - 1, 1); // Ensure the position is valid and within bounds
+
         requests.push({
           insertText: {
-            location: { index: endIndex },
+            location: { index: insertPosition },
             text: `\n${section}\n`,
           },
         });
         requests.push({
           updateParagraphStyle: {
             range: {
-              startIndex: endIndex,
-              endIndex: endIndex + section.length + 1,
+              startIndex: insertPosition,
+              endIndex: insertPosition + section.length + 1,
             },
             paragraphStyle: { namedStyleType: 'HEADING_1' },
             fields: 'namedStyleType',
@@ -757,7 +760,7 @@ export class GoogleDocService {
       }
     }
 
-    // Execute batch update to add new sections
+    // Execute batch update to add any missing sections first
     if (requests.length > 0) {
       await docsService.documents.batchUpdate({
         documentId,
@@ -765,12 +768,12 @@ export class GoogleDocService {
       });
     }
 
-    // Step 2: Go backwards through the document to find each section and append recommendations
+    // Step 2: Go backwards through each section and append recommendations
     for (const [section, changes] of Object.entries(updates).reverse()) {
       let sectionStartIndex: number | null = null;
       let nextSectionStartIndex: number | null = null;
 
-      // Locate the section heading and start of the next section (if it exists)
+      // Locate the section and mark where to insert recommendations
       for (let i = contentElements.length - 1; i >= 0; i--) {
         const element = contentElements[i];
         const textContent = element.paragraph?.elements
@@ -789,14 +792,11 @@ export class GoogleDocService {
         }
       }
 
-      // Default to appending at the end of the document if the section wasn’t found
-      if (!sectionStartIndex) {
-        sectionStartIndex = contentElements.slice(-1)[0]?.endIndex || 1;
-      }
+      // If the section is new, set the insertIndex to the document's end
+      const insertIndex =
+        nextSectionStartIndex || sectionStartIndex || docEndIndex - 1;
 
-      const insertIndex = nextSectionStartIndex || sectionStartIndex;
-
-      // Step 3: Build and insert recommendation text
+      // Prepare the recommendation text
       let updateText = '';
       if (changes.add) {
         updateText += changes.add
@@ -822,7 +822,7 @@ export class GoogleDocService {
           },
         });
 
-        // Step 4: Apply color coding for "Add" and "Remove" labels
+        // Apply color coding for "Add" and "Remove" labels
         const addColor = { red: 0, green: 0, blue: 1 };
         const removeColor = { red: 1, green: 0, blue: 0 };
         let cursorIndex = insertIndex;
@@ -860,7 +860,7 @@ export class GoogleDocService {
       }
     }
 
-    // Step 5: Execute the final batch update
+    // Step 3: Execute the final batch update
     if (requests.length > 0) {
       await docsService.documents.batchUpdate({
         documentId,
