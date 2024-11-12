@@ -671,6 +671,167 @@ export class GoogleDocService {
     );
   }
 
+  async getDocumentSections(
+    documentId: string,
+  ): Promise<{ [section: string]: string }> {
+    const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+    const doc = await docsService.documents.get({ documentId });
+    const contentElements = doc.data.body?.content || [];
+
+    const sections: { [section: string]: string } = {};
+    let currentSection = '';
+    let currentContent = '';
+
+    for (const element of contentElements) {
+      if (element.paragraph) {
+        const paragraph = element.paragraph;
+        const textRuns = paragraph.elements || [];
+        const textContent = textRuns
+          .map((tr) => tr.textRun?.content || '')
+          .join('');
+
+        if (paragraph.paragraphStyle?.namedStyleType === 'HEADING_1') {
+          // Save the previous section
+          if (currentSection) {
+            sections[currentSection] = currentContent.trim();
+          }
+          // Start a new section
+          currentSection = textContent.trim();
+          currentContent = '';
+        } else {
+          // Append to the current section content
+          currentContent += textContent;
+        }
+      }
+    }
+
+    // Save the last section
+    if (currentSection) {
+      sections[currentSection] = currentContent.trim();
+    }
+
+    return sections;
+  }
+
+  async appendRecommendations(
+    documentId: string,
+    updates: { [section: string]: { add?: string; remove?: string } },
+  ) {
+    const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+    const doc = await docsService.documents.get({ documentId });
+    const contentElements = doc.data.body?.content || [];
+
+    const requests: any[] = [];
+    const sectionIndices: { [section: string]: number } = {};
+
+    // Map section headers to their end indices
+    let currentSection = '';
+    let currentIndex = 0;
+
+    for (const element of contentElements) {
+      if (element.paragraph) {
+        const paragraph = element.paragraph;
+        const textRuns = paragraph.elements || [];
+        const textContent = textRuns
+          .map((tr) => tr.textRun?.content || '')
+          .join('');
+
+        if (paragraph.paragraphStyle?.namedStyleType === 'HEADING_1') {
+          currentSection = textContent.trim();
+          sectionIndices[currentSection] = element.endIndex || currentIndex;
+        }
+      }
+      currentIndex = element.endIndex || currentIndex;
+    }
+
+    // Append recommendations to each section
+    for (const [section, changes] of Object.entries(updates)) {
+      const sectionEndIndex = sectionIndices[section];
+
+      if (sectionEndIndex) {
+        let updateText = '';
+
+        if (changes.add) {
+          const addLines = changes.add
+            .split('\n')
+            .map((line) => `Add: ${line}`)
+            .join('\n');
+          updateText += `\n${addLines}\n`;
+        }
+
+        if (changes.remove) {
+          const removeLines = changes.remove
+            .split('\n')
+            .map((line) => `Remove: ${line}`)
+            .join('\n');
+          updateText += `\n${removeLines}\n`;
+        }
+
+        if (updateText) {
+          requests.push({
+            insertText: {
+              location: { index: sectionEndIndex - 1 },
+              text: updateText,
+            },
+          });
+
+          // Optionally, apply color styling to "Add:" and "Remove:"
+          const addLength = (changes.add || '')
+            .split('\n')
+            .reduce((acc, line) => acc + line.length + 1, 0);
+          const removeLength = (changes.remove || '')
+            .split('\n')
+            .reduce((acc, line) => acc + line.length + 1, 0);
+          let startIndex = sectionEndIndex - 1;
+
+          if (changes.add) {
+            requests.push({
+              updateTextStyle: {
+                range: {
+                  startIndex,
+                  endIndex: startIndex + addLength,
+                },
+                textStyle: {
+                  foregroundColor: { color: { rgbColor: { green: 0.5 } } },
+                },
+                fields: 'foregroundColor',
+              },
+            });
+            startIndex += addLength;
+          }
+
+          if (changes.remove) {
+            requests.push({
+              updateTextStyle: {
+                range: {
+                  startIndex,
+                  endIndex: startIndex + removeLength,
+                },
+                textStyle: {
+                  foregroundColor: { color: { rgbColor: { red: 0.5 } } },
+                },
+                fields: 'foregroundColor',
+              },
+            });
+          }
+        }
+      } else {
+        this.logger.warn(`Section '${section}' not found in the document.`);
+      }
+    }
+
+    // Execute the batch update
+    if (requests.length > 0) {
+      await docsService.documents.batchUpdate({
+        documentId,
+        requestBody: { requests },
+      });
+      this.logger.log(`Appended recommendations to the document.`);
+    } else {
+      this.logger.log(`No updates to apply to the document.`);
+    }
+  }
+
   // async parseMarkdownFormat(content: string, startIndex: number = 1): Promise<any[]> {
   //   // Parses markdown-style formatting for bold, italic, etc., and returns Google Docs API requests.
   // }
