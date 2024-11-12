@@ -761,6 +761,9 @@ export class GoogleDocService {
     if (currentSection) {
       sectionIndices[currentSection].endIndex = currentEndIndex;
     }
+    const sortedSections = Object.entries(sectionIndices).sort(
+      ([, a], [, b]) => a.startIndex - b.startIndex,
+    );
 
     // Append recommendations to each section
     for (const [section, changes] of Object.entries(updates)) {
@@ -798,6 +801,12 @@ export class GoogleDocService {
           startIndex: endIndex + section.length + 1,
           endIndex: endIndex + section.length + 1,
         };
+
+        // Add the new section to the sortedSections array
+        sortedSections.push([section, sectionInfo]);
+
+        // Sort the sections again
+        sortedSections.sort(([, a], [, b]) => a.startIndex - b.startIndex);
       }
 
       // Prepare recommendations text
@@ -823,18 +832,19 @@ export class GoogleDocService {
       }
 
       if (updateText) {
-        const insertIndex = sectionInfo.endIndex - 1;
+        const textToInsert = `\n${updateText}`;
+        const insertIndex = sectionInfo.endIndex;
         requests.push({
           insertText: {
             location: { index: insertIndex },
-            text: updateText,
+            text: textToInsert,
           },
         });
         requests.push({
           updateParagraphStyle: {
             range: {
               startIndex: insertIndex,
-              endIndex: insertIndex + updateText.length,
+              endIndex: insertIndex + textToInsert.length,
             },
             paragraphStyle: {
               namedStyleType: 'NORMAL_TEXT',
@@ -877,43 +887,20 @@ export class GoogleDocService {
           cursorIndex += line.length + 1; // Move to the next line (+1 for the newline character)
         });
 
-        sectionInfo.endIndex += updateText.length;
+        // Calculate the length of inserted text
+        const insertedTextLength = textToInsert.length;
+
+        // Update the endIndex of the current section
+        sectionInfo.endIndex += insertedTextLength;
+
+        // Update startIndex and endIndex of subsequent sections
+        for (const [nextSection, nextSectionInfo] of sortedSections) {
+          if (nextSectionInfo.startIndex > sectionInfo.startIndex) {
+            nextSectionInfo.startIndex += insertedTextLength;
+            nextSectionInfo.endIndex += insertedTextLength;
+          }
+        }
       }
-
-      // if (changes.add) {
-      //   requests.push({
-      //     updateTextStyle: {
-      //       range: {
-      //         startIndex,
-      //         endIndex: startIndex + addLength,
-      //       },
-      //       textStyle: {
-      //         foregroundColor: { color: { rgbColor: { green: 0.5 } } },
-      //       },
-      //       fields: 'foregroundColor',
-      //     },
-      //   });
-      //   startIndex += addLength;
-      // }
-
-      // if (changes.remove) {
-      //   requests.push({
-      //     updateTextStyle: {
-      //       range: {
-      //         startIndex,
-      //         endIndex: startIndex + removeLength,
-      //       },
-      //       textStyle: {
-      //         foregroundColor: { color: { rgbColor: { red: 0.5 } } },
-      //       },
-      //       fields: 'foregroundColor',
-      //     },
-      //   });
-      // }
-      //   }
-      // } else {
-      //   this.logger.warn(`Section '${section}' not found in the document.`);
-      // }
     }
 
     // Execute the batch update
