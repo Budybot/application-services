@@ -723,80 +723,25 @@ export class GoogleDocService {
 
     const requests: any[] = [];
 
-    // Step 1: Handle missing sections by adding them at the end of the document
-    const lastElementEndIndex =
-      contentElements.length > 0
-        ? contentElements[contentElements.length - 1].endIndex
-        : 1;
-    for (const section of Object.keys(updates)) {
-      if (
-        !contentElements.some(
-          (element) =>
-            element.paragraph?.paragraphStyle?.namedStyleType === 'HEADING_1' &&
-            element.paragraph.elements
-              ?.map((tr) => tr.textRun?.content || '')
-              .join('')
-              .trim() === section,
-        )
-      ) {
-        this.logger.warn(`Section '${section}' not found. Adding it.`);
+    // Step 1: Go through each section and append recommendations
+    for (const [section, changes] of Object.entries(updates)) {
+      let sectionElement: any = null;
 
-        // Insert the new section header at the end of the document
-        requests.push({
-          insertText: {
-            location: { index: lastElementEndIndex + 1 },
-            text: `\n${section}\n`,
-          },
-        });
-        requests.push({
-          updateParagraphStyle: {
-            range: {
-              startIndex: lastElementEndIndex + 1,
-              endIndex: lastElementEndIndex + section.length + 2,
-            },
-            paragraphStyle: { namedStyleType: 'HEADING_1' },
-            fields: 'namedStyleType',
-          },
-        });
-      }
-    }
-
-    // Step 2: Go through each section in reverse order and append recommendations
-    for (const [section, changes] of Object.entries(updates).reverse()) {
-      let sectionStartIndex: number | null = null;
-      let nextSectionStartIndex: number | null = null;
-
-      // Locate the section and mark where to insert recommendations
-      for (let i = contentElements.length - 1; i >= 0; i--) {
-        const element = contentElements[i];
-        const textContent = element.paragraph?.elements
-          ?.map((tr) => tr.textRun?.content || '')
-          .join('')
-          .trim();
-
+      // Locate the section
+      for (const element of contentElements) {
         if (
-          textContent === section &&
-          element.paragraph?.paragraphStyle?.namedStyleType === 'HEADING_1'
+          element.paragraph?.paragraphStyle?.namedStyleType === 'HEADING_1' &&
+          element.paragraph.elements
+            ?.map((tr) => tr.textRun?.content || '')
+            .join('')
+            .trim() === section
         ) {
-          sectionStartIndex = element.endIndex || 1;
+          sectionElement = element;
           break;
         }
       }
 
-      if (sectionStartIndex) {
-        // Find the start index of the next section
-        for (let i = contentElements.length - 1; i >= 0; i--) {
-          const element = contentElements[i];
-          if (
-            element.paragraph?.paragraphStyle?.namedStyleType === 'HEADING_1' &&
-            element.endIndex &&
-            element.endIndex < sectionStartIndex
-          ) {
-            nextSectionStartIndex = element.endIndex;
-            break;
-          }
-        }
-
+      if (sectionElement) {
         // Prepare the recommendation text
         let updateText = '';
         if (changes.add) {
@@ -815,18 +760,29 @@ export class GoogleDocService {
         }
 
         if (updateText) {
-          const textToInsert = `\n${updateText}\n`;
+          // Create a new paragraph with the recommendations
           requests.push({
-            insertText: {
-              location: { index: nextSectionStartIndex || sectionStartIndex },
-              text: textToInsert,
+            createParagraph: {
+              location: {
+                segmentId: sectionElement.paragraphId,
+                index: 1, // Insert after the section header
+              },
+              paragraph: {
+                elements: [
+                  {
+                    textRun: {
+                      content: `\n${updateText}\n`,
+                    },
+                  },
+                ],
+              },
             },
           });
 
           // Apply color coding for "Add" and "Remove" labels
           const addColor = { red: 0, green: 0, blue: 1 };
           const removeColor = { red: 1, green: 0, blue: 0 };
-          let cursorIndex = nextSectionStartIndex || sectionStartIndex;
+          let cursorIndex = sectionElement.startIndex + 1; // Start after the section header
 
           updateText.split('\n').forEach((line) => {
             if (line.startsWith('Add:')) {
@@ -859,10 +815,12 @@ export class GoogleDocService {
             cursorIndex += line.length + 1;
           });
         }
+      } else {
+        this.logger.warn(`Section '${section}' not found. Skipping updates.`);
       }
     }
 
-    // Step 3: Execute the final batch update
+    // Step 2: Execute the final batch update
     if (requests.length > 0) {
       await docsService.documents.batchUpdate({
         documentId,
