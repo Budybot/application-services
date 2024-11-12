@@ -474,16 +474,17 @@ export class GoogleDocService {
     requests.push({
       insertText: {
         location: { index: 1 },
-        text: `\n${title}\n`,
+        text: `\n${title}\n\n`,
       },
     });
     requests.push({
-      updateParagraphStyle: {
+      updateTextStyle: {
         range: { startIndex: 1, endIndex: title.length + 1 },
-        paragraphStyle: {
-          namedStyleType: 'TITLE',
+        textStyle: {
+          bold: true,
+          fontSize: { magnitude: 24, unit: 'PT' },
         },
-        fields: 'namedStyleType',
+        fields: 'bold,fontSize',
       },
     });
 
@@ -544,7 +545,10 @@ export class GoogleDocService {
           });
           requests.push({
             updateParagraphStyle: {
-              range: { startIndex: index, endIndex: index + subHeader.length + 1 },
+              range: {
+                startIndex: index,
+                endIndex: index + subHeader.length + 1,
+              },
               paragraphStyle: {
                 namedStyleType: 'HEADING_2',
               },
@@ -552,7 +556,7 @@ export class GoogleDocService {
             },
           });
           index += subHeader.length + 1;
-  
+
           // Check subContent type for flexible handling
           if (Array.isArray(subContent)) {
             // subContent is a list
