@@ -400,9 +400,15 @@ export class SowUpdateService {
     pageName: string,
   ): Promise<void> {
     try {
+      this.logger.log(
+        `Received request to update SOW with document ID: ${documentId}`,
+      );
       // Step 1: Retrieve SOW sections based on headers
       const sowSections =
         await this.googleDocService.getDocumentSections(documentId);
+      this.logger.debug(
+        `Retrieved SOW sections: ${JSON.stringify(sowSections)}`,
+      );
 
       // Extract relevant sections
       const projectObjectives = sowSections['Project Objectives'];
