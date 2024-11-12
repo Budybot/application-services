@@ -719,131 +719,39 @@ export class GoogleDocService {
   ) {
     const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
 
-    // Build the entire recommendations content
-    let recommendationsContent = '\nRecommendations\n';
-    const recommendationsStart = recommendationsContent.length - 1; // -1 to account for initial newline
-
-    const stylesToApply: any[] = [];
+    // Collect all recommendation texts
+    let recommendationsContent = '\n'; // Start with a newline to separate from existing content
 
     for (const [section, changes] of Object.entries(updates)) {
-      // Add section subheading
-      recommendationsContent += `\n${section}\n`;
-
-      // Keep track of the section heading to apply HEADING_2 style
-      const sectionStartIndex =
-        recommendationsContent.length - section.length - 1;
-      stylesToApply.push({
-        startIndex: sectionStartIndex,
-        endIndex: sectionStartIndex + section.length,
-        style: 'HEADING_2',
-      });
-
-      // **Ensure changes.add and changes.remove are strings**
+      // Ensure changes.add and changes.remove are strings
       const addContent = typeof changes.add === 'string' ? changes.add : '';
       const removeContent =
         typeof changes.remove === 'string' ? changes.remove : '';
 
-      // Prepare recommendation lines
-      const addLines = addContent.trim()
-        ? addContent.split('\n').map((line) => `Add: ${line}`)
-        : [];
-      const removeLines = removeContent.trim()
-        ? removeContent.split('\n').map((line) => `Remove: ${line}`)
-        : [];
-
-      // Append add lines
-      for (const line of addLines) {
-        const lineStartIndex = recommendationsContent.length;
-        recommendationsContent += `${line}\n`;
-
-        // Mark "Add:" for styling
-        stylesToApply.push({
-          startIndex: lineStartIndex,
-          endIndex: lineStartIndex + 4, // "Add:" is 4 characters
-          color: { red: 0, green: 0, blue: 1 }, // Blue color
-        });
+      if (addContent.trim()) {
+        recommendationsContent += addContent.trim() + '\n';
       }
 
-      // Append remove lines
-      for (const line of removeLines) {
-        const lineStartIndex = recommendationsContent.length;
-        recommendationsContent += `${line}\n`;
-
-        // Mark "Remove:" for styling
-        stylesToApply.push({
-          startIndex: lineStartIndex,
-          endIndex: lineStartIndex + 7, // "Remove:" is 7 characters
-          color: { red: 1, green: 0, blue: 0 }, // Red color
-        });
+      if (removeContent.trim()) {
+        recommendationsContent += removeContent.trim() + '\n';
       }
     }
 
-    // Insert the entire recommendations content at the end of the document
-    const requests: any[] = [];
-
-    // Use endOfSegmentLocation to insert at the end of the document
-    requests.push({
-      insertText: {
-        endOfSegmentLocation: {},
-        text: recommendationsContent,
-      },
-    });
-
-    // Apply styles after insertion
-    let offset = 1; // Start from 1 due to initial newline
-
-    // Apply HEADING_1 style to "Recommendations" heading
-    requests.push({
-      updateParagraphStyle: {
-        range: {
-          startIndex: offset,
-          endIndex: offset + 'Recommendations'.length,
-        },
-        paragraphStyle: { namedStyleType: 'HEADING_1' },
-        fields: 'namedStyleType',
-      },
-    });
-
-    offset += 'Recommendations\n'.length;
-
-    // Apply styles recorded in stylesToApply
-    for (const style of stylesToApply) {
-      if (style.style) {
-        // Apply paragraph style (e.g., HEADING_2)
-        requests.push({
-          updateParagraphStyle: {
-            range: {
-              startIndex: offset + style.startIndex,
-              endIndex: offset + style.endIndex,
-            },
-            paragraphStyle: { namedStyleType: style.style },
-            fields: 'namedStyleType',
-          },
-        });
-      }
-      if (style.color) {
-        // Apply text color
-        requests.push({
-          updateTextStyle: {
-            range: {
-              startIndex: offset + style.startIndex,
-              endIndex: offset + style.endIndex,
-            },
-            textStyle: {
-              foregroundColor: { color: { rgbColor: style.color } },
-            },
-            fields: 'foregroundColor',
-          },
-        });
-      }
-    }
-
-    // Execute the batch update
-    if (requests.length > 0) {
+    // Insert the recommendations at the end of the document
+    if (recommendationsContent.trim()) {
       try {
         await docsService.documents.batchUpdate({
           documentId,
-          requestBody: { requests },
+          requestBody: {
+            requests: [
+              {
+                insertText: {
+                  endOfSegmentLocation: {},
+                  text: recommendationsContent,
+                },
+              },
+            ],
+          },
         });
         this.logger.log('Appended recommendations to the document.');
       } catch (error) {
@@ -851,7 +759,7 @@ export class GoogleDocService {
         throw error;
       }
     } else {
-      this.logger.log('No updates to apply to the document.');
+      this.logger.log('No recommendations to append.');
     }
   }
 
