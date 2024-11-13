@@ -144,6 +144,7 @@ export class ProjectPlannerService {
       );
       if (matchedTemplate) {
         this.logger.debug(`Matched template: ${matchedTemplate.template}`);
+        systemPrompt += `For the ${foundKeywords[0]} deliverable, you can structure the plan in the following way: \n`;
         systemPrompt += matchedTemplate.template;
       }
 
