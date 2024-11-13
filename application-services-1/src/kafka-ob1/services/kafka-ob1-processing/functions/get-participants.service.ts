@@ -1,10 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { AgentServiceRequest } from '../agent-service-request.service';
 
 @Injectable()
 export class GetParticipantsService {
   private readonly logger = new Logger(GetParticipantsService.name);
 
-  async extractParticipants(transcript: string): Promise<any> {
+  constructor(private readonly agentServiceRequest: AgentServiceRequest) {}
+
+  async extractParticipants(
+    transcript: string,
+    instanceName: string,
+    userId: string,
+  ): Promise<any> {
     try {
       this.logger.log('Extracting participants from transcript...');
       const participants = {};
@@ -30,8 +37,59 @@ export class GetParticipantsService {
           userCount++;
         }
       }
+      if (Object.keys(participants).length === 0) {
+        this.logger.log(
+          'No participants found, invoking LLM for participant extraction...',
+        );
 
-      this.logger.log('Participants extracted successfully');
+        // Define the prompt for the LLM
+        const systemPrompt = `
+          You are an AI assistant tasked with identifying participants in a meeting transcript. 
+          Identify unique speaker names from the conversation, providing a suggested role and role type for each.
+          Format the output as JSON, where each key is a unique participant (e.g., "user1", "user2"), and each value includes the name, role, and roletype.
+
+          Example output:
+          {
+            "user1": {"name": "John Doe", "role": "Manager", "roletype": "Staff"},
+            "user2": {"name": "Jane Smith", "role": "Consultant", "roletype": "External"}
+          }
+        `;
+
+        const config = {
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          temperature: 0.7,
+          maxTokens: 1000,
+          frequencyPenalty: 0,
+          presencePenalty: 0,
+        };
+
+        try {
+          const response = await this.agentServiceRequest.sendAgentRequest(
+            systemPrompt,
+            transcript,
+            config,
+            instanceName,
+            userId,
+          );
+
+          // Parse response and populate participants
+          const extractedParticipants = JSON.parse(
+            response.messageContent.content,
+          );
+          Object.assign(participants, extractedParticipants);
+
+          this.logger.log('Participants extracted via LLM successfully');
+        } catch (error) {
+          this.logger.error(
+            `Error invoking LLM for participants extraction: ${error.message}`,
+            error.stack,
+          );
+          throw new Error('Failed to extract participants');
+        }
+      } else {
+        this.logger.log('Participants extracted successfully via regex');
+      }
       this.logger.debug(
         `Extracted participants: ${JSON.stringify(participants)}`,
       );

@@ -43,6 +43,8 @@ export class KafkaOb1ProcessingService {
           const participants =
             await this.getParticipantsService.extractParticipants(
               transcriptForParticipants,
+              instanceName,
+              userEmail,
             );
           response = { messageContent: { participants: participants } };
           break;
