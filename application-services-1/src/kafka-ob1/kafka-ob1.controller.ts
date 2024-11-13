@@ -141,7 +141,7 @@ export class KafkaOb1Controller implements OnModuleInit {
         schemaVersion: CURRENT_SCHEMA_VERSION,
         sourceService: process.env.SERVICE_NAME,
         destinationService: headers.sourceService,
-        sourceType: 'system',
+        sourceType: 'service',
         requestId: headers.requestId || `Not-Sent-${Date.now()}`,
         responseId: `RE-${process.env.SERVICE_NAME}-${Date.now()}`,
       };
