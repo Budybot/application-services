@@ -123,10 +123,11 @@ export class EmailGenerationService {
     } else if (pageName.endsWith('inputPage2')) {
       // Extract required fields
       const {
-        consultant_name,
-        consultant_role,
-        client_name,
-        client_role,
+        // consultant_name,
+        // consultant_role,
+        // client_name,
+        // client_role,
+        userRoles,
         transcript,
         action_items,
         meeting_slots,
@@ -156,10 +157,7 @@ export class EmailGenerationService {
         You are acting as the consultant, drafting a follow-up email to the customer after a recent meeting. This is not the first meeting with the customer.
         
         Use the following details:
-        - Consultant name: ${consultant_name}
-        - Consultant role: ${consultant_role}
-        - Primary user name: ${client_name}
-        - Primary user role: ${client_role}
+        - Consultants and clients: ${JSON.stringify(userRoles)}
 
         Meeting Transcript: ${transcript}
         Action items: ${JSON.stringify(updatedActionItems)}
