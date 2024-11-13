@@ -713,6 +713,50 @@ export class GoogleDocService {
     return sections;
   }
 
+  // async appendRecommendations(
+  //   documentId: string,
+  //   updates: { [section: string]: { add?: string; remove?: string } },
+  // ) {
+  //   const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+
+  //   let recommendationsContent = 'RECOMMENDATIONS:\n\n';
+
+  //   // Build the recommendations content with section headers and content
+  //   for (const [section, changes] of Object.entries(updates)) {
+  //     recommendationsContent += `${section}\n`;
+
+  //     if (changes.add) {
+  //       recommendationsContent += `Add:\n${changes.add.trim()}\n`;
+  //     }
+  //     if (changes.remove) {
+  //       recommendationsContent += `Remove:\n${changes.remove.trim()}\n`;
+  //     }
+
+  //     recommendationsContent += '\n'; // Separate sections
+  //   }
+
+  //   try {
+  //     // Insert recommendations content at the end of the document
+  //     await docsService.documents.batchUpdate({
+  //       documentId,
+  //       requestBody: {
+  //         requests: [
+  //           {
+  //             insertText: {
+  //               endOfSegmentLocation: {},
+  //               text: recommendationsContent,
+  //             },
+  //           },
+  //         ],
+  //       },
+  //     });
+
+  //     this.logger.log('Appended recommendations to the document.');
+  //   } catch (error) {
+  //     this.logger.error(`Failed to write to Google Doc: ${error.message}`);
+  //     throw error;
+  //   }
+  // }
   async appendRecommendations(
     documentId: string,
     updates: { [section: string]: { add?: string; remove?: string } },
@@ -737,7 +781,7 @@ export class GoogleDocService {
 
     try {
       // Insert recommendations content at the end of the document
-      await docsService.documents.batchUpdate({
+      const insertResponse = await docsService.documents.batchUpdate({
         documentId,
         requestBody: {
           requests: [
@@ -750,6 +794,44 @@ export class GoogleDocService {
           ],
         },
       });
+
+      // Calculate the starting index of the inserted text
+      const startIndex = (insertResponse.data.replies?.[0] as any)?.insertText
+        ?.location?.index;
+
+      if (startIndex !== undefined) {
+        const endIndex = startIndex + recommendationsContent.length;
+
+        // Attempt to apply blue color to the newly added recommendations content
+        try {
+          await docsService.documents.batchUpdate({
+            documentId,
+            requestBody: {
+              requests: [
+                {
+                  updateTextStyle: {
+                    range: {
+                      startIndex: startIndex,
+                      endIndex: endIndex,
+                    },
+                    textStyle: {
+                      foregroundColor: {
+                        color: { rgbColor: { red: 0, green: 0, blue: 1 } },
+                      },
+                    },
+                    fields: 'foregroundColor',
+                  },
+                },
+              ],
+            },
+          });
+          this.logger.log('Applied blue color to recommendations content.');
+        } catch (colorError) {
+          this.logger.error(
+            `Failed to apply color to recommendations: ${colorError.message}`,
+          );
+        }
+      }
 
       this.logger.log('Appended recommendations to the document.');
     } catch (error) {
