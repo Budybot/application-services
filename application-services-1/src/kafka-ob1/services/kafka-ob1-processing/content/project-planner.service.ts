@@ -24,6 +24,32 @@ export class ProjectPlannerService {
         'Task 1. Generate a report template. Task 2. Populate the template with data.',
     },
   };
+  private parseOutputTo2DArray(output: string): string[][] {
+    // Attempt to parse as JSON
+    try {
+      const parsedOutput = JSON.parse(output);
+      if (Array.isArray(parsedOutput)) {
+        // If parsed successfully and is an array, return as is
+        return parsedOutput as string[][];
+      }
+    } catch {
+      // Not a valid JSON format, proceed to manual parsing
+    }
+
+    // Fallback manual parsing in case it's not JSON
+    const rows = output
+      .replace(/^\s*[\[\]]\s*$/gm, '') // Remove stray brackets at line starts/ends
+      .trim()
+      .split(/\r?\n/);
+    const result: string[][] = [];
+    for (const row of rows) {
+      const cells = row
+        .split(/\s*"\s*,\s*"\s*/) // Split by comma or space after removing extra spaces
+        .map((cell) => cell.replace(/^"|"$/g, '').trim()); // Remove any leading or trailing quotes and spaces
+      if (cells.length > 0) result.push(cells);
+    }
+    return result;
+  }
 
   async generateProjectPlan(
     instanceName: string,
@@ -136,9 +162,11 @@ export class ProjectPlannerService {
     const desiredDeliverables = plannerDetails.desiredDeliverables || '';
     this.logger.debug(`Desired Deliverables: ${desiredDeliverables}`);
     const foundKeywords = keywords.filter((keyword) =>
-      desiredDeliverables.toLowerCase().includes(keyword.toLowerCase())
+      plannerDetails.desiredDeliverables
+        .toLowerCase()
+        .includes(keyword.toLowerCase()),
     );
-    
+
     if (foundKeywords.length > 0) {
       this.logger.debug(
         `Using predefined template for keyword: ${foundKeywords[0]}`,
@@ -157,73 +185,46 @@ export class ProjectPlannerService {
       }
     }
 
-      const config = {
-        provider: 'openai',
-        model: 'gpt-4o-mini',
-        temperature: 0.7,
-        maxTokens: 1500,
-        frequencyPenalty: 0,
-        presencePenalty: 0,
-      };
+    const config = {
+      provider: 'openai',
+      model: 'gpt-4o-mini',
+      temperature: 0.7,
+      maxTokens: 1500,
+      frequencyPenalty: 0,
+      presencePenalty: 0,
+    };
 
-      try {
-        // this.logger.log(
-        //   'Requesting Project Plan generation from AgentServiceRequest...',
-        // );
-        const response = await this.agentServiceRequest.sendAgentRequest(
-          systemPrompt,
-          'Ensure the response is in valid JSON format.',
-          config,
-          instanceName,
-          userId,
-        );
-
-        if (response?.messageContent?.content) {
-          const generatedPlan = response.messageContent.content;
-          // this.logger.debug(`Generated Project Plan from LLM: ${generatedPlan}`);
-          // const parsedData = this.parseCsvToArray(generatedPlan);
-          const parsedData = this.parseOutputTo2DArray(generatedPlan);
-          this.logger.debug(
-            `Parsed Project Plan into 2D array format: ${JSON.stringify(parsedData)}`,
-          );
-          // return generatedPlan;
-          return parsedData;
-        } else {
-          throw new Error(`Invalid response: ${JSON.stringify(response)}`);
-        }
-      } catch (error) {
-        this.logger.error(
-          `Error generating Project Plan: ${error.message}`,
-          error.stack,
-        );
-        throw new Error('Failed to generate Project Plan');
-      }
-    }
-  }
-  private parseOutputTo2DArray(output: string): string[][] {
-    // Attempt to parse as JSON
     try {
-      const parsedOutput = JSON.parse(output);
-      if (Array.isArray(parsedOutput)) {
-        // If parsed successfully and is an array, return as is
-        return parsedOutput as string[][];
-      }
-    } catch {
-      // Not a valid JSON format, proceed to manual parsing
-    }
+      // this.logger.log(
+      //   'Requesting Project Plan generation from AgentServiceRequest...',
+      // );
+      const response = await this.agentServiceRequest.sendAgentRequest(
+        systemPrompt,
+        'Ensure the response is in valid JSON format.',
+        config,
+        instanceName,
+        userId,
+      );
 
-    // Fallback manual parsing in case it's not JSON
-    const rows = output
-      .replace(/^\s*[\[\]]\s*$/gm, '') // Remove stray brackets at line starts/ends
-      .trim()
-      .split(/\r?\n/);
-    const result: string[][] = [];
-    for (const row of rows) {
-      const cells = row
-        .split(/\s*"\s*,\s*"\s*/) // Split by comma or space after removing extra spaces
-        .map((cell) => cell.replace(/^"|"$/g, '').trim()); // Remove any leading or trailing quotes and spaces
-      if (cells.length > 0) result.push(cells);
+      if (response?.messageContent?.content) {
+        const generatedPlan = response.messageContent.content;
+        // this.logger.debug(`Generated Project Plan from LLM: ${generatedPlan}`);
+        // const parsedData = this.parseCsvToArray(generatedPlan);
+        const parsedData = this.parseOutputTo2DArray(generatedPlan);
+        this.logger.debug(
+          `Parsed Project Plan into 2D array format: ${JSON.stringify(parsedData)}`,
+        );
+        // return generatedPlan;
+        return parsedData;
+      } else {
+        throw new Error(`Invalid response: ${JSON.stringify(response)}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error generating Project Plan: ${error.message}`,
+        error.stack,
+      );
+      throw new Error('Failed to generate Project Plan');
     }
-    return result;
   }
 }
