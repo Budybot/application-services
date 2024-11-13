@@ -104,8 +104,9 @@ export class GetParticipantsService {
   }
   private cleanJsonResponse(responseContent: string): any {
     try {
-      // Basic JSON cleanup to handle minor formatting issues
+      // Remove common non-JSON markers such as ```json or ```
       const cleanedContent = responseContent
+        .replace(/```(?:json)?/g, '') // Remove ```json or ``` markers
         .replace(/[\r\n]+/g, '') // Remove new lines
         .replace(/,\s*}/g, '}') // Remove trailing commas in objects
         .replace(/,\s*]/g, ']'); // Remove trailing commas in arrays
