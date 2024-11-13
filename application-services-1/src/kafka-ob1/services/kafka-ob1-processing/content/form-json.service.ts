@@ -94,6 +94,61 @@ export class FormJsonService {
     }
   }
 
+  // async generateActionItems(
+  //   transcript: string,
+  //   actionItems: string,
+  //   userId: string,
+  //   projectName: string,
+  // ): Promise<any> {
+  //   const actionPrompt = `
+  //     Based on the customer meeting transcript, generate JSON-formatted action items that align with the project goals.
+
+  //     Output must be a JSON object with an "action_items" array containing strings of action items.
+
+  //     Input Details:
+  //     Clean Transcript: ${transcript},
+  //     Cosultant Recorded Action Items: ${actionItems}
+  //   `;
+
+  //   const config = {
+  //     provider: 'openai',
+  //     model: 'gpt-4o-mini',
+  //     temperature: 0.25,
+  //     maxTokens: 4096,
+  //     frequencyPenalty: 0,
+  //     presencePenalty: 0,
+  //   };
+
+  //   try {
+  //     // this.logger.log('Requesting action items JSON generation from LLM...');
+  //     const actionLlmOutput = await this.agentServiceRequest.sendAgentRequest(
+  //       actionPrompt,
+  //       'Ensure the output of this call is only JSON.',
+  //       config,
+  //       projectName,
+  //       userId,
+  //     );
+
+  //     if (actionLlmOutput?.messageContent?.content) {
+  //       const actionResultJson = this.cleanAndParseJson(
+  //         actionLlmOutput.messageContent.content,
+  //       );
+  //       validateActionItemsJson(actionResultJson);
+  //       // this.logger.debug(
+  //       //   `Generated action items JSON: ${JSON.stringify(actionResultJson)}`,
+  //       // );
+  //       return actionResultJson;
+  //     } else {
+  //       throw new Error(`Invalid response: ${JSON.stringify(actionLlmOutput)}`);
+  //     }
+  //   } catch (error) {
+  //     this.logger.error(
+  //       `Error generating action items JSON: ${error.message}`,
+  //       error.stack,
+  //     );
+  //     throw new Error('Failed to generate action items JSON');
+  //   }
+  // }
   async generateActionItems(
     transcript: string,
     actionItems: string,
@@ -101,13 +156,19 @@ export class FormJsonService {
     projectName: string,
   ): Promise<any> {
     const actionPrompt = `
-      Based on the customer meeting transcript, generate JSON-formatted action items that align with the project goals.
-
-      Output must be a JSON object with an "action_items" array containing strings of action items.
-
+      Based on the customer meeting transcript, generate JSON-formatted action items with a priority level for each item (high, medium, or low).
+  
+      Output must be a JSON object with an "action_items" array containing objects of this structure:
+      {
+        "text": "Action item name and text",
+        "priority": "high" | "medium" | "low"
+      }
+  
       Input Details:
       Clean Transcript: ${transcript},
-      Cosultant Recorded Action Items: ${actionItems}
+      Consultant Recorded Action Items: ${actionItems}
+
+      You are encouraged to change the content of the action items, to remove or compress items, or to add more items as needed, based on the transcript.
     `;
 
     const config = {
@@ -120,7 +181,6 @@ export class FormJsonService {
     };
 
     try {
-      // this.logger.log('Requesting action items JSON generation from LLM...');
       const actionLlmOutput = await this.agentServiceRequest.sendAgentRequest(
         actionPrompt,
         'Ensure the output of this call is only JSON.',
@@ -134,9 +194,6 @@ export class FormJsonService {
           actionLlmOutput.messageContent.content,
         );
         validateActionItemsJson(actionResultJson);
-        // this.logger.debug(
-        //   `Generated action items JSON: ${JSON.stringify(actionResultJson)}`,
-        // );
         return actionResultJson;
       } else {
         throw new Error(`Invalid response: ${JSON.stringify(actionLlmOutput)}`);

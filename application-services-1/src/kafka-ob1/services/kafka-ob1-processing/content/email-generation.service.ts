@@ -45,7 +45,12 @@ export class EmailGenerationService {
         keyTakeaway2: KC2.join(', '),
         projectObjectives: PO.join(', '),
         desiredDeliverables: DD.join(', '),
-        actionItems: Object.values(action_items).join(', '),
+        actionItems: action_items
+          .map(
+            (item: { text: string; priority: string }) =>
+              `${item.text} (Priority: ${item.priority})`,
+          )
+          .join(', '),
         meetingSlots: meeting_slots,
         consultantInput: consultant_input,
       };
@@ -85,7 +90,7 @@ export class EmailGenerationService {
         provider: 'openai',
         model: 'gpt-4o-mini',
         temperature: 0.7,
-        maxTokens: 1000,
+        maxTokens: 4096,
         frequencyPenalty: 0,
         presencePenalty: 0,
       };

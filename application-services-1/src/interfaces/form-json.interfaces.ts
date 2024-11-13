@@ -7,12 +7,17 @@ export interface FormJson {
   DD: string[];
   KC1: string[];
   KC2: string[];
-  action_items: string[];
+  action_items: ActionItem[];
   PO: string[];
   company_name: string;
 }
+export interface ActionItem {
+  text: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
 export interface ActionItemsJson {
-  action_items: string[];
+  action_items: ActionItem[];
 }
 export function validateFormJson(data: any): asserts data is FormJson {
   const requiredKeys = [
@@ -38,4 +43,17 @@ export function validateActionItemsJson(
   if (!data.action_items || !Array.isArray(data.action_items)) {
     throw new Error('Action Items JSON is missing the "action_items" array');
   }
+
+  data.action_items.forEach((item: any, index: number) => {
+    if (typeof item.text !== 'string') {
+      throw new Error(
+        `Action item at index ${index} is missing a valid "text" field`,
+      );
+    }
+    if (!['high', 'medium', 'low'].includes(item.priority)) {
+      throw new Error(
+        `Action item at index ${index} has an invalid "priority" value`,
+      );
+    }
+  });
 }

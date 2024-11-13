@@ -38,7 +38,12 @@ export class ProjectPlannerService {
       keyTakeaway2: KC2.join(', '),
       projectObjectives: PO.join(', '),
       desiredDeliverables: DD.join(', '),
-      actionItems: Object.values(action_items).join(', '),
+      actionItems: action_items
+        .map(
+          (item: { text: string; priority: string }) =>
+            `${item.text} (Priority: ${item.priority})`,
+        )
+        .join(', '),
     };
 
     // const systemPrompt = `
@@ -52,7 +57,7 @@ export class ProjectPlannerService {
     //   Guidelines for Project Plan Structure:
     //   Milestone Tasks (e.g., 1, 2, 3): Major phases in the project, like Discovery, Definition, and Implementation.
     //   Execution Steps (e.g., 1.1, 1.2): Detailed, actionable steps to complete each milestone task.
-      
+
     //   CSV Format and Columns:
     //   Task ID: Sequentially numbered tasks, with decimal notation for execution steps under each milestone.
     //   Task Name: Descriptive name for each task.
@@ -133,7 +138,7 @@ export class ProjectPlannerService {
         this.logger.debug(
           `Parsed Project Plan into 2D array format: ${JSON.stringify(parsedData)}`,
         );
-        // return generatedPlan; 
+        // return generatedPlan;
         return parsedData;
       } else {
         throw new Error(`Invalid response: ${JSON.stringify(response)}`);
@@ -163,7 +168,7 @@ export class ProjectPlannerService {
     const rows = output
       .replace(/^\s*[\[\]]\s*$/gm, '') // Remove stray brackets at line starts/ends
       .trim()
-      .split(/\r?\n/); 
+      .split(/\r?\n/);
     const result: string[][] = [];
     for (const row of rows) {
       const cells = row
@@ -173,41 +178,41 @@ export class ProjectPlannerService {
     }
     return result;
   }
-//   parseCsvToArray(csvData: string): string[][] {
-//     const cleanedCsvData = csvData
-//       .replace(/```csv|```/g, '') // Remove specific markers
-//       .trim(); // Remove any leading or trailing whitespace
-//     const rows = cleanedCsvData.split(/\r?\n/);
-//     const result: string[][] = [];
+  //   parseCsvToArray(csvData: string): string[][] {
+  //     const cleanedCsvData = csvData
+  //       .replace(/```csv|```/g, '') // Remove specific markers
+  //       .trim(); // Remove any leading or trailing whitespace
+  //     const rows = cleanedCsvData.split(/\r?\n/);
+  //     const result: string[][] = [];
 
-//     for (const row of rows) {
-//       const values: string[] = [];
-//       let current = '';
-//       let insideQuotes = false;
+  //     for (const row of rows) {
+  //       const values: string[] = [];
+  //       let current = '';
+  //       let insideQuotes = false;
 
-//       for (let i = 0; i < row.length; i++) {
-//         const char = row[i];
+  //       for (let i = 0; i < row.length; i++) {
+  //         const char = row[i];
 
-//         if (char === '"') {
-//           insideQuotes = !insideQuotes;
-//         } else if (char === ',' && !insideQuotes) {
-//           values.push(current.trim()); // Trim each value to remove extra whitespace
-//           current = '';
-//         } else {
-//           current += char;
-//         }
-//       }
-//       values.push(current.trim()); // Add the last value in the row
+  //         if (char === '"') {
+  //           insideQuotes = !insideQuotes;
+  //         } else if (char === ',' && !insideQuotes) {
+  //           values.push(current.trim()); // Trim each value to remove extra whitespace
+  //           current = '';
+  //         } else {
+  //           current += char;
+  //         }
+  //       }
+  //       values.push(current.trim()); // Add the last value in the row
 
-//       // Only add non-empty rows that don't have empty strings as values
-//       if (values.filter((val) => val !== '').length === values.length) {
-//         result.push(values);
-//       }
-//     }
+  //       // Only add non-empty rows that don't have empty strings as values
+  //       if (values.filter((val) => val !== '').length === values.length) {
+  //         result.push(values);
+  //       }
+  //     }
 
-//     this.logger.log(
-//       `Parsed CSV into 2D array format: ${JSON.stringify(result)}`,
-//     );
-//     return result;
-//   }
+  //     this.logger.log(
+  //       `Parsed CSV into 2D array format: ${JSON.stringify(result)}`,
+  //     );
+  //     return result;
+  //   }
 }
