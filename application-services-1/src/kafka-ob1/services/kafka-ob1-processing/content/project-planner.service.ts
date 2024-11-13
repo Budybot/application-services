@@ -24,7 +24,40 @@ export class ProjectPlannerService {
         'Task 1. Generate a report template. Task 2. Populate the template with data.',
     },
   };
+  // private parseOutputTo2DArray(output: string): string[][] {
+  //   // Attempt to parse as JSON
+  //   try {
+  //     const parsedOutput = JSON.parse(output);
+  //     if (Array.isArray(parsedOutput)) {
+  //       // If parsed successfully and is an array, return as is
+  //       return parsedOutput as string[][];
+  //     }
+  //   } catch {
+  //     // Not a valid JSON format, proceed to manual parsing
+  //   }
+
+  //   // Fallback manual parsing in case it's not JSON
+  //   const rows = output
+  //     .replace(/^\s*[\[\]]\s*$/gm, '') // Remove stray brackets at line starts/ends
+  //     .trim()
+  //     .split(/\r?\n/);
+  //   const result: string[][] = [];
+  //   for (const row of rows) {
+  //     const cells = row
+  //       .split(/\s*"\s*,\s*"\s*/) // Split by comma or space after removing extra spaces
+  //       .map((cell) => cell.replace(/^"|"$/g, '').trim()); // Remove any leading or trailing quotes and spaces
+  //     if (cells.length > 0) result.push(cells);
+  //   }
+  //   return result;
+  // }
+
   private parseOutputTo2DArray(output: string): string[][] {
+    // Remove code block delimiters and any extra symbols
+    output = output
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+
     // Attempt to parse as JSON
     try {
       const parsedOutput = JSON.parse(output);
