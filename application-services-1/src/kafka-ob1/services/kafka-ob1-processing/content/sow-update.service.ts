@@ -496,7 +496,7 @@ export class SowUpdateService {
       const scopeUpdatePrompt = `
       Update relevant sections of the Statement of Work (SOW) based on the scope analysis. Only return sections that require changes.
 
-      Scope Analysis: ${pageContent.scopeAnalysis}
+      Scope Analysis: ${scopeAnalysis}
       Existing SOW: ${JSON.stringify(sowSections)}
 
       Return a JSON object with only the changes:
@@ -537,7 +537,7 @@ export class SowUpdateService {
       const timelineUpdatePrompt = `
         Update the relevant sections of the Statement of Work (SOW) based on the timeline analysis. Only return sections with changes.
 
-        Timeline Analysis: ${pageContent.timelineAnalysis}
+        Timeline Analysis: ${timelineAnalysis}
         Existing SOW: ${JSON.stringify(sowSections)}
 
         Return a JSON object with only the changes:
