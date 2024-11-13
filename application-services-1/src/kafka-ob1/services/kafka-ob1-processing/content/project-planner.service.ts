@@ -199,24 +199,42 @@ export class ProjectPlannerService {
         .toLowerCase()
         .includes(keyword.toLowerCase()),
     );
+    const addedTemplates = new Set<string>();
 
-    if (foundKeywords.length > 0) {
-      this.logger.debug(
-        `Using predefined template for keyword: ${foundKeywords[0]}`,
-      );
-      // Find the template for the first keyword match
+    foundKeywords.forEach((keyword) => {
+      // Find the template corresponding to the current keyword
       const matchedTemplate = Object.values(this.templates).find((template) =>
         template.keywords.some(
           (templateKeyword) =>
-            templateKeyword.toLowerCase() === foundKeywords[0].toLowerCase(),
+            templateKeyword.toLowerCase() === keyword.toLowerCase(),
         ),
       );
-      if (matchedTemplate) {
-        this.logger.debug(`Matched template: ${matchedTemplate.template}`);
-        systemPrompt += `For the ${foundKeywords[0]} deliverable, you need to structure the plan in the following way:\n`;
-        systemPrompt += matchedTemplate.template;
+
+      if (matchedTemplate && !addedTemplates.has(matchedTemplate.template)) {
+        this.logger.debug(`Adding template for keyword: ${keyword}`);
+        systemPrompt += `For the ${keyword} deliverable, you need to structure the plan in the following way:\n`;
+        systemPrompt += matchedTemplate.template + '\n';
+        addedTemplates.add(matchedTemplate.template);
       }
-    }
+    });
+
+    // if (foundKeywords.length > 0) {
+    //   this.logger.debug(
+    //     `Using predefined template for keyword: ${foundKeywords[0]}`,
+    //   );
+    //   // Find the template for the first keyword match
+    //   const matchedTemplate = Object.values(this.templates).find((template) =>
+    //     template.keywords.some(
+    //       (templateKeyword) =>
+    //         templateKeyword.toLowerCase() === foundKeywords[0].toLowerCase(),
+    //     ),
+    //   );
+    //   if (matchedTemplate) {
+    //     this.logger.debug(`Matched template: ${matchedTemplate.template}`);
+    //     systemPrompt += `For the ${foundKeywords[0]} deliverable, you need to structure the plan in the following way:\n`;
+    //     systemPrompt += matchedTemplate.template;
+    //   }
+    // }
 
     const config = {
       provider: 'openai',
