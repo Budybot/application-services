@@ -769,11 +769,17 @@ export class GoogleDocService {
     for (const [section, changes] of Object.entries(updates)) {
       recommendationsContent += `${section}\n`;
 
-      if (changes.add) {
-        recommendationsContent += `Add:\n${changes.add.trim()}\n`;
+      // Ensure add and remove are strings before trimming
+      const addContent =
+        typeof changes.add === 'string' ? changes.add.trim() : '';
+      const removeContent =
+        typeof changes.remove === 'string' ? changes.remove.trim() : '';
+
+      if (addContent) {
+        recommendationsContent += `Add:\n${addContent}\n`;
       }
-      if (changes.remove) {
-        recommendationsContent += `Remove:\n${changes.remove.trim()}\n`;
+      if (removeContent) {
+        recommendationsContent += `Remove:\n${removeContent}\n`;
       }
 
       recommendationsContent += '\n'; // Separate sections
