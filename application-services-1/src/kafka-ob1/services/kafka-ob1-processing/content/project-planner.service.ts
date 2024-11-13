@@ -7,6 +7,24 @@ export class ProjectPlannerService {
 
   constructor(private readonly agentServiceRequest: AgentServiceRequest) {}
 
+  templates = {
+    deduplication: {
+      keywords: ['deduplication', 'duplicate entries'],
+      template:
+        'Task 1. Check for duplicate entries in the database. Task 2. Remove duplicates from the database.',
+    },
+    data_cleaning: {
+      keywords: ['data cleaning', 'clean data'],
+      template:
+        'Task 1. Clean the data by removing unnecessary columns. Task 2. Standardize the data format.',
+    },
+    report_building: {
+      keywords: ['report building', 'build a report', 'generate reports'],
+      template:
+        'Task 1. Generate a report template. Task 2. Populate the template with data.',
+    },
+  };
+
   async generateProjectPlan(
     instanceName: string,
     userId: string,
@@ -71,7 +89,7 @@ export class ProjectPlannerService {
 
     //   Using these details, create a comprehensive CSV of milestone tasks and execution steps that captures each phase and action required to complete the project.
     // `;
-    const systemPrompt = `
+    let systemPrompt = `
     You are a project planning assistant, using specific details from the project to generate a structured table of tasks and steps.
   
     Project Overview:
@@ -109,6 +127,26 @@ export class ProjectPlannerService {
   
     Generate the table with tasks and steps based on the details provided above.
   `;
+    // Check for specific keywords to use predefined templates
+    const keywords = [
+      ...this.templates.deduplication.keywords,
+      ...this.templates.data_cleaning.keywords,
+      ...this.templates.report_building.keywords,
+    ];
+    const foundKeywords = keywords.filter((keyword) =>
+      plannerDetails.desiredDeliverables.includes(keyword),
+    );
+    if (foundKeywords.length > 0) {
+      this.logger.debug(`Using predefined template for keyword: ${foundKeywords[0]}`);
+      // find the template for the first keyword match
+      const matchedTemplate = Object.values(this.templates).find(template =>
+        template.keywords.includes(foundKeywords[0])
+      );
+      if (matchedTemplate) {
+        this.logger.debug(`Matched template: ${matchedTemplate.template}`);
+        systemPrompt += matchedTemplate.template;
+      }
+
     const config = {
       provider: 'openai',
       model: 'gpt-4o-mini',
