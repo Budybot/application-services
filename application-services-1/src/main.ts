@@ -19,8 +19,8 @@ async function bootstrap() {
       },
       consumer: {
         groupId: `${SERVICE_NAME}-group`, // Consumer group ID
-        // sessionTimeout: 15000,
-        heartbeatInterval: 60000,
+        sessionTimeout: 60000,
+        heartbeatInterval: 20000,
         // maxWaitTimeInMs: 10000,
         // rebalanceTimeout: 90000,
       },
