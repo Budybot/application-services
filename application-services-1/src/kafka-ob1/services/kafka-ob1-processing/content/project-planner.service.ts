@@ -137,10 +137,12 @@ export class ProjectPlannerService {
       plannerDetails.desiredDeliverables.includes(keyword),
     );
     if (foundKeywords.length > 0) {
-      this.logger.debug(`Using predefined template for keyword: ${foundKeywords[0]}`);
+      this.logger.debug(
+        `Using predefined template for keyword: ${foundKeywords[0]}`,
+      );
       // find the template for the first keyword match
-      const matchedTemplate = Object.values(this.templates).find(template =>
-        template.keywords.includes(foundKeywords[0])
+      const matchedTemplate = Object.values(this.templates).find((template) =>
+        template.keywords.includes(foundKeywords[0]),
       );
       if (matchedTemplate) {
         this.logger.debug(`Matched template: ${matchedTemplate.template}`);
@@ -148,49 +150,49 @@ export class ProjectPlannerService {
         systemPrompt += matchedTemplate.template;
       }
 
-    const config = {
-      provider: 'openai',
-      model: 'gpt-4o-mini',
-      temperature: 0.7,
-      maxTokens: 1500,
-      frequencyPenalty: 0,
-      presencePenalty: 0,
-    };
+      const config = {
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+        temperature: 0.7,
+        maxTokens: 1500,
+        frequencyPenalty: 0,
+        presencePenalty: 0,
+      };
 
-    try {
-      // this.logger.log(
-      //   'Requesting Project Plan generation from AgentServiceRequest...',
-      // );
-      const response = await this.agentServiceRequest.sendAgentRequest(
-        systemPrompt,
-        'Ensure the response is in valid JSON format.',
-        config,
-        instanceName,
-        userId,
-      );
-
-      if (response?.messageContent?.content) {
-        const generatedPlan = response.messageContent.content;
-        // this.logger.debug(`Generated Project Plan from LLM: ${generatedPlan}`);
-        // const parsedData = this.parseCsvToArray(generatedPlan);
-        const parsedData = this.parseOutputTo2DArray(generatedPlan);
-        this.logger.debug(
-          `Parsed Project Plan into 2D array format: ${JSON.stringify(parsedData)}`,
+      try {
+        // this.logger.log(
+        //   'Requesting Project Plan generation from AgentServiceRequest...',
+        // );
+        const response = await this.agentServiceRequest.sendAgentRequest(
+          systemPrompt,
+          'Ensure the response is in valid JSON format.',
+          config,
+          instanceName,
+          userId,
         );
-        // return generatedPlan;
-        return parsedData;
-      } else {
-        throw new Error(`Invalid response: ${JSON.stringify(response)}`);
+
+        if (response?.messageContent?.content) {
+          const generatedPlan = response.messageContent.content;
+          // this.logger.debug(`Generated Project Plan from LLM: ${generatedPlan}`);
+          // const parsedData = this.parseCsvToArray(generatedPlan);
+          const parsedData = this.parseOutputTo2DArray(generatedPlan);
+          this.logger.debug(
+            `Parsed Project Plan into 2D array format: ${JSON.stringify(parsedData)}`,
+          );
+          // return generatedPlan;
+          return parsedData;
+        } else {
+          throw new Error(`Invalid response: ${JSON.stringify(response)}`);
+        }
+      } catch (error) {
+        this.logger.error(
+          `Error generating Project Plan: ${error.message}`,
+          error.stack,
+        );
+        throw new Error('Failed to generate Project Plan');
       }
-    } catch (error) {
-      this.logger.error(
-        `Error generating Project Plan: ${error.message}`,
-        error.stack,
-      );
-      throw new Error('Failed to generate Project Plan');
     }
   }
-
   private parseOutputTo2DArray(output: string): string[][] {
     // Attempt to parse as JSON
     try {
@@ -217,41 +219,4 @@ export class ProjectPlannerService {
     }
     return result;
   }
-  //   parseCsvToArray(csvData: string): string[][] {
-  //     const cleanedCsvData = csvData
-  //       .replace(/```csv|```/g, '') // Remove specific markers
-  //       .trim(); // Remove any leading or trailing whitespace
-  //     const rows = cleanedCsvData.split(/\r?\n/);
-  //     const result: string[][] = [];
-
-  //     for (const row of rows) {
-  //       const values: string[] = [];
-  //       let current = '';
-  //       let insideQuotes = false;
-
-  //       for (let i = 0; i < row.length; i++) {
-  //         const char = row[i];
-
-  //         if (char === '"') {
-  //           insideQuotes = !insideQuotes;
-  //         } else if (char === ',' && !insideQuotes) {
-  //           values.push(current.trim()); // Trim each value to remove extra whitespace
-  //           current = '';
-  //         } else {
-  //           current += char;
-  //         }
-  //       }
-  //       values.push(current.trim()); // Add the last value in the row
-
-  //       // Only add non-empty rows that don't have empty strings as values
-  //       if (values.filter((val) => val !== '').length === values.length) {
-  //         result.push(values);
-  //       }
-  //     }
-
-  //     this.logger.log(
-  //       `Parsed CSV into 2D array format: ${JSON.stringify(result)}`,
-  //     );
-  //     return result;
-  //   }
 }
