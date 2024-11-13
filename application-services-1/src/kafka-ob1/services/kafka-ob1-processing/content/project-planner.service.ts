@@ -133,22 +133,29 @@ export class ProjectPlannerService {
       ...this.templates.data_cleaning.keywords,
       ...this.templates.report_building.keywords,
     ];
+    const desiredDeliverables = plannerDetails.desiredDeliverables || '';
+    this.logger.debug(`Desired Deliverables: ${desiredDeliverables}`);
     const foundKeywords = keywords.filter((keyword) =>
-      plannerDetails.desiredDeliverables.includes(keyword),
+      desiredDeliverables.toLowerCase().includes(keyword.toLowerCase())
     );
+    
     if (foundKeywords.length > 0) {
       this.logger.debug(
         `Using predefined template for keyword: ${foundKeywords[0]}`,
       );
-      // find the template for the first keyword match
+      // Find the template for the first keyword match
       const matchedTemplate = Object.values(this.templates).find((template) =>
-        template.keywords.includes(foundKeywords[0]),
+        template.keywords.some(
+          (templateKeyword) =>
+            templateKeyword.toLowerCase() === foundKeywords[0].toLowerCase(),
+        ),
       );
       if (matchedTemplate) {
         this.logger.debug(`Matched template: ${matchedTemplate.template}`);
-        systemPrompt += `For the ${foundKeywords[0]} deliverable, you can structure the plan in the following way: \n`;
+        systemPrompt += `For the ${foundKeywords[0]} deliverable, you can structure the plan in the following way:\n`;
         systemPrompt += matchedTemplate.template;
       }
+    }
 
       const config = {
         provider: 'openai',
