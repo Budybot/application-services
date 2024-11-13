@@ -74,7 +74,7 @@ export class GetParticipantsService {
           );
 
           // Parse response and populate participants
-          const extractedParticipants = JSON.parse(
+          const extractedParticipants = this.cleanJsonResponse(
             response.messageContent.content,
           );
           Object.assign(participants, extractedParticipants);
@@ -100,6 +100,23 @@ export class GetParticipantsService {
         error.stack,
       );
       throw new Error('Failed to extract participants');
+    }
+  }
+  private cleanJsonResponse(responseContent: string): any {
+    try {
+      // Basic JSON cleanup to handle minor formatting issues
+      const cleanedContent = responseContent
+        .replace(/[\r\n]+/g, '') // Remove new lines
+        .replace(/,\s*}/g, '}') // Remove trailing commas in objects
+        .replace(/,\s*]/g, ']'); // Remove trailing commas in arrays
+
+      return JSON.parse(cleanedContent);
+    } catch (error) {
+      this.logger.error(
+        `Error cleaning JSON response: ${error.message}`,
+        error.stack,
+      );
+      throw new Error('Failed to clean JSON response');
     }
   }
 }
