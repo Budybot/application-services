@@ -116,10 +116,10 @@ export class GoogleDocService {
         version: 'v1',
         auth: this.oAuth2Client,
       });
-      // const driveService = google.drive({
-      //   version: 'v3',
-      //   auth: this.oAuth2Client,
-      // });
+      const driveService = google.drive({
+        version: 'v3',
+        auth: this.oAuth2Client,
+      });
 
       const document = await docsService.documents.create({
         requestBody: { title },
@@ -185,18 +185,173 @@ export class GoogleDocService {
     documentId: string,
     updates: { [section: string]: { add?: string; remove?: string } },
   ) {
-    let recommendationsContent = 'RECOMMENDATIONS:\n\n';
+    let recommendationsContent = 'RECOMMENDATIONS:
+
+';
 
     for (const [section, changes] of Object.entries(updates)) {
-      recommendationsContent += `${section}\n`;
-      if (changes.add)
-        recommendationsContent += `Add:\n${changes.add.trim()}\n`;
-      if (changes.remove)
-        recommendationsContent += `Remove:\n${changes.remove.trim()}\n`;
-      recommendationsContent += '\n';
+      recommendationsContent += `${section}
+`;
+      if (changes.add) recommendationsContent += `Add:
+${changes.add.trim()}
+`;
+      if (changes.remove) recommendationsContent += `Remove:
+${changes.remove.trim()}
+`;
+      recommendationsContent += '
+';
     }
 
     await this.writeToDocument(documentId, recommendationsContent, false);
+  }
+
+  async readDocumentContent(documentId: string): Promise<string> {
+    try {
+      await this.refreshAccessTokenIfNeeded();
+      const docsService = google.docs({
+        version: 'v1',
+        auth: this.oAuth2Client,
+      });
+
+      const doc = await docsService.documents.get({ documentId });
+      const docContent = doc.data.body?.content || [];
+      let documentText = '';
+
+      docContent.forEach((element) => {
+        if (element.paragraph) {
+          element.paragraph.elements?.forEach((elem) => {
+            if (elem.textRun?.content) {
+              documentText += elem.textRun.content;
+            }
+          });
+        }
+      });
+
+      this.logger.log(`Read content from Google Doc ID: ${documentId}`);
+      return documentText;
+    } catch (error) {
+      this.logger.error(`Failed to read Google Doc content: ${error.message}`);
+      throw new Error('Failed to read Google Doc content');
+    }
+  }
+
+  async getDocumentSections(
+    documentId: string,
+  ): Promise<{ [section: string]: string }> {
+    try {
+      await this.refreshAccessTokenIfNeeded();
+      const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+      const doc = await docsService.documents.get({ documentId });
+      const contentElements = doc.data.body?.content || [];
+
+      const sections: { [section: string]: string } = {};
+      let currentSection = '';
+      let currentContent = '';
+
+      for (const element of contentElements) {
+        if (element.paragraph) {
+          const paragraph = element.paragraph;
+          const textRuns = paragraph.elements || [];
+          const textContent = textRuns
+            .map((tr) => tr.textRun?.content || '')
+            .join('');
+
+          if (paragraph.paragraphStyle?.namedStyleType === 'HEADING_1') {
+            if (currentSection) {
+              sections[currentSection] = currentContent.trim();
+            }
+            currentSection = textContent.trim();
+            currentContent = '';
+          } else {
+            currentContent += textContent;
+          }
+        }
+      }
+
+      if (currentSection) {
+        sections[currentSection] = currentContent.trim();
+      }
+
+      return sections;
+    } catch (error) {
+      this.logger.error(`Failed to get document sections: ${error.message}`);
+      throw new Error('Failed to get document sections');
+    }
+  }
+
+  async createDocumentFromJson(
+    documentId: string,
+    contentJson: { [section: string]: string },
+    title: string = 'Document Title',
+  ) {
+    try {
+      await this.refreshAccessTokenIfNeeded();
+      const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+      const requests: any[] = [];
+
+      requests.push({
+        insertText: {
+          location: { index: 1 },
+          text: `${title}
+
+`,
+        },
+      });
+      requests.push({
+        updateTextStyle: {
+          range: { startIndex: 1, endIndex: title.length + 1 },
+          textStyle: {
+            bold: true,
+            fontSize: { magnitude: 24, unit: 'PT' },
+          },
+          fields: 'bold,fontSize',
+        },
+      });
+
+      let index = title.length + 2;
+
+      for (const [header, content] of Object.entries(contentJson)) {
+        requests.push({
+          insertText: {
+            location: { index },
+            text: `${header}
+`,
+          },
+        });
+        requests.push({
+          updateParagraphStyle: {
+            range: { startIndex: index, endIndex: index + header.length + 1 },
+            paragraphStyle: {
+              namedStyleType: 'HEADING_1',
+            },
+            fields: 'namedStyleType',
+          },
+        });
+        index += header.length + 1;
+
+        requests.push({
+          insertText: {
+            location: { index },
+            text: `${content}
+
+`,
+          },
+        });
+        index += content.length + 2;
+      }
+
+      await docsService.documents.batchUpdate({
+        documentId,
+        requestBody: { requests },
+      });
+
+      this.logger.log(
+        `Document created with structured sections in Google Doc ID: ${documentId}`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to create document from JSON: ${error.message}`);
+      throw new Error('Failed to create document from JSON');
+    }
   }
 
   private async refreshAccessTokenIfNeeded() {
@@ -213,10 +368,7 @@ export class GoogleDocService {
     }
   }
 
-  private createDeleteContentRangeRequest(
-    startIndex: number,
-    endIndex: number,
-  ) {
+  private createDeleteContentRangeRequest(startIndex: number, endIndex: number) {
     return {
       deleteContentRange: {
         range: { startIndex, endIndex },
@@ -269,9 +421,7 @@ export class GoogleDocService {
       fileId,
       fields: 'parents',
     });
-    const previousParents = file.data.parents
-      ? file.data.parents.join(',')
-      : '';
+    const previousParents = file.data.parents ? file.data.parents.join(',') : '';
     await driveService.files.update({
       fileId,
       addParents: folderId,
