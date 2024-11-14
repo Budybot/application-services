@@ -185,21 +185,20 @@ export class GoogleDocService {
     documentId: string,
     updates: { [section: string]: { add?: string; remove?: string } },
   ) {
-    let recommendationsContent = 'RECOMMENDATIONS:
-
-';
+    let recommendationsContent = 'RECOMMENDATIONS:\n\n';
 
     for (const [section, changes] of Object.entries(updates)) {
       recommendationsContent += `${section}
 `;
-      if (changes.add) recommendationsContent += `Add:
+      if (changes.add)
+        recommendationsContent += `Add:
 ${changes.add.trim()}
 `;
-      if (changes.remove) recommendationsContent += `Remove:
+      if (changes.remove)
+        recommendationsContent += `Remove:
 ${changes.remove.trim()}
 `;
-      recommendationsContent += '
-';
+      recommendationsContent += '\n';
     }
 
     await this.writeToDocument(documentId, recommendationsContent, false);
@@ -240,7 +239,10 @@ ${changes.remove.trim()}
   ): Promise<{ [section: string]: string }> {
     try {
       await this.refreshAccessTokenIfNeeded();
-      const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+      const docsService = google.docs({
+        version: 'v1',
+        auth: this.oAuth2Client,
+      });
       const doc = await docsService.documents.get({ documentId });
       const contentElements = doc.data.body?.content || [];
 
@@ -286,7 +288,10 @@ ${changes.remove.trim()}
   ) {
     try {
       await this.refreshAccessTokenIfNeeded();
-      const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+      const docsService = google.docs({
+        version: 'v1',
+        auth: this.oAuth2Client,
+      });
       const requests: any[] = [];
 
       requests.push({
@@ -349,7 +354,9 @@ ${changes.remove.trim()}
         `Document created with structured sections in Google Doc ID: ${documentId}`,
       );
     } catch (error) {
-      this.logger.error(`Failed to create document from JSON: ${error.message}`);
+      this.logger.error(
+        `Failed to create document from JSON: ${error.message}`,
+      );
       throw new Error('Failed to create document from JSON');
     }
   }
@@ -368,7 +375,10 @@ ${changes.remove.trim()}
     }
   }
 
-  private createDeleteContentRangeRequest(startIndex: number, endIndex: number) {
+  private createDeleteContentRangeRequest(
+    startIndex: number,
+    endIndex: number,
+  ) {
     return {
       deleteContentRange: {
         range: { startIndex, endIndex },
@@ -421,7 +431,9 @@ ${changes.remove.trim()}
       fileId,
       fields: 'parents',
     });
-    const previousParents = file.data.parents ? file.data.parents.join(',') : '';
+    const previousParents = file.data.parents
+      ? file.data.parents.join(',')
+      : '';
     await driveService.files.update({
       fileId,
       addParents: folderId,
