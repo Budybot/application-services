@@ -181,6 +181,24 @@ export class GoogleDocService {
     }
   }
 
+  // async appendRecommendations(
+  //   documentId: string,
+  //   updates: { [section: string]: { add?: string; remove?: string } },
+  // ) {
+  //   let recommendationsContent = 'RECOMMENDATIONS:\n\n';
+
+  //   for (const [section, changes] of Object.entries(updates)) {
+  //     recommendationsContent += `${section}\n`;
+  //     if (changes.add)
+  //       recommendationsContent += `Add:\n${changes.add.trim()}\n`;
+  //     if (changes.remove)
+  //       recommendationsContent += `Remove:\n${changes.remove.trim()}\n`;
+  //     recommendationsContent += '\n';
+  //   }
+
+  //   await this.writeToDocument(documentId, recommendationsContent, false);
+  // }
+
   async appendRecommendations(
     documentId: string,
     updates: { [section: string]: { add?: string; remove?: string } },
@@ -196,7 +214,41 @@ export class GoogleDocService {
       recommendationsContent += '\n';
     }
 
-    await this.writeToDocument(documentId, recommendationsContent, false);
+    try {
+      await this.appendToEndOfDocument(documentId, recommendationsContent);
+    } catch (error) {
+      this.logger.error(`Failed to append recommendations: ${error.message}`);
+      throw new Error('Failed to append recommendations');
+    }
+  }
+
+  async appendToEndOfDocument(documentId: string, content: string) {
+    try {
+      await this.refreshAccessTokenIfNeeded();
+      const docsService = google.docs({
+        version: 'v1',
+        auth: this.oAuth2Client,
+      });
+      const doc = await docsService.documents.get({ documentId });
+      const bodyContent = doc.data.body?.content || [];
+      const endIndex = bodyContent[bodyContent.length - 1]?.endIndex || 1;
+
+      const requests: any[] = [
+        this.createInsertTextRequest(endIndex, `\n${content}`),
+      ];
+
+      await docsService.documents.batchUpdate({
+        documentId,
+        requestBody: { requests },
+      });
+
+      this.logger.log(
+        `Appended content to the end of Google Doc ID: ${documentId}`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to append to Google Doc: ${error.message}`);
+      throw new Error('Failed to append to Google Doc');
+    }
   }
 
   async readDocumentContent(documentId: string): Promise<string> {
@@ -283,7 +335,10 @@ export class GoogleDocService {
   ) {
     try {
       await this.refreshAccessTokenIfNeeded();
-      const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+      const docsService = google.docs({
+        version: 'v1',
+        auth: this.oAuth2Client,
+      });
       const requests: any[] = [];
 
       // Add title at the beginning
