@@ -185,7 +185,9 @@ export class GoogleDocService {
     documentId: string,
     updates: { [section: string]: { add?: string; remove?: string } },
   ) {
-    let recommendationsContent = 'RECOMMENDATIONS:\n\n';
+    let recommendationsContent = 'RECOMMENDATIONS:
+
+';
 
     for (const [section, changes] of Object.entries(updates)) {
       recommendationsContent += `${section}
@@ -198,7 +200,8 @@ ${changes.add.trim()}
         recommendationsContent += `Remove:
 ${changes.remove.trim()}
 `;
-      recommendationsContent += '\n';
+      recommendationsContent += '
+';
     }
 
     await this.writeToDocument(documentId, recommendationsContent, false);
@@ -288,18 +291,14 @@ ${changes.remove.trim()}
   ) {
     try {
       await this.refreshAccessTokenIfNeeded();
-      const docsService = google.docs({
-        version: 'v1',
-        auth: this.oAuth2Client,
-      });
+      const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
       const requests: any[] = [];
 
+      // Add title at the beginning
       requests.push({
         insertText: {
           location: { index: 1 },
-          text: `${title}
-
-`,
+          text: `${title}\n\n`,
         },
       });
       requests.push({
@@ -313,14 +312,15 @@ ${changes.remove.trim()}
         },
       });
 
+      // Set initial index after the title
       let index = title.length + 2;
 
       for (const [header, content] of Object.entries(contentJson)) {
+        // Insert header
         requests.push({
           insertText: {
             location: { index },
-            text: `${header}
-`,
+            text: `${header}\n`,
           },
         });
         requests.push({
@@ -334,15 +334,14 @@ ${changes.remove.trim()}
         });
         index += header.length + 1;
 
+        // Insert content with proper spacing
         requests.push({
           insertText: {
             location: { index },
-            text: `${content}
-
-`,
+            text: `\n${content}\n\n`,
           },
         });
-        index += content.length + 2;
+        index += content.length + 4; // account for added newlines
       }
 
       await docsService.documents.batchUpdate({
