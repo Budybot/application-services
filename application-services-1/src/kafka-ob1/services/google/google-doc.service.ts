@@ -185,23 +185,15 @@ export class GoogleDocService {
     documentId: string,
     updates: { [section: string]: { add?: string; remove?: string } },
   ) {
-    let recommendationsContent = 'RECOMMENDATIONS:
-
-';
+    let recommendationsContent = 'RECOMMENDATIONS:\n\n';
 
     for (const [section, changes] of Object.entries(updates)) {
-      recommendationsContent += `${section}
-`;
+      recommendationsContent += `${section}\n`;
       if (changes.add)
-        recommendationsContent += `Add:
-${changes.add.trim()}
-`;
+        recommendationsContent += `Add:\n${changes.add.trim()}\n`;
       if (changes.remove)
-        recommendationsContent += `Remove:
-${changes.remove.trim()}
-`;
-      recommendationsContent += '
-';
+        recommendationsContent += `Remove:\n${changes.remove.trim()}\n`;
+      recommendationsContent += '\n';
     }
 
     await this.writeToDocument(documentId, recommendationsContent, false);
