@@ -29,6 +29,7 @@ export class ContentService {
     contentType: 'SOW' | 'Email' | 'ProjectPlanner',
   ): Promise<string> {
     const { sowData } = contentData;
+    const { pageName } = contentData;
 
     try {
       if (contentType === 'SOW') {
@@ -82,13 +83,19 @@ export class ContentService {
           userEmail,
         );
 
+        const description =
+          pageName === 'OB1-pages-inputPage2'
+            ? 'Follow-up email after second meeting'
+            : 'Follow-up email';
+
+
         await this.googleDocService.writeToDocument(documentId, emailContent);
         await this.contentAssetsService.saveDocumentAsset(
           'Email',
           'google doc',
           documentId,
           `https://docs.google.com/document/d/${documentId}`,
-          `Follow-up email document for project ${projectName}`,
+          `${description} for project ${projectName}`,
           projectName,
           instanceName,
           userEmail,

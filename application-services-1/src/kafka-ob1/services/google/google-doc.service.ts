@@ -57,6 +57,7 @@ export class GoogleDocService {
       ],
     });
   }
+
   async handleOAuthCallback(code: string) {
     if (!this.oAuth2Client) {
       throw new Error('OAuth client not initialized');
@@ -72,31 +73,18 @@ export class GoogleDocService {
     parentFolderId?: string,
   ): Promise<string> {
     try {
-      // Check if the access token is expired or missing, and refresh if needed
-      if (
-        !this.oAuth2Client.credentials.access_token ||
-        (this.oAuth2Client.credentials.expiry_date &&
-          Date.now() >= this.oAuth2Client.credentials.expiry_date)
-      ) {
-        this.logger.log(
-          'Access token is missing or expired. Attempting to refresh...',
-        );
-        await this.oAuth2Client.getAccessToken(); // Refreshes the token if expired
-        this.logger.log('Token refreshed successfully');
-      }
+      await this.refreshAccessTokenIfNeeded();
       const driveService = google.drive({
         version: 'v3',
         auth: this.oAuth2Client,
       });
 
-      // Define the folder metadata
       const folderMetadata = {
         name: folderName,
         mimeType: 'application/vnd.google-apps.folder',
-        ...(parentFolderId && { parents: [parentFolderId] }), // Add parent folder if specified
+        ...(parentFolderId && { parents: [parentFolderId] }),
       };
 
-      // Create the folder in Google Drive
       const folder = await driveService.files.create({
         requestBody: folderMetadata,
         fields: 'id',
@@ -108,7 +96,6 @@ export class GoogleDocService {
       );
       return folderId;
     } catch (error) {
-      // this.logger.error(`Failed to create Google Drive folder: ${error}`);
       this.logger.error(
         `Failed to create Google Drive folder: ${error.message}`,
         error.response?.data || error,
@@ -124,6 +111,7 @@ export class GoogleDocService {
     role: string = 'writer',
   ) {
     try {
+      await this.refreshAccessTokenIfNeeded();
       const docsService = google.docs({
         version: 'v1',
         auth: this.oAuth2Client,
@@ -133,49 +121,24 @@ export class GoogleDocService {
         auth: this.oAuth2Client,
       });
 
-      // Step 1: Create the Google Doc
       const document = await docsService.documents.create({
         requestBody: { title },
       });
       const documentId = document.data.documentId;
       this.logger.log(`Google Doc created with ID: ${documentId}`);
 
-      // Step 2: Move the Document to a Folder (Optional)
       if (folderId) {
-        const file = await driveService.files.get({
-          fileId: documentId,
-          fields: 'parents',
-        });
-        const previousParents = file.data.parents
-          ? file.data.parents.join(',')
-          : '';
-        await driveService.files.update({
-          fileId: documentId,
-          addParents: folderId,
-          removeParents: previousParents,
-          fields: 'id, parents',
-        });
-        this.logger.debug(`Document moved to folder ID: ${folderId}`);
+        await this.moveFileToFolder(documentId, folderId);
       }
 
-      // Step 3: Share the Document (Optional)
       if (shareWithEmail) {
-        await driveService.permissions.create({
-          fileId: documentId,
-          requestBody: {
-            type: 'user',
-            role,
-            emailAddress: shareWithEmail,
-          },
-          fields: 'id',
-        });
-        this.logger.log(`Document shared with ${shareWithEmail} as ${role}.`);
+        await this.shareFileWithUser(documentId, shareWithEmail, role);
       }
 
       return documentId;
     } catch (error) {
       this.logger.error(
-        `An error occurred while creating the document: ${error}`,
+        `An error occurred while creating the document: ${error.message}`,
       );
       throw new Error('Failed to create Google Doc');
     }
@@ -187,61 +150,24 @@ export class GoogleDocService {
     rewrite: boolean = true,
   ) {
     try {
+      await this.refreshAccessTokenIfNeeded();
       const docsService = google.docs({
         version: 'v1',
         auth: this.oAuth2Client,
       });
-      // Fetch the document to determine its current content
       const doc = await docsService.documents.get({ documentId });
       const bodyContent = doc.data.body?.content || [];
       const endIndex = bodyContent[bodyContent.length - 1]?.endIndex || 1;
 
       const requests: any[] = [];
-      // Check that the endIndex allows for deletion without creating an empty range
+
       if (rewrite && endIndex > 2) {
-        requests.push({
-          deleteContentRange: {
-            range: { startIndex: 1, endIndex: endIndex - 1 },
-          },
-        });
-      } else {
-        this.logger.warn(
-          `Skipping content deletion: endIndex (${endIndex}) does not allow deletion without creating an empty range.`,
-        );
+        requests.push(this.createDeleteContentRangeRequest(1, endIndex - 1));
       }
 
-      // Insert the new content
-      requests.push({
-        insertText: {
-          location: { index: 1 },
-          text: content,
-        },
-      });
+      requests.push(this.createInsertTextRequest(1, content));
 
-      // Add styling based on patterns
-      let cursorIndex = 1; // Start after insertion point
-      content.split('\n').forEach((line) => {
-        const addMatch = line.startsWith('Add:');
-        const removeMatch = line.startsWith('Remove:');
-
-        if (addMatch || removeMatch) {
-          const color = addMatch ? { blue: 1.0 } : { red: 1.0 };
-
-          requests.push({
-            updateTextStyle: {
-              range: {
-                startIndex: cursorIndex,
-                endIndex: cursorIndex + line.length,
-              },
-              textStyle: {
-                foregroundColor: { color: { rgbColor: color } },
-              },
-              fields: 'foregroundColor',
-            },
-          });
-        }
-        cursorIndex += line.length + 1; // Update cursorIndex (+1 for the newline character)
-      });
+      requests.push(...this.createTextStyleRequests(content, 1));
 
       await docsService.documents.batchUpdate({
         documentId,
@@ -250,25 +176,75 @@ export class GoogleDocService {
 
       this.logger.log(`Content written to Google Doc ID: ${documentId}`);
     } catch (error) {
-      this.logger.error(`Failed to write to Google Doc: ${error}`);
+      this.logger.error(`Failed to write to Google Doc: ${error.message}`);
       throw new Error('Failed to write to Google Doc');
+    }
+  }
+
+  async appendRecommendationsNoStyle(
+    documentId: string,
+    updates: { [section: string]: { add?: string; remove?: string } },
+  ) {
+    let recommendationsContent = 'RECOMMENDATIONS:\n\n';
+
+    for (const [section, changes] of Object.entries(updates)) {
+      recommendationsContent += `${section}\n`;
+      if (changes.add)
+        recommendationsContent += `Add:\n${changes.add.trim()}\n`;
+      if (changes.remove)
+        recommendationsContent += `Remove:\n${changes.remove.trim()}\n`;
+      recommendationsContent += '\n';
+    }
+
+    try {
+      await this.appendToEndOfDocument(documentId, recommendationsContent);
+    } catch (error) {
+      this.logger.error(`Failed to append recommendations: ${error.message}`);
+      throw new Error('Failed to append recommendations');
+    }
+  }
+
+  async appendToEndOfDocument(documentId: string, content: string) {
+    try {
+      await this.refreshAccessTokenIfNeeded();
+      const docsService = google.docs({
+        version: 'v1',
+        auth: this.oAuth2Client,
+      });
+      const doc = await docsService.documents.get({ documentId });
+      const bodyContent = doc.data.body?.content || [];
+      const endIndex = bodyContent[bodyContent.length - 1]?.endIndex || 1;
+
+      const requests: any[] = [
+        this.createInsertTextRequest(endIndex, `\n${content}`),
+      ];
+
+      await docsService.documents.batchUpdate({
+        documentId,
+        requestBody: { requests },
+      });
+
+      this.logger.log(
+        `Appended content to the end of Google Doc ID: ${documentId}`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to append to Google Doc: ${error.message}`);
+      throw new Error('Failed to append to Google Doc');
     }
   }
 
   async readDocumentContent(documentId: string): Promise<string> {
     try {
-      // const auth = await this.getCredentials();
+      await this.refreshAccessTokenIfNeeded();
       const docsService = google.docs({
         version: 'v1',
         auth: this.oAuth2Client,
       });
 
-      // Fetch the document's content
       const doc = await docsService.documents.get({ documentId });
       const docContent = doc.data.body?.content || [];
       let documentText = '';
 
-      // Parse each element to extract the text
       docContent.forEach((element) => {
         if (element.paragraph) {
           element.paragraph.elements?.forEach((elem) => {
@@ -282,184 +258,56 @@ export class GoogleDocService {
       this.logger.log(`Read content from Google Doc ID: ${documentId}`);
       return documentText;
     } catch (error) {
-      this.logger.error(`Failed to read Google Doc content: ${error}`);
+      this.logger.error(`Failed to read Google Doc content: ${error.message}`);
       throw new Error('Failed to read Google Doc content');
     }
   }
 
-  /**
-   * Creates a section with a header and initial content paragraphs.
-   */
-  async createSection(
+  async getDocumentSections(
     documentId: string,
-    header: string,
-    paragraphs: string[],
-  ) {
-    const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
-    const requests: any[] = [];
-
-    // Add header
-    requests.push({
-      insertText: {
-        location: { index: 1 },
-        text: `\n${header}\n`,
-      },
-    });
-
-    // Style as header
-    requests.push({
-      updateTextStyle: {
-        range: {
-          startIndex: 1,
-          endIndex: header.length + 2, // account for newline
-        },
-        textStyle: {
-          bold: true,
-          fontSize: { magnitude: 14, unit: 'PT' },
-          foregroundColor: {
-            color: { rgbColor: { blue: 0.5, green: 0.5, red: 0.2 } },
-          },
-        },
-        fields: 'bold,fontSize,foregroundColor',
-      },
-    });
-
-    // Add paragraphs
-    let cursorIndex = header.length + 2;
-    paragraphs.forEach((paragraph) => {
-      requests.push({
-        insertText: {
-          location: { index: cursorIndex },
-          text: `\n${paragraph}\n`,
-        },
+  ): Promise<{ [section: string]: string }> {
+    try {
+      await this.refreshAccessTokenIfNeeded();
+      const docsService = google.docs({
+        version: 'v1',
+        auth: this.oAuth2Client,
       });
-      cursorIndex += paragraph.length + 2; // account for newline
-    });
+      const doc = await docsService.documents.get({ documentId });
+      const contentElements = doc.data.body?.content || [];
 
-    await docsService.documents.batchUpdate({
-      documentId,
-      requestBody: { requests },
-    });
-    this.logger.log(`Section '${header}' created with paragraphs`);
-  }
+      const sections: { [section: string]: string } = {};
+      let currentSection = '';
+      let currentContent = '';
 
-  /**
-   * Writes to a specific paragraph under a given header.
-   */
-  async writeToParagraph(
-    documentId: string,
-    header: string,
-    paragraphIndex: number,
-    content: string,
-    replace = true,
-  ) {
-    const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+      for (const element of contentElements) {
+        if (element.paragraph) {
+          const paragraph = element.paragraph;
+          const textRuns = paragraph.elements || [];
+          const textContent = textRuns
+            .map((tr) => tr.textRun?.content || '')
+            .join('');
 
-    // Locate the header and its paragraphs
-    const doc = await docsService.documents.get({ documentId });
-    const contentElements = doc.data.body?.content || [];
-
-    let startIdx = null;
-    let paraIdx = 0;
-    for (let i = 0; i < contentElements.length; i++) {
-      const element = contentElements[i];
-      if (
-        element.paragraph &&
-        element.paragraph.elements?.[0]?.textRun?.content.trim() === header
-      ) {
-        startIdx = i + 1; // start after header
-        break;
-      }
-    }
-
-    if (startIdx === null) throw new Error(`Header '${header}' not found`);
-
-    // Locate the specific paragraph index under the header
-    for (let i = startIdx; i < contentElements.length; i++) {
-      const element = contentElements[i];
-      if (element.paragraph && paraIdx === paragraphIndex) {
-        const endIndex = element.endIndex;
-        const requests = [];
-
-        if (replace) {
-          requests.push({
-            deleteContentRange: {
-              range: { startIndex: element.startIndex, endIndex },
-            },
-          });
+          if (paragraph.paragraphStyle?.namedStyleType === 'HEADING_1') {
+            if (currentSection) {
+              sections[currentSection] = currentContent.trim();
+            }
+            currentSection = textContent.trim();
+            currentContent = '';
+          } else {
+            currentContent += textContent;
+          }
         }
-
-        requests.push({
-          insertText: {
-            location: { index: element.startIndex },
-            text: content,
-          },
-        });
-
-        await docsService.documents.batchUpdate({
-          documentId,
-          requestBody: { requests },
-        });
-        this.logger.log(
-          `Paragraph ${paragraphIndex} under header '${header}' updated`,
-        );
-        return;
       }
-      paraIdx++;
-    }
 
-    throw new Error(
-      `Paragraph index ${paragraphIndex} under header '${header}' not found`,
-    );
-  }
-
-  /**
-   * Reads content from a specific paragraph under a given header.
-   */
-  async readFromParagraph(
-    documentId: string,
-    header: string,
-    paragraphIndex: number,
-  ): Promise<string> {
-    const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
-
-    // Locate the header and paragraphs
-    const doc = await docsService.documents.get({ documentId });
-    const contentElements = doc.data.body?.content || [];
-
-    let startIdx = null;
-    let paraIdx = 0;
-    for (let i = 0; i < contentElements.length; i++) {
-      const element = contentElements[i];
-      if (
-        element.paragraph &&
-        element.paragraph.elements?.[0]?.textRun?.content.trim() === header
-      ) {
-        startIdx = i + 1; // start after header
-        break;
+      if (currentSection) {
+        sections[currentSection] = currentContent.trim();
       }
+
+      return sections;
+    } catch (error) {
+      this.logger.error(`Failed to get document sections: ${error.message}`);
+      throw new Error('Failed to get document sections');
     }
-
-    if (startIdx === null) throw new Error(`Header '${header}' not found`);
-
-    // Locate the specific paragraph index under the header
-    for (let i = startIdx; i < contentElements.length; i++) {
-      const element = contentElements[i];
-      if (element.paragraph && paraIdx === paragraphIndex) {
-        const paragraphText = element.paragraph.elements
-          ?.map((el) => el.textRun?.content || '')
-          .join('');
-        this.logger.log(
-          `Read from paragraph ${paragraphIndex} under header '${header}'`,
-        );
-        return paragraphText || '';
-      }
-      paraIdx++;
-    }
-
-    throw new Error(
-      `Paragraph index ${paragraphIndex} under header '${header}' not found`,
-    );
   }
 
   async createDocumentFromJson(
@@ -671,178 +519,618 @@ export class GoogleDocService {
     );
   }
 
-  async getDocumentSections(
+  private async refreshAccessTokenIfNeeded() {
+    if (
+      !this.oAuth2Client.credentials.access_token ||
+      (this.oAuth2Client.credentials.expiry_date &&
+        Date.now() >= this.oAuth2Client.credentials.expiry_date)
+    ) {
+      this.logger.log(
+        'Access token is missing or expired. Attempting to refresh...',
+      );
+      await this.oAuth2Client.getAccessToken();
+      this.logger.log('Token refreshed successfully');
+    }
+  }
+
+  private createDeleteContentRangeRequest(
+    startIndex: number,
+    endIndex: number,
+  ) {
+    return {
+      deleteContentRange: {
+        range: { startIndex, endIndex },
+      },
+    };
+  }
+
+  async appendRecommendations(
     documentId: string,
-  ): Promise<{ [section: string]: string }> {
-    const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
-    const doc = await docsService.documents.get({ documentId });
-    const contentElements = doc.data.body?.content || [];
+    updates: { [section: string]: { add?: string; remove?: string } },
+  ) {
+    const recommendationsTitle = 'RECOMMENDATIONS';
+    const paragraphs: { text: string; isHeading: boolean }[] = [];
 
-    const sections: { [section: string]: string } = {};
-    let currentSection = '';
-    let currentContent = '';
-
-    for (const element of contentElements) {
-      if (element.paragraph) {
-        const paragraph = element.paragraph;
-        const textRuns = paragraph.elements || [];
-        const textContent = textRuns
-          .map((tr) => tr.textRun?.content || '')
-          .join('');
-
-        if (paragraph.paragraphStyle?.namedStyleType === 'HEADING_1') {
-          // Save the previous section
-          if (currentSection) {
-            sections[currentSection] = currentContent.trim();
-          }
-          // Start a new section
-          currentSection = textContent.trim();
-          currentContent = '';
-        } else {
-          // Append to the current section content
-          currentContent += textContent;
-        }
+    // Create paragraphs for each section recommendation
+    for (const [section, changes] of Object.entries(updates)) {
+      paragraphs.push({ text: section, isHeading: true });
+      if (changes.add) {
+        paragraphs.push({
+          text: `Add:
+${changes.add.trim()}`,
+          isHeading: false,
+        });
+      }
+      if (changes.remove) {
+        paragraphs.push({
+          text: `Remove:
+${changes.remove.trim()}`,
+          isHeading: false,
+        });
       }
     }
 
-    // Save the last section
-    if (currentSection) {
-      sections[currentSection] = currentContent.trim();
+    try {
+      await this.appendSectionToEnd(
+        documentId,
+        recommendationsTitle,
+        paragraphs,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to append recommendations: ${error.message}`);
+      throw new Error('Failed to append recommendations');
     }
-
-    return sections;
   }
+  async appendSectionToEnd(
+    documentId: string,
+    header: string,
+    paragraphs: { text: string; isHeading: boolean }[],
+  ) {
+    try {
+      await this.refreshAccessTokenIfNeeded();
+      const docsService = google.docs({
+        version: 'v1',
+        auth: this.oAuth2Client,
+      });
+      const doc = await docsService.documents.get({ documentId });
+      const bodyContent = doc.data.body?.content || [];
+      let endIndex = bodyContent[bodyContent.length - 1]?.endIndex || 1;
+
+      // Adjust endIndex to ensure we are always inserting within bounds
+      if (endIndex > 1) {
+        endIndex -= 1;
+      }
+
+      const requests: any[] = [];
+
+      // Add header at the end of the document
+      requests.push({
+        insertText: {
+          location: { index: endIndex },
+          text: `\n${header}\n`,
+        },
+      });
+
+      // Style as Heading 1 and color in blue
+      requests.push({
+        updateParagraphStyle: {
+          range: {
+            startIndex: endIndex + 1,
+            endIndex: endIndex + 1 + header.length + 1, // account for newline
+          },
+          paragraphStyle: {
+            namedStyleType: 'HEADING_1',
+          },
+          fields: 'namedStyleType',
+        },
+      });
+      requests.push({
+        updateTextStyle: {
+          range: {
+            startIndex: endIndex + 1,
+            endIndex: endIndex + 1 + header.length + 1,
+          },
+          textStyle: {
+            foregroundColor: {
+              color: { rgbColor: { red: 0, green: 0, blue: 1 } },
+            },
+          },
+          fields: 'foregroundColor',
+        },
+      });
+
+      // Update cursor index after adding the header
+      let cursorIndex = endIndex + 1 + header.length + 1;
+
+      // Add paragraphs after the header
+      paragraphs.forEach((paragraph) => {
+        requests.push({
+          insertText: {
+            location: { index: cursorIndex },
+            text: `\n${paragraph.text}\n`,
+          },
+        });
+
+        // Style section names as Heading 2 if applicable
+        if (paragraph.isHeading) {
+          requests.push({
+            updateParagraphStyle: {
+              range: {
+                startIndex: cursorIndex + 1,
+                endIndex: cursorIndex + 1 + paragraph.text.length + 1,
+              },
+              paragraphStyle: {
+                namedStyleType: 'HEADING_2',
+              },
+              fields: 'namedStyleType',
+            },
+          });
+        } else {
+          // Style 'Add:' and 'Remove:' with specific colors
+          if (paragraph.text.startsWith('Add:')) {
+            requests.push({
+              updateTextStyle: {
+                range: {
+                  startIndex: cursorIndex + 1,
+                  endIndex: cursorIndex + 5, // Only color 'Add:'
+                },
+                textStyle: {
+                  foregroundColor: {
+                    color: { rgbColor: { red: 0, green: 0, blue: 1 } },
+                  },
+                },
+                fields: 'foregroundColor',
+              },
+            });
+          } else if (paragraph.text.startsWith('Remove:')) {
+            requests.push({
+              updateTextStyle: {
+                range: {
+                  startIndex: cursorIndex + 1,
+                  endIndex: cursorIndex + 8, // Only color 'Remove:'
+                },
+                textStyle: {
+                  foregroundColor: {
+                    color: { rgbColor: { red: 1, green: 0, blue: 0 } },
+                  },
+                },
+                fields: 'foregroundColor',
+              },
+            });
+          }
+        }
+
+        // Update cursorIndex after adding the paragraph
+        cursorIndex += paragraph.text.length + 2; // account for newlines
+      });
+
+      await docsService.documents.batchUpdate({
+        documentId,
+        requestBody: { requests },
+      });
+      this.logger.log(
+        `Section '${header}' appended at the end of the document with paragraphs`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to append section: ${error.message}`);
+      throw new Error('Failed to append section');
+    }
+  }
+
+  // async appendSectionToEnd(
+  //   documentId: string,
+  //   header: string,
+  //   paragraphs: { text: string; isHeading: boolean }[],
+  // ) {
+  //   try {
+  //     await this.refreshAccessTokenIfNeeded();
+  //     const docsService = google.docs({
+  //       version: 'v1',
+  //       auth: this.oAuth2Client,
+  //     });
+  //     const doc = await docsService.documents.get({ documentId });
+  //     const bodyContent = doc.data.body?.content || [];
+  //     let endIndex = bodyContent[bodyContent.length - 1]?.endIndex || 1;
+
+  //     // Adjust endIndex to ensure we are always inserting within bounds
+  //     if (endIndex > 1) {
+  //       endIndex -= 1;
+  //     }
+
+  //     const requests: any[] = [];
+
+  //     // Add header at the end of the document
+  //     requests.push({
+  //       insertText: {
+  //         location: { index: endIndex },
+  //         text: `\n${header}\n`,
+  //       },
+  //     });
+
+  //     // Style as Heading 1
+  //     requests.push({
+  //       updateParagraphStyle: {
+  //         range: {
+  //           startIndex: endIndex + 1,
+  //           endIndex: endIndex + 1 + header.length + 1, // account for newline
+  //         },
+  //         paragraphStyle: {
+  //           namedStyleType: 'HEADING_1',
+  //         },
+  //         fields: 'namedStyleType',
+  //       },
+  //     });
+
+  //     // Update cursor index after adding the header
+  //     let cursorIndex = endIndex + 1 + header.length + 1;
+
+  //     // Add paragraphs after the header
+  //     paragraphs.forEach((paragraph) => {
+  //       requests.push({
+  //         insertText: {
+  //           location: { index: cursorIndex },
+  //           text: `\n${paragraph.text}\n`,
+  //         },
+  //       });
+
+  //       // Style section names as Heading 2 if applicable
+  //       if (paragraph.isHeading) {
+  //         requests.push({
+  //           updateParagraphStyle: {
+  //             range: {
+  //               startIndex: cursorIndex + 1,
+  //               endIndex: cursorIndex + 1 + paragraph.text.length + 1,
+  //             },
+  //             paragraphStyle: {
+  //               namedStyleType: 'HEADING_2',
+  //             },
+  //             fields: 'namedStyleType',
+  //           },
+  //         });
+  //       }
+
+  //       // Update cursorIndex after adding the paragraph
+  //       cursorIndex += paragraph.text.length + 2; // account for newlines
+  //     });
+
+  //     await docsService.documents.batchUpdate({
+  //       documentId,
+  //       requestBody: { requests },
+  //     });
+  //     this.logger.log(
+  //       `Section '${header}' appended at the end of the document with paragraphs`,
+  //     );
+  //   } catch (error) {
+  //     this.logger.error(`Failed to append section: ${error.message}`);
+  //     throw new Error('Failed to append section');
+  //   }
+  // }
 
   // async appendRecommendations(
   //   documentId: string,
   //   updates: { [section: string]: { add?: string; remove?: string } },
   // ) {
-  //   const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+  //   const recommendationsTitle = 'RECOMMENDATIONS';
+  //   const paragraphs: string[] = [];
 
-  //   let recommendationsContent = 'RECOMMENDATIONS:\n\n';
-
-  //   // Build the recommendations content with section headers and content
+  //   // Create paragraphs for each section recommendation
   //   for (const [section, changes] of Object.entries(updates)) {
-  //     recommendationsContent += `${section}\n`;
-
+  //     paragraphs.push(section);
   //     if (changes.add) {
-  //       recommendationsContent += `Add:\n${changes.add.trim()}\n`;
+  //       paragraphs.push(`Add:\n${changes.add.trim()}`);
   //     }
   //     if (changes.remove) {
-  //       recommendationsContent += `Remove:\n${changes.remove.trim()}\n`;
+  //       paragraphs.push(`Remove:\n${changes.remove.trim()}`);
   //     }
-
-  //     recommendationsContent += '\n'; // Separate sections
   //   }
 
   //   try {
-  //     // Insert recommendations content at the end of the document
-  //     await docsService.documents.batchUpdate({
+  //     await this.appendSectionToEnd(
   //       documentId,
-  //       requestBody: {
-  //         requests: [
-  //           {
-  //             insertText: {
-  //               endOfSegmentLocation: {},
-  //               text: recommendationsContent,
-  //             },
-  //           },
-  //         ],
+  //       recommendationsTitle,
+  //       paragraphs,
+  //     );
+  //   } catch (error) {
+  //     this.logger.error(`Failed to append recommendations: ${error.message}`);
+  //     throw new Error('Failed to append recommendations');
+  //   }
+  // }
+
+  // async appendSectionToEnd(
+  //   documentId: string,
+  //   header: string,
+  //   paragraphs: string[],
+  // ) {
+  //   try {
+  //     await this.refreshAccessTokenIfNeeded();
+  //     const docsService = google.docs({
+  //       version: 'v1',
+  //       auth: this.oAuth2Client,
+  //     });
+  //     const doc = await docsService.documents.get({ documentId });
+  //     const bodyContent = doc.data.body?.content || [];
+  //     let endIndex = bodyContent[bodyContent.length - 1]?.endIndex || 1;
+
+  //     // Adjust endIndex to ensure we are always inserting within bounds
+  //     if (endIndex > 1) {
+  //       endIndex -= 1;
+  //     }
+
+  //     const requests: any[] = [];
+
+  //     // Add header at the end of the document
+  //     requests.push({
+  //       insertText: {
+  //         location: { index: endIndex },
+  //         text: `\n${header}\n`,
   //       },
   //     });
 
-  //     this.logger.log('Appended recommendations to the document.');
+  //     // Style as header
+  //     requests.push({
+  //       updateTextStyle: {
+  //         range: {
+  //           startIndex: endIndex + 1,
+  //           endIndex: endIndex + 1 + header.length + 1, // account for newline
+  //         },
+  //         textStyle: {
+  //           bold: true,
+  //           fontSize: { magnitude: 14, unit: 'PT' },
+  //           foregroundColor: {
+  //             color: { rgbColor: { blue: 0.5, green: 0.5, red: 0.2 } },
+  //           },
+  //         },
+  //         fields: 'bold,fontSize,foregroundColor',
+  //       },
+  //     });
+
+  //     // Add paragraphs after the header
+  //     let cursorIndex = endIndex + 1 + header.length + 1;
+  //     paragraphs.forEach((paragraph) => {
+  //       requests.push({
+  //         insertText: {
+  //           location: { index: cursorIndex },
+  //           text: `\n${paragraph}\n`,
+  //         },
+  //       });
+  //       cursorIndex += paragraph.length + 2; // account for newlines
+  //     });
+
+  //     await docsService.documents.batchUpdate({
+  //       documentId,
+  //       requestBody: { requests },
+  //     });
+  //     this.logger.log(
+  //       `Section '${header}' appended at the end of the document with paragraphs`,
+  //     );
   //   } catch (error) {
-  //     this.logger.error(`Failed to write to Google Doc: ${error.message}`);
-  //     throw error;
+  //     this.logger.error(`Failed to append section: ${error.message}`);
+  //     throw new Error('Failed to append section');
   //   }
   // }
-  async appendRecommendations(
-    documentId: string,
-    updates: { [section: string]: { add?: string; remove?: string } },
+
+  // async appendSectionToEnd(
+  //   documentId: string,
+  //   header: string,
+  //   paragraphs: string[],
+  // ) {
+  //   try {
+  //     await this.refreshAccessTokenIfNeeded();
+  //     const docsService = google.docs({
+  //       version: 'v1',
+  //       auth: this.oAuth2Client,
+  //     });
+  //     const doc = await docsService.documents.get({ documentId });
+  //     const bodyContent = doc.data.body?.content || [];
+  //     let endIndex = bodyContent[bodyContent.length - 1]?.endIndex || 1;
+
+  //     // Adjust endIndex to ensure we are always inserting within bounds
+  //     if (endIndex > 1) {
+  //       endIndex -= 1;
+  //     }
+
+  //     const requests: any[] = [];
+
+  //     // Add header at the end of the document
+  //     requests.push({
+  //       insertText: {
+  //         location: { index: endIndex },
+  //         text: `\n${header}\n`,
+  //       },
+  //     });
+
+  //     // Style as Heading 1
+  //     requests.push({
+  //       updateParagraphStyle: {
+  //         range: {
+  //           startIndex: endIndex + 1,
+  //           endIndex: endIndex + 1 + header.length + 1, // account for newline
+  //         },
+  //         paragraphStyle: {
+  //           namedStyleType: 'HEADING_1',
+  //         },
+  //         fields: 'namedStyleType',
+  //       },
+  //     });
+
+  //     // Add paragraphs after the header
+  //     let cursorIndex = endIndex + 1 + header.length + 1;
+  //     paragraphs.forEach((paragraph) => {
+  //       requests.push({
+  //         insertText: {
+  //           location: { index: cursorIndex },
+  //           text: `\n${paragraph}\n`,
+  //         },
+  //       });
+  //       cursorIndex += paragraph.length + 2; // account for newlines
+  //     });
+
+  //     await docsService.documents.batchUpdate({
+  //       documentId,
+  //       requestBody: { requests },
+  //     });
+  //     this.logger.log(
+  //       `Section '${header}' appended at the end of the document with paragraphs`,
+  //     );
+  //   } catch (error) {
+  //     this.logger.error(`Failed to append section: ${error.message}`);
+  //     throw new Error('Failed to append section');
+  //   }
+  // }
+
+  // async createSection(
+  //   documentId: string,
+  //   header: string,
+  //   paragraphs: string[],
+  // ) {
+  //   try {
+  //     await this.refreshAccessTokenIfNeeded();
+  //     const docsService = google.docs({
+  //       version: 'v1',
+  //       auth: this.oAuth2Client,
+  //     });
+  //     const requests: any[] = [];
+
+  //     // Add header
+  //     requests.push({
+  //       insertText: {
+  //         location: { index: 1 },
+  //         text: `\n${header}\n`,
+  //       },
+  //     });
+
+  //     // Style as header
+  //     requests.push({
+  //       updateTextStyle: {
+  //         range: {
+  //           startIndex: 1,
+  //           endIndex: header.length + 2, // account for newline
+  //         },
+  //         textStyle: {
+  //           bold: true,
+  //           fontSize: { magnitude: 14, unit: 'PT' },
+  //           foregroundColor: {
+  //             color: { rgbColor: { blue: 0.5, green: 0.5, red: 0.2 } },
+  //           },
+  //         },
+  //         fields: 'bold,fontSize,foregroundColor',
+  //       },
+  //     });
+
+  //     // Add paragraphs
+  //     let cursorIndex = header.length + 2;
+  //     paragraphs.forEach((paragraph) => {
+  //       requests.push({
+  //         insertText: {
+  //           location: { index: cursorIndex },
+  //           text: `\n${paragraph}\n`,
+  //         },
+  //       });
+  //       cursorIndex += paragraph.length + 2; // account for newline
+  //     });
+
+  //     await docsService.documents.batchUpdate({
+  //       documentId,
+  //       requestBody: { requests },
+  //     });
+  //     this.logger.log(`Section '${header}' created with paragraphs`);
+  //   } catch (error) {
+  //     this.logger.error(`Failed to create section: ${error.message}`);
+  //     throw new Error('Failed to create section');
+  //   }
+  // }
+
+  private createInsertTextRequest(index: number, text: string) {
+    return {
+      insertText: {
+        location: { index },
+        text,
+      },
+    };
+  }
+
+  private createTextStyleRequests(content: string, startIndex: number) {
+    const requests: any[] = [];
+    let cursorIndex = startIndex;
+    content.split('\n').forEach((line) => {
+      const addMatch = line.startsWith('Add:');
+      const removeMatch = line.startsWith('Remove:');
+
+      if (addMatch || removeMatch) {
+        const color = addMatch ? { blue: 1.0 } : { red: 1.0 };
+        requests.push({
+          updateTextStyle: {
+            range: {
+              startIndex: cursorIndex,
+              endIndex: cursorIndex + line.length,
+            },
+            textStyle: {
+              foregroundColor: { color: { rgbColor: color } },
+            },
+            fields: 'foregroundColor',
+          },
+        });
+      }
+      cursorIndex += line.length + 1;
+    });
+    return requests;
+  }
+
+  // private createUpdateTextStyleRequest(
+  //   startIndex: number,
+  //   endIndex: number,
+  //   style: string,
+  // ) {
+  //   return {
+  //     updateParagraphStyle: {
+  //       range: { startIndex, endIndex },
+  //       paragraphStyle: {
+  //         namedStyleType: style,
+  //       },
+  //       fields: 'namedStyleType',
+  //     },
+  //   };
+  // }
+
+  private async moveFileToFolder(fileId: string, folderId: string) {
+    const driveService = google.drive({
+      version: 'v3',
+      auth: this.oAuth2Client,
+    });
+    const file = await driveService.files.get({
+      fileId,
+      fields: 'parents',
+    });
+    const previousParents = file.data.parents
+      ? file.data.parents.join(',')
+      : '';
+    await driveService.files.update({
+      fileId,
+      addParents: folderId,
+      removeParents: previousParents,
+      fields: 'id, parents',
+    });
+    this.logger.debug(`File moved to folder ID: ${folderId}`);
+  }
+
+  private async shareFileWithUser(
+    fileId: string,
+    email: string,
+    role: string = 'writer',
   ) {
-    const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
-
-    let recommendationsContent = 'RECOMMENDATIONS:\n\n';
-
-    // Build the recommendations content with section headers and content
-    for (const [section, changes] of Object.entries(updates)) {
-      recommendationsContent += `${section}\n`;
-
-      // Ensure add and remove are strings before trimming
-      const addContent =
-        typeof changes.add === 'string' ? changes.add.trim() : '';
-      const removeContent =
-        typeof changes.remove === 'string' ? changes.remove.trim() : '';
-
-      if (addContent) {
-        recommendationsContent += `Add:\n${addContent}\n`;
-      }
-      if (removeContent) {
-        recommendationsContent += `Remove:\n${removeContent}\n`;
-      }
-
-      recommendationsContent += '\n'; // Separate sections
-    }
-
-    try {
-      // Insert recommendations content at the end of the document
-      const insertResponse = await docsService.documents.batchUpdate({
-        documentId,
-        requestBody: {
-          requests: [
-            {
-              insertText: {
-                endOfSegmentLocation: {},
-                text: recommendationsContent,
-              },
-            },
-          ],
-        },
-      });
-
-      // Calculate the starting index of the inserted text
-      const startIndex = (insertResponse.data.replies?.[0] as any)?.insertText
-        ?.location?.index;
-
-      if (startIndex !== undefined) {
-        const endIndex = startIndex + recommendationsContent.length;
-
-        // Attempt to apply blue color to the newly added recommendations content
-        try {
-          await docsService.documents.batchUpdate({
-            documentId,
-            requestBody: {
-              requests: [
-                {
-                  updateTextStyle: {
-                    range: {
-                      startIndex: startIndex,
-                      endIndex: endIndex,
-                    },
-                    textStyle: {
-                      foregroundColor: {
-                        color: { rgbColor: { red: 0, green: 0, blue: 1 } },
-                      },
-                    },
-                    fields: 'foregroundColor',
-                  },
-                },
-              ],
-            },
-          });
-          this.logger.log('Applied blue color to recommendations content.');
-        } catch (colorError) {
-          this.logger.error(
-            `Failed to apply color to recommendations: ${colorError.message}`,
-          );
-        }
-      }
-
-      this.logger.log('Appended recommendations to the document.');
-    } catch (error) {
-      this.logger.error(`Failed to write to Google Doc: ${error.message}`);
-      throw error;
-    }
+    const driveService = google.drive({
+      version: 'v3',
+      auth: this.oAuth2Client,
+    });
+    await driveService.permissions.create({
+      fileId,
+      requestBody: {
+        type: 'user',
+        role,
+        emailAddress: email,
+      },
+      fields: 'id',
+    });
+    this.logger.log(`File shared with ${email} as ${role}`);
   }
 }
