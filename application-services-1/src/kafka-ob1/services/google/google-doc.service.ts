@@ -326,7 +326,7 @@ export class GoogleDocService {
       // Add title at the beginning
       requests.push({
         insertText: {
-          location: { index: 1 },
+          endOfSegmentLocation: {},
           text: `${title}\n\n`,
         },
       });
@@ -341,36 +341,38 @@ export class GoogleDocService {
         },
       });
 
-      // Set initial index after the title
-      let index = title.length + 2;
+      let cursorIndex = title.length + 2;
 
       for (const [header, content] of Object.entries(contentJson)) {
         // Insert header
         requests.push({
           insertText: {
-            location: { index },
-            text: `${header}\n`,
+            endOfSegmentLocation: {},
+            text: `\n${header}\n`,
           },
         });
         requests.push({
           updateParagraphStyle: {
-            range: { startIndex: index, endIndex: index + header.length + 1 },
+            range: {
+              startIndex: cursorIndex,
+              endIndex: cursorIndex + header.length + 1,
+            },
             paragraphStyle: {
               namedStyleType: 'HEADING_1',
             },
             fields: 'namedStyleType',
           },
         });
-        index += header.length + 1;
+        cursorIndex += header.length + 2;
 
         // Insert content with proper spacing
         requests.push({
           insertText: {
-            location: { index },
+            endOfSegmentLocation: {},
             text: `\n${content}\n\n`,
           },
         });
-        index += content.length + 4; // account for added newlines
+        cursorIndex += content.length + 4;
       }
 
       await docsService.documents.batchUpdate({
