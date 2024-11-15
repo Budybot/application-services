@@ -46,58 +46,70 @@ export class CleanTranscriptService {
         userId,
       );
 
-      const cleanedTranscript = response.messageContent.content;
-      this.logger.log('Transcript cleaned successfully');
-      return cleanedTranscript;
-    } catch (error) {
-      this.logger.error(
-        `Error cleaning transcript: ${error.message}`,
-        error.stack,
-      );
-      // Split transcript if error occurs and length exceeds threshold
-      const tokenThreshold = 2000;
-      if (transcriptWithoutTimestamps.length > tokenThreshold) {
-        this.logger.warn(
-          'Transcript exceeds token limit, splitting into parts.',
+      if (response.messageType === 'ERROR_RESPONSE' && response.error) {
+        this.logger.error(
+          `Agent service returned an error: ${response.messageContent.errorMessage}`,
         );
-        const midPoint = Math.floor(transcriptWithoutTimestamps.length / 2);
-
-        const firstHalf = transcriptWithoutTimestamps.slice(0, midPoint);
-        const secondHalf = transcriptWithoutTimestamps.slice(midPoint);
-
-        const newSystemPrompt = `Initial transcript was too long, this is only half. Please feel free to remove irrelevant or redundant content and use summarization where you believe it will decrease the size of the clean transcript without missing any important details about the project discussed.${systemPrompt}`;
-
-        try {
-          const firstHalfResponse =
-            await this.agentServiceRequest.sendAgentRequest(
-              newSystemPrompt,
-              firstHalf,
-              config,
-              instanceName,
-              userId,
-            );
-
-          const secondHalfResponse =
-            await this.agentServiceRequest.sendAgentRequest(
-              newSystemPrompt,
-              secondHalf,
-              config,
-              instanceName,
-              userId,
-            );
-
-          const combinedTranscript = `${firstHalfResponse.messageContent.content}
-${secondHalfResponse.messageContent.content}`;
-          this.logger.log('Transcript cleaned successfully after splitting');
-          return combinedTranscript;
-        } catch (splitError) {
-          this.logger.error(
-            `Error cleaning split transcript parts: ${splitError.message}`,
-            splitError.stack,
+        // Split transcript if error occurs and length exceeds threshold
+        const tokenThreshold = 2000;
+        if (transcriptWithoutTimestamps.length > tokenThreshold) {
+          this.logger.warn(
+            'Transcript exceeds token limit, splitting into parts.',
           );
-          throw new Error('Failed to clean transcript after splitting');
+          const midPoint = Math.floor(transcriptWithoutTimestamps.length / 2);
+
+          const firstHalf = transcriptWithoutTimestamps.slice(0, midPoint);
+          const secondHalf = transcriptWithoutTimestamps.slice(midPoint);
+
+          const firstHalfPrompt = `This is the first half of a long transcript. Please remove irrelevant or redundant content and use summarization to decrease the size of the cleaned transcript without missing any important details about the project discussed.\n${systemPrompt}`;
+          const secondHalfPrompt = `This is the second half of a long transcript. Please remove irrelevant or redundant content and use summarization to decrease the size of the cleaned transcript without missing any important details about the project discussed.\n${systemPrompt}`;
+
+          try {
+            const firstHalfResponse =
+              await this.agentServiceRequest.sendAgentRequest(
+                firstHalfPrompt,
+                firstHalf,
+                config,
+                instanceName,
+                userId,
+              );
+
+            const secondHalfResponse =
+              await this.agentServiceRequest.sendAgentRequest(
+                secondHalfPrompt,
+                secondHalf,
+                config,
+                instanceName,
+                userId,
+              );
+            if (
+              firstHalfResponse.messageType === 'ERROR_RESPONSE' ||
+              secondHalfResponse.messageType === 'ERROR_RESPONSE'
+            ) {
+              this.logger.error(
+                'Failed to clean one or both parts of the transcript, attempting to split further.',
+              );
+            }
+
+            const combinedTranscript = `${firstHalfResponse.messageContent.content}
+${secondHalfResponse.messageContent.content}`;
+            this.logger.log('Transcript cleaned successfully after splitting');
+            return combinedTranscript;
+          } catch (splitError) {
+            this.logger.error(
+              `Error cleaning split transcript parts: ${splitError.message}`,
+              splitError.stack,
+            );
+            throw new Error('Failed to clean transcript after splitting');
+          }
         }
+
+        const cleanedTranscript = response.messageContent.content;
+        this.logger.log('Transcript cleaned successfully');
+        return cleanedTranscript;
       }
+    } catch (error) {
+      this.logger.error(`Error cleaning transcript: ${error.message}`);
       throw new Error('Failed to clean transcript');
     }
   }
