@@ -22,7 +22,8 @@ export class GoogleSheetService {
 
     try {
       const credentials = JSON.parse(tokenData);
-      const { client_id, client_secret, token_uri, refresh_token } = credentials;
+      const { client_id, client_secret, token_uri, refresh_token } =
+        credentials;
       this.oAuth2Client = new google.auth.OAuth2(
         client_id,
         client_secret,
@@ -133,12 +134,44 @@ export class GoogleSheetService {
     }
   }
 
+  // async writeToSheet(sheetId: string, data: string[][], startCell = 'A1') {
+  //   try {
+  //     const sheets = google.sheets({ version: 'v4', auth: this.oAuth2Client });
+
+  //     // Compute dynamic range based on data dimensions
+  //     const range = this.computeRange(startCell, data);
+
+  //     const request = {
+  //       spreadsheetId: sheetId,
+  //       range,
+  //       valueInputOption: 'USER_ENTERED',
+  //       resource: { values: data },
+  //     };
+
+  //     await sheets.spreadsheets.values.update(request);
+  //     this.logger.log(
+  //       `Data written to Google Sheet ID: ${sheetId} at range ${range}`,
+  //     );
+  //   } catch (error) {
+  //     this.logger.error(`Failed to write data to Google Sheet: ${error}`);
+  //     throw new Error('Failed to write to Google Sheet');
+  //   }
+  // }
+
   async writeToSheet(sheetId: string, data: string[][], startCell = 'A1') {
     try {
       const sheets = google.sheets({ version: 'v4', auth: this.oAuth2Client });
 
+      // Ensure data is valid
+      if (!data || data.length === 0 || data[0].length === 0) {
+        throw new Error('Data must be a non-empty 2D array.');
+      }
+
       // Compute dynamic range based on data dimensions
       const range = this.computeRange(startCell, data);
+
+      // Validate if the data matches the intended range
+      this.logger.debug(`Attempting to write data to range: ${range}`);
 
       const request = {
         spreadsheetId: sheetId,
@@ -147,12 +180,75 @@ export class GoogleSheetService {
         resource: { values: data },
       };
 
-      await sheets.spreadsheets.values.update(request);
+      // Update the values in the given range
+      const response = await sheets.spreadsheets.values.update(request);
+      if (response.status !== 200) {
+        throw new Error(`Unexpected response status: ${response.status}`);
+      }
+
+      // Apply formatting to "Budy Notes" column if present
+      const headers = data[0];
+      const budyNotesIndex = headers.indexOf('Budy Notes');
+      if (budyNotesIndex !== -1) {
+        const formatRequests = [];
+        for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+          const cellValue = data[rowIndex][budyNotesIndex];
+          let color = null;
+          if (cellValue === 'Add') {
+            color = { red: 0.0, green: 0.0, blue: 1.0 }; // Blue
+          } else if (cellValue.startsWith('Edit:')) {
+            color = { red: 0.0, green: 0.0, blue: 1.0 }; // Blue
+          } else if (cellValue === 'Remove') {
+            color = { red: 1.0, green: 0.0, blue: 0.0 }; // Red
+          }
+
+          if (color) {
+            formatRequests.push({
+              updateCells: {
+                range: {
+                  sheetId: 0, // Assuming first sheet
+                  startRowIndex: rowIndex,
+                  endRowIndex: rowIndex + 1,
+                  startColumnIndex: budyNotesIndex,
+                  endColumnIndex: budyNotesIndex + 1,
+                },
+                rows: [
+                  {
+                    values: [
+                      {
+                        userEnteredFormat: {
+                          backgroundColor: color,
+                        },
+                      },
+                    ],
+                  },
+                ],
+                fields: 'userEnteredFormat.backgroundColor',
+              },
+            });
+          }
+        }
+
+        if (formatRequests.length > 0) {
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: sheetId,
+            requestBody: {
+              requests: formatRequests,
+            },
+          });
+          this.logger.log(
+            `Applied formatting to "Budy Notes" column in Google Sheet ID: ${sheetId}`,
+          );
+        }
+      }
+
       this.logger.log(
         `Data written to Google Sheet ID: ${sheetId} at range ${range}`,
       );
     } catch (error) {
-      this.logger.error(`Failed to write data to Google Sheet: ${error}`);
+      this.logger.error(
+        `Failed to write data to Google Sheet: ${error.message}`,
+      );
       throw new Error('Failed to write to Google Sheet');
     }
   }
