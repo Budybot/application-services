@@ -102,6 +102,7 @@ export class ProjectPlannerService {
       PO,
       DD,
       action_items,
+      consultant_input,
     } = plannerData;
 
     const plannerDetails = {
@@ -121,6 +122,7 @@ export class ProjectPlannerService {
             `${item.text} (Priority: ${item.priority})`,
         )
         .join(', '),
+      consultantInput: consultant_input,
     };
 
     // const systemPrompt = `
@@ -172,17 +174,19 @@ export class ProjectPlannerService {
   
     [
       ["Task ID", "Task Name", "Dependency", "Description"],
-      ["1", "Discovery", "", "Conduct initial meetings and research"],
-      ["1.1", "Stakeholder Interviews", "1", "Interview key stakeholders"],
-      ["1.2", "Requirements Gathering", "1.1", "Gather requirements from discussions"],
-      ["2", "Definition", "1", "Define project scope and objectives"],
-      ["2.1", "Scope Definition", "2", "Outline project scope and boundaries"]
+      ["1", "Create Project Plan", "", "Create project plan for this example"],
+      ["1.1", "Generate System Prompt", "1", "Generate system prompt for the project plan LLM call"],
+      ...
     ]
   
     Guidelines:
     - Each row represents a task with consistent column structure.
     - Ensure milestone tasks and execution steps are logically sequenced.
     - Output in plain text with no additional formatting or symbols.
+
+    Consultant Input: ${plannerDetails.consultantInput}
+
+    Feel free to add as many tasks and steps as needed to cover the project scope.
   
     Generate the table with tasks and steps based on the details provided above.
   `;
