@@ -204,7 +204,7 @@ export class GoogleSheetService {
 
           if (color) {
             formatRequests.push({
-              updateCells: {
+              repeatCell: {
                 range: {
                   sheetId: 0, // Assuming first sheet
                   startRowIndex: rowIndex,
@@ -212,18 +212,14 @@ export class GoogleSheetService {
                   startColumnIndex: budyNotesIndex,
                   endColumnIndex: budyNotesIndex + 1,
                 },
-                rows: [
-                  {
-                    values: [
-                      {
-                        userEnteredFormat: {
-                          backgroundColor: color,
-                        },
-                      },
-                    ],
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      foregroundColor: color,
+                    },
                   },
-                ],
-                fields: 'userEnteredFormat.backgroundColor',
+                },
+                fields: 'userEnteredFormat.textFormat.foregroundColor',
               },
             });
           }
@@ -237,7 +233,7 @@ export class GoogleSheetService {
             },
           });
           this.logger.log(
-            `Applied formatting to "Budy Notes" column in Google Sheet ID: ${sheetId}`,
+            `Applied text formatting to "Budy Notes" column in Google Sheet ID: ${sheetId}`,
           );
         }
       }
