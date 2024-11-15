@@ -315,80 +315,208 @@ export class GoogleDocService {
     contentJson: { [section: string]: string },
     title: string = 'Document Title',
   ) {
-    try {
-      await this.refreshAccessTokenIfNeeded();
-      const docsService = google.docs({
-        version: 'v1',
-        auth: this.oAuth2Client,
-      });
-      const requests: any[] = [];
+    const docsService = google.docs({ version: 'v1', auth: this.oAuth2Client });
+    const requests: any[] = [];
 
-      // Add title at the beginning
+    // 1. Add Title at the top of the document
+    requests.push({
+      insertText: {
+        location: { index: 1 },
+        text: `${title}\n\n`,
+      },
+    });
+    requests.push({
+      updateTextStyle: {
+        range: { startIndex: 1, endIndex: title.length + 1 },
+        textStyle: {
+          bold: true,
+          fontSize: { magnitude: 24, unit: 'PT' },
+        },
+        fields: 'bold,fontSize',
+      },
+    });
+
+    // 2. Initialize index after the title
+    let index = title.length + 2;
+
+    // 3. Loop through each section in order
+    for (const [header, content] of Object.entries(contentJson)) {
+      // a. Add header
       requests.push({
         insertText: {
-          endOfSegmentLocation: {},
-          text: `${title}\n\n`,
+          location: { index },
+          text: `${header}\n`,
         },
       });
       requests.push({
-        updateTextStyle: {
-          range: { startIndex: 1, endIndex: title.length + 1 },
-          textStyle: {
-            bold: true,
-            fontSize: { magnitude: 24, unit: 'PT' },
+        updateParagraphStyle: {
+          range: { startIndex: index, endIndex: index + header.length + 1 },
+          paragraphStyle: {
+            namedStyleType: 'HEADING_1',
           },
-          fields: 'bold,fontSize',
+          fields: 'namedStyleType',
         },
       });
+      index += header.length + 1;
 
-      let cursorIndex = title.length + 2;
+      // b. Add content based on its type
+      if (Array.isArray(content)) {
+        // Content is a list (e.g., objectives, challenges)
+        for (const item of content) {
+          // Insert bullet point
+          requests.push({
+            insertText: {
+              location: { index },
+              text: `${item}\n`,
+            },
+          });
+          requests.push({
+            createParagraphBullets: {
+              range: {
+                startIndex: index,
+                endIndex: index + item.length + 1,
+              },
+              bulletPreset: 'BULLET_DISC_CIRCLE_SQUARE',
+            },
+          });
+          index += item.length + 1;
+        }
+      } else if (typeof content === 'object' && content !== null) {
+        // Content is a sub-section (e.g., roles and responsibilities)
+        for (const [subHeader, subContent] of Object.entries(content)) {
+          // Insert sub-header
+          requests.push({
+            insertText: {
+              location: { index },
+              text: `${subHeader}\n`,
+            },
+          });
+          requests.push({
+            updateParagraphStyle: {
+              range: {
+                startIndex: index,
+                endIndex: index + subHeader.length + 1,
+              },
+              paragraphStyle: {
+                namedStyleType: 'HEADING_2',
+              },
+              fields: 'namedStyleType',
+            },
+          });
+          index += subHeader.length + 1;
 
-      for (const [header, content] of Object.entries(contentJson)) {
-        // Insert header
+          // Check subContent type for flexible handling
+          if (Array.isArray(subContent)) {
+            // subContent is a list
+            for (const listItem of subContent) {
+              requests.push({
+                insertText: {
+                  location: { index },
+                  text: `${listItem}\n`,
+                },
+              });
+              requests.push({
+                createParagraphBullets: {
+                  range: {
+                    startIndex: index,
+                    endIndex: index + listItem.length + 1,
+                  },
+                  bulletPreset: 'BULLET_DISC_CIRCLE_SQUARE',
+                },
+              });
+              index += listItem.length + 1;
+            }
+          } else if (typeof subContent === 'string') {
+            // subContent is a paragraph
+            requests.push({
+              insertText: {
+                location: { index },
+                text: `${subContent}\n\n`,
+              },
+            });
+            index += subContent.length + 2;
+          }
+        }
+      } else if (typeof content === 'string') {
+        // Content is a paragraph
         requests.push({
           insertText: {
-            endOfSegmentLocation: {},
-            text: `\n${header}\n`,
+            location: { index },
+            text: `${content}\n\n`,
           },
         });
-        requests.push({
-          updateParagraphStyle: {
-            range: {
-              startIndex: cursorIndex,
-              endIndex: cursorIndex + header.length + 1,
-            },
-            paragraphStyle: {
-              namedStyleType: 'HEADING_1',
-            },
-            fields: 'namedStyleType',
-          },
-        });
-        cursorIndex += header.length + 2;
-
-        // Insert content with proper spacing
-        requests.push({
-          insertText: {
-            endOfSegmentLocation: {},
-            text: `\n${content}\n\n`,
-          },
-        });
-        cursorIndex += content.length + 4;
+        index += content.length + 2;
       }
-
-      await docsService.documents.batchUpdate({
-        documentId,
-        requestBody: { requests },
-      });
-
-      this.logger.log(
-        `Document created with structured sections in Google Doc ID: ${documentId}`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to create document from JSON: ${error.message}`,
-      );
-      throw new Error('Failed to create document from JSON');
     }
+
+    // // 2. Reverse the order of sections to add content sequentially from the top down
+    // const sections = Object.entries(contentJson).reverse();
+
+    // sections.forEach(([header, paragraph]) => {
+    //   // Add header for each section
+    //   requests.push({
+    //     insertText: {
+    //       location: { index: 1 },
+    //       text: `\n${header}\n`,
+    //     },
+    //   });
+    //   requests.push({
+    //     updateTextStyle: {
+    //       range: { startIndex: 1, endIndex: header.length + 2 },
+    //       textStyle: {
+    //         bold: true,
+    //         fontSize: { magnitude: 14, unit: 'PT' },
+    //       },
+    //       fields: 'bold,fontSize',
+    //     },
+    //   });
+    //   // 3. Handle bullet points and numbered lists based on content format
+    //   if (paragraph.includes('* ')) {
+    //     // Bullet point formatting
+    //     const bulletPoints = paragraph
+    //       .split('\n')
+    //       .map((line) => line.replace('* ', ''));
+    //     bulletPoints.forEach((point) => {
+    //       requests.push({
+    //         insertText: {
+    //           location: { index: header.length + 2 },
+    //           text: `• ${point}\n`,
+    //         },
+    //       });
+    //     });
+    //   } else if (paragraph.includes('1. ')) {
+    //     // Numbered list formatting
+    //     const numberedItems = paragraph
+    //       .split('\n')
+    //       .map((line) => line.replace(/^\d+\.\s/, ''));
+    //     numberedItems.forEach((item, index) => {
+    //       requests.push({
+    //         insertText: {
+    //           location: { index: header.length + 2 },
+    //           text: `${index + 1}. ${item}\n`,
+    //         },
+    //       });
+    //     });
+    //   } else {
+    //     // Regular paragraph
+    //     requests.push({
+    //       insertText: {
+    //         location: { index: header.length + 2 },
+    //         text: `\n${paragraph}\n`,
+    //       },
+    //     });
+    //   }
+    // });
+
+    // Send the batch update request to Google Docs API
+    await docsService.documents.batchUpdate({
+      documentId,
+      requestBody: { requests },
+    });
+
+    this.logger.log(
+      `Document created with structured sections in Google Doc ID: ${documentId}`,
+    );
   }
 
   private async refreshAccessTokenIfNeeded() {
