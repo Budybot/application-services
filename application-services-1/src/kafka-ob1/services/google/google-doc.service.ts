@@ -457,7 +457,14 @@ export class GoogleDocService {
       });
       const doc = await docsService.documents.get({ documentId });
       const bodyContent = doc.data.body?.content || [];
-      const endIndex = bodyContent[bodyContent.length - 1]?.endIndex || 1;
+      let endIndex = bodyContent[bodyContent.length - 1]?.endIndex || 1;
+
+      // Ensure the endIndex is valid by reducing it if it's at the boundary
+      if (
+        bodyContent[bodyContent.length - 1]?.paragraph?.elements?.length === 0
+      ) {
+        endIndex -= 1;
+      }
 
       const requests: any[] = [];
 
