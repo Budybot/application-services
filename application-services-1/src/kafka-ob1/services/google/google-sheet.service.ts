@@ -186,9 +186,9 @@ export class GoogleSheetService {
         throw new Error(`Unexpected response status: ${response.status}`);
       }
 
-      // Apply formatting to "Budy Notes" column if present
+      // Apply formatting to "Budy Suggests" column if present
       const headers = data[0];
-      const budyNotesIndex = headers.indexOf('Budy Notes');
+      const budyNotesIndex = headers.indexOf('Budy Suggests');
       if (budyNotesIndex !== -1) {
         const formatRequests = [];
         for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
@@ -233,7 +233,7 @@ export class GoogleSheetService {
             },
           });
           this.logger.log(
-            `Applied text formatting to "Budy Notes" column in Google Sheet ID: ${sheetId}`,
+            `Applied text formatting to "Budy Suggests" column in Google Sheet ID: ${sheetId}`,
           );
         }
       }

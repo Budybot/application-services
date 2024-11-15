@@ -286,10 +286,10 @@ async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
   const { edit, remove, add } = sowDelta;
 
   // Step 3: Initialize 'Budy Notes' column in each row
-  headers.push('Budy Notes');
+  headers.push('Budy Suggests');
   const updatedRows = rows.map((row) => [...row, '']);
 
-  // Step 4: Process `remove` items by marking them in the 'Budy Notes' column
+  // Step 4: Process `remove` items by marking them in the 'Budy Suggests' column
   console.log('Remove:', remove);
   if (remove) {
     remove.forEach((taskId) => {
@@ -300,7 +300,7 @@ async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
     });
   }
 
-  // Step 5: Process `edit` items by adding edit descriptions in the 'Budy Notes' column
+  // Step 5: Process `edit` items by adding edit descriptions in the 'Budy Suggests' column
   console.log('Edit:', edit);
   if (edit) {
     for (const [taskId, editDescription] of Object.entries(edit)) {
