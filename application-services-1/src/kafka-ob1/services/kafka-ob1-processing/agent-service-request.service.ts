@@ -29,7 +29,7 @@ export class AgentServiceRequest {
         `System prompt exceeds token limit of ${tokenThreshold} tokens`,
       );
       config.model = 'gpt-4o';
-      config.maxTokens = 12000;
+      config.maxTokens = 16384;
     }
 
     const messageInput = {
