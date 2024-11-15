@@ -419,16 +419,24 @@ export class GoogleDocService {
     updates: { [section: string]: { add?: string; remove?: string } },
   ) {
     const recommendationsTitle = 'RECOMMENDATIONS';
-    const paragraphs: string[] = [];
+    const paragraphs: { text: string; isHeading: boolean }[] = [];
 
     // Create paragraphs for each section recommendation
     for (const [section, changes] of Object.entries(updates)) {
-      paragraphs.push(section);
+      paragraphs.push({ text: section, isHeading: true });
       if (changes.add) {
-        paragraphs.push(`Add:\n${changes.add.trim()}`);
+        paragraphs.push({
+          text: `Add:
+${changes.add.trim()}`,
+          isHeading: false,
+        });
       }
       if (changes.remove) {
-        paragraphs.push(`Remove:\n${changes.remove.trim()}`);
+        paragraphs.push({
+          text: `Remove:
+${changes.remove.trim()}`,
+          isHeading: false,
+        });
       }
     }
 
@@ -443,10 +451,11 @@ export class GoogleDocService {
       throw new Error('Failed to append recommendations');
     }
   }
+
   async appendSectionToEnd(
     documentId: string,
     header: string,
-    paragraphs: string[],
+    paragraphs: { text: string; isHeading: boolean }[],
   ) {
     try {
       await this.refreshAccessTokenIfNeeded();
@@ -487,23 +496,25 @@ export class GoogleDocService {
         },
       });
 
-      // Add paragraphs after the header
+      // Update cursor index after adding the header
       let cursorIndex = endIndex + 1 + header.length + 1;
-      paragraphs.forEach((paragraph, index) => {
+
+      // Add paragraphs after the header
+      paragraphs.forEach((paragraph) => {
         requests.push({
           insertText: {
             location: { index: cursorIndex },
-            text: `\n${paragraph}\n`,
+            text: `\n${paragraph.text}\n`,
           },
         });
 
-        // Style section names as Heading 2
-        if (index % 3 === 0) {
+        // Style section names as Heading 2 if applicable
+        if (paragraph.isHeading) {
           requests.push({
             updateParagraphStyle: {
               range: {
                 startIndex: cursorIndex + 1,
-                endIndex: cursorIndex + 1 + paragraph.length + 1,
+                endIndex: cursorIndex + 1 + paragraph.text.length + 1,
               },
               paragraphStyle: {
                 namedStyleType: 'HEADING_2',
@@ -513,7 +524,8 @@ export class GoogleDocService {
           });
         }
 
-        cursorIndex += paragraph.length + 2; // account for newlines
+        // Update cursorIndex after adding the paragraph
+        cursorIndex += paragraph.text.length + 2; // account for newlines
       });
 
       await docsService.documents.batchUpdate({
@@ -528,6 +540,36 @@ export class GoogleDocService {
       throw new Error('Failed to append section');
     }
   }
+
+  // async appendRecommendations(
+  //   documentId: string,
+  //   updates: { [section: string]: { add?: string; remove?: string } },
+  // ) {
+  //   const recommendationsTitle = 'RECOMMENDATIONS';
+  //   const paragraphs: string[] = [];
+
+  //   // Create paragraphs for each section recommendation
+  //   for (const [section, changes] of Object.entries(updates)) {
+  //     paragraphs.push(section);
+  //     if (changes.add) {
+  //       paragraphs.push(`Add:\n${changes.add.trim()}`);
+  //     }
+  //     if (changes.remove) {
+  //       paragraphs.push(`Remove:\n${changes.remove.trim()}`);
+  //     }
+  //   }
+
+  //   try {
+  //     await this.appendSectionToEnd(
+  //       documentId,
+  //       recommendationsTitle,
+  //       paragraphs,
+  //     );
+  //   } catch (error) {
+  //     this.logger.error(`Failed to append recommendations: ${error.message}`);
+  //     throw new Error('Failed to append recommendations');
+  //   }
+  // }
 
   // async appendSectionToEnd(
   //   documentId: string,
