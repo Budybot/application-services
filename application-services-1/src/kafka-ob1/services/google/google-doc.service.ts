@@ -444,6 +444,79 @@ export class GoogleDocService {
     }
   }
 
+  // async appendSectionToEnd(
+  //   documentId: string,
+  //   header: string,
+  //   paragraphs: string[],
+  // ) {
+  //   try {
+  //     await this.refreshAccessTokenIfNeeded();
+  //     const docsService = google.docs({
+  //       version: 'v1',
+  //       auth: this.oAuth2Client,
+  //     });
+  //     const doc = await docsService.documents.get({ documentId });
+  //     const bodyContent = doc.data.body?.content || [];
+  //     let endIndex = bodyContent[bodyContent.length - 1]?.endIndex || 1;
+
+  //     // Adjust endIndex to ensure we are always inserting within bounds
+  //     if (endIndex > 1) {
+  //       endIndex -= 1;
+  //     }
+
+  //     const requests: any[] = [];
+
+  //     // Add header at the end of the document
+  //     requests.push({
+  //       insertText: {
+  //         location: { index: endIndex },
+  //         text: `\n${header}\n`,
+  //       },
+  //     });
+
+  //     // Style as header
+  //     requests.push({
+  //       updateTextStyle: {
+  //         range: {
+  //           startIndex: endIndex + 1,
+  //           endIndex: endIndex + 1 + header.length + 1, // account for newline
+  //         },
+  //         textStyle: {
+  //           bold: true,
+  //           fontSize: { magnitude: 14, unit: 'PT' },
+  //           foregroundColor: {
+  //             color: { rgbColor: { blue: 0.5, green: 0.5, red: 0.2 } },
+  //           },
+  //         },
+  //         fields: 'bold,fontSize,foregroundColor',
+  //       },
+  //     });
+
+  //     // Add paragraphs after the header
+  //     let cursorIndex = endIndex + 1 + header.length + 1;
+  //     paragraphs.forEach((paragraph) => {
+  //       requests.push({
+  //         insertText: {
+  //           location: { index: cursorIndex },
+  //           text: `\n${paragraph}\n`,
+  //         },
+  //       });
+  //       cursorIndex += paragraph.length + 2; // account for newlines
+  //     });
+
+  //     await docsService.documents.batchUpdate({
+  //       documentId,
+  //       requestBody: { requests },
+  //     });
+  //     this.logger.log(
+  //       `Section '${header}' appended at the end of the document with paragraphs`,
+  //     );
+  //   } catch (error) {
+  //     this.logger.error(`Failed to append section: ${error.message}`);
+  //     throw new Error('Failed to append section');
+  //   }
+  // }
+
   async appendSectionToEnd(
     documentId: string,
     header: string,
@@ -474,21 +547,17 @@ export class GoogleDocService {
         },
       });
 
-      // Style as header
+      // Style as Heading 1
       requests.push({
-        updateTextStyle: {
+        updateParagraphStyle: {
           range: {
             startIndex: endIndex + 1,
             endIndex: endIndex + 1 + header.length + 1, // account for newline
           },
-          textStyle: {
-            bold: true,
-            fontSize: { magnitude: 14, unit: 'PT' },
-            foregroundColor: {
-              color: { rgbColor: { blue: 0.5, green: 0.5, red: 0.2 } },
-            },
+          paragraphStyle: {
+            namedStyleType: 'HEADING_1',
           },
-          fields: 'bold,fontSize,foregroundColor',
+          fields: 'namedStyleType',
         },
       });
 
@@ -517,67 +586,67 @@ export class GoogleDocService {
     }
   }
 
-  async createSection(
-    documentId: string,
-    header: string,
-    paragraphs: string[],
-  ) {
-    try {
-      await this.refreshAccessTokenIfNeeded();
-      const docsService = google.docs({
-        version: 'v1',
-        auth: this.oAuth2Client,
-      });
-      const requests: any[] = [];
+  // async createSection(
+  //   documentId: string,
+  //   header: string,
+  //   paragraphs: string[],
+  // ) {
+  //   try {
+  //     await this.refreshAccessTokenIfNeeded();
+  //     const docsService = google.docs({
+  //       version: 'v1',
+  //       auth: this.oAuth2Client,
+  //     });
+  //     const requests: any[] = [];
 
-      // Add header
-      requests.push({
-        insertText: {
-          location: { index: 1 },
-          text: `\n${header}\n`,
-        },
-      });
+  //     // Add header
+  //     requests.push({
+  //       insertText: {
+  //         location: { index: 1 },
+  //         text: `\n${header}\n`,
+  //       },
+  //     });
 
-      // Style as header
-      requests.push({
-        updateTextStyle: {
-          range: {
-            startIndex: 1,
-            endIndex: header.length + 2, // account for newline
-          },
-          textStyle: {
-            bold: true,
-            fontSize: { magnitude: 14, unit: 'PT' },
-            foregroundColor: {
-              color: { rgbColor: { blue: 0.5, green: 0.5, red: 0.2 } },
-            },
-          },
-          fields: 'bold,fontSize,foregroundColor',
-        },
-      });
+  //     // Style as header
+  //     requests.push({
+  //       updateTextStyle: {
+  //         range: {
+  //           startIndex: 1,
+  //           endIndex: header.length + 2, // account for newline
+  //         },
+  //         textStyle: {
+  //           bold: true,
+  //           fontSize: { magnitude: 14, unit: 'PT' },
+  //           foregroundColor: {
+  //             color: { rgbColor: { blue: 0.5, green: 0.5, red: 0.2 } },
+  //           },
+  //         },
+  //         fields: 'bold,fontSize,foregroundColor',
+  //       },
+  //     });
 
-      // Add paragraphs
-      let cursorIndex = header.length + 2;
-      paragraphs.forEach((paragraph) => {
-        requests.push({
-          insertText: {
-            location: { index: cursorIndex },
-            text: `\n${paragraph}\n`,
-          },
-        });
-        cursorIndex += paragraph.length + 2; // account for newline
-      });
+  //     // Add paragraphs
+  //     let cursorIndex = header.length + 2;
+  //     paragraphs.forEach((paragraph) => {
+  //       requests.push({
+  //         insertText: {
+  //           location: { index: cursorIndex },
+  //           text: `\n${paragraph}\n`,
+  //         },
+  //       });
+  //       cursorIndex += paragraph.length + 2; // account for newline
+  //     });
 
-      await docsService.documents.batchUpdate({
-        documentId,
-        requestBody: { requests },
-      });
-      this.logger.log(`Section '${header}' created with paragraphs`);
-    } catch (error) {
-      this.logger.error(`Failed to create section: ${error.message}`);
-      throw new Error('Failed to create section');
-    }
-  }
+  //     await docsService.documents.batchUpdate({
+  //       documentId,
+  //       requestBody: { requests },
+  //     });
+  //     this.logger.log(`Section '${header}' created with paragraphs`);
+  //   } catch (error) {
+  //     this.logger.error(`Failed to create section: ${error.message}`);
+  //     throw new Error('Failed to create section');
+  //   }
+  // }
 
   private createInsertTextRequest(index: number, text: string) {
     return {
@@ -615,21 +684,21 @@ export class GoogleDocService {
     return requests;
   }
 
-  private createUpdateTextStyleRequest(
-    startIndex: number,
-    endIndex: number,
-    style: string,
-  ) {
-    return {
-      updateParagraphStyle: {
-        range: { startIndex, endIndex },
-        paragraphStyle: {
-          namedStyleType: style,
-        },
-        fields: 'namedStyleType',
-      },
-    };
-  }
+  // private createUpdateTextStyleRequest(
+  //   startIndex: number,
+  //   endIndex: number,
+  //   style: string,
+  // ) {
+  //   return {
+  //     updateParagraphStyle: {
+  //       range: { startIndex, endIndex },
+  //       paragraphStyle: {
+  //         namedStyleType: style,
+  //       },
+  //       fields: 'namedStyleType',
+  //     },
+  //   };
+  // }
 
   private async moveFileToFolder(fileId: string, folderId: string) {
     const driveService = google.drive({
