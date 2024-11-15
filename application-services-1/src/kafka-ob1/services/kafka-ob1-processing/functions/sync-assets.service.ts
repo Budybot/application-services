@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ContentAssetsService } from '../content/content-assets.service';
 import { GoogleDocService } from '../../google/google-doc.service';
 import { GoogleSheetService } from '../../google/google-sheet.service';
-import { SowSectionService } from '../content/sow-section.service';
+// import { SowSectionService } from '../content/sow-section.service';
 import { AgentServiceRequest } from '../agent-service-request.service';
 
 @Injectable()
@@ -13,7 +13,7 @@ export class SyncAssetsService {
     private readonly contentAssetsService: ContentAssetsService,
     private readonly googleDocService: GoogleDocService,
     private readonly googleSheetService: GoogleSheetService,
-    private readonly sowSectionService: SowSectionService,
+    // private readonly sowSectionService: SowSectionService,
     private readonly agentServiceRequest: AgentServiceRequest,
   ) {}
 
@@ -286,10 +286,10 @@ async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
   const { edit, remove, add } = sowDelta;
 
   // Step 3: Initialize 'Budy Notes' column in each row
-  headers.push('Budy Notes');
+  headers.push('Budy Suggests');
   const updatedRows = rows.map((row) => [...row, '']);
 
-  // Step 4: Process `remove` items by marking them in the 'Budy Notes' column
+  // Step 4: Process `remove` items by marking them in the 'Budy Suggests' column
   console.log('Remove:', remove);
   if (remove) {
     remove.forEach((taskId) => {
@@ -300,7 +300,7 @@ async function updateProjectPlanner(sowDelta: any, syncToContent: any) {
     });
   }
 
-  // Step 5: Process `edit` items by adding edit descriptions in the 'Budy Notes' column
+  // Step 5: Process `edit` items by adding edit descriptions in the 'Budy Suggests' column
   console.log('Edit:', edit);
   if (edit) {
     for (const [taskId, editDescription] of Object.entries(edit)) {
