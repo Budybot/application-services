@@ -451,7 +451,6 @@ ${changes.remove.trim()}`,
       throw new Error('Failed to append recommendations');
     }
   }
-
   async appendSectionToEnd(
     documentId: string,
     header: string,
@@ -482,7 +481,7 @@ ${changes.remove.trim()}`,
         },
       });
 
-      // Style as Heading 1
+      // Style as Heading 1 and color in blue
       requests.push({
         updateParagraphStyle: {
           range: {
@@ -493,6 +492,20 @@ ${changes.remove.trim()}`,
             namedStyleType: 'HEADING_1',
           },
           fields: 'namedStyleType',
+        },
+      });
+      requests.push({
+        updateTextStyle: {
+          range: {
+            startIndex: endIndex + 1,
+            endIndex: endIndex + 1 + header.length + 1,
+          },
+          textStyle: {
+            foregroundColor: {
+              color: { rgbColor: { red: 0, green: 0, blue: 1 } },
+            },
+          },
+          fields: 'foregroundColor',
         },
       });
 
@@ -522,6 +535,39 @@ ${changes.remove.trim()}`,
               fields: 'namedStyleType',
             },
           });
+        } else {
+          // Style 'Add:' and 'Remove:' with specific colors
+          if (paragraph.text.startsWith('Add:')) {
+            requests.push({
+              updateTextStyle: {
+                range: {
+                  startIndex: cursorIndex + 1,
+                  endIndex: cursorIndex + 5, // Only color 'Add:'
+                },
+                textStyle: {
+                  foregroundColor: {
+                    color: { rgbColor: { red: 0, green: 0, blue: 1 } },
+                  },
+                },
+                fields: 'foregroundColor',
+              },
+            });
+          } else if (paragraph.text.startsWith('Remove:')) {
+            requests.push({
+              updateTextStyle: {
+                range: {
+                  startIndex: cursorIndex + 1,
+                  endIndex: cursorIndex + 8, // Only color 'Remove:'
+                },
+                textStyle: {
+                  foregroundColor: {
+                    color: { rgbColor: { red: 1, green: 0, blue: 0 } },
+                  },
+                },
+                fields: 'foregroundColor',
+              },
+            });
+          }
         }
 
         // Update cursorIndex after adding the paragraph
@@ -540,6 +586,95 @@ ${changes.remove.trim()}`,
       throw new Error('Failed to append section');
     }
   }
+
+  // async appendSectionToEnd(
+  //   documentId: string,
+  //   header: string,
+  //   paragraphs: { text: string; isHeading: boolean }[],
+  // ) {
+  //   try {
+  //     await this.refreshAccessTokenIfNeeded();
+  //     const docsService = google.docs({
+  //       version: 'v1',
+  //       auth: this.oAuth2Client,
+  //     });
+  //     const doc = await docsService.documents.get({ documentId });
+  //     const bodyContent = doc.data.body?.content || [];
+  //     let endIndex = bodyContent[bodyContent.length - 1]?.endIndex || 1;
+
+  //     // Adjust endIndex to ensure we are always inserting within bounds
+  //     if (endIndex > 1) {
+  //       endIndex -= 1;
+  //     }
+
+  //     const requests: any[] = [];
+
+  //     // Add header at the end of the document
+  //     requests.push({
+  //       insertText: {
+  //         location: { index: endIndex },
+  //         text: `\n${header}\n`,
+  //       },
+  //     });
+
+  //     // Style as Heading 1
+  //     requests.push({
+  //       updateParagraphStyle: {
+  //         range: {
+  //           startIndex: endIndex + 1,
+  //           endIndex: endIndex + 1 + header.length + 1, // account for newline
+  //         },
+  //         paragraphStyle: {
+  //           namedStyleType: 'HEADING_1',
+  //         },
+  //         fields: 'namedStyleType',
+  //       },
+  //     });
+
+  //     // Update cursor index after adding the header
+  //     let cursorIndex = endIndex + 1 + header.length + 1;
+
+  //     // Add paragraphs after the header
+  //     paragraphs.forEach((paragraph) => {
+  //       requests.push({
+  //         insertText: {
+  //           location: { index: cursorIndex },
+  //           text: `\n${paragraph.text}\n`,
+  //         },
+  //       });
+
+  //       // Style section names as Heading 2 if applicable
+  //       if (paragraph.isHeading) {
+  //         requests.push({
+  //           updateParagraphStyle: {
+  //             range: {
+  //               startIndex: cursorIndex + 1,
+  //               endIndex: cursorIndex + 1 + paragraph.text.length + 1,
+  //             },
+  //             paragraphStyle: {
+  //               namedStyleType: 'HEADING_2',
+  //             },
+  //             fields: 'namedStyleType',
+  //           },
+  //         });
+  //       }
+
+  //       // Update cursorIndex after adding the paragraph
+  //       cursorIndex += paragraph.text.length + 2; // account for newlines
+  //     });
+
+  //     await docsService.documents.batchUpdate({
+  //       documentId,
+  //       requestBody: { requests },
+  //     });
+  //     this.logger.log(
+  //       `Section '${header}' appended at the end of the document with paragraphs`,
+  //     );
+  //   } catch (error) {
+  //     this.logger.error(`Failed to append section: ${error.message}`);
+  //     throw new Error('Failed to append section');
+  //   }
+  // }
 
   // async appendRecommendations(
   //   documentId: string,
