@@ -459,10 +459,8 @@ export class GoogleDocService {
       const bodyContent = doc.data.body?.content || [];
       let endIndex = bodyContent[bodyContent.length - 1]?.endIndex || 1;
 
-      // Ensure the endIndex is valid by reducing it if it's at the boundary
-      if (
-        bodyContent[bodyContent.length - 1]?.paragraph?.elements?.length === 0
-      ) {
+      // Adjust endIndex to ensure we are always inserting within bounds
+      if (endIndex > 1) {
         endIndex -= 1;
       }
 
