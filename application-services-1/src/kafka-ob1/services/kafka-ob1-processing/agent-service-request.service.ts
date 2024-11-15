@@ -32,6 +32,14 @@ export class AgentServiceRequest {
       config.maxTokens = 16384;
     }
 
+    // Replace empty prompts with a placeholder
+    if (!systemPrompt) {
+      systemPrompt = '[No system prompt provided]';
+    }
+    if (!userPrompt) {
+      userPrompt = '[No user prompt provided]';
+    }
+
     const messageInput = {
       messageContent: {
         functionName: 'LLMgenerateResponse',
@@ -65,9 +73,6 @@ export class AgentServiceRequest {
         messageKey,
         topic,
       );
-      // this.logger.log(
-      //   `Agent request sent for instance ${instanceName} with user prompt: ${userPrompt}`,
-      // );
       this.logger.debug(response);
       return response;
     } catch (error) {

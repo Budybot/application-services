@@ -33,14 +33,11 @@ export class CleanTranscriptService {
       provider: 'openai',
       model: 'gpt-4o-mini',
       temperature: 0.7,
-      maxTokens: 1000,
+      maxTokens: 4096,
       frequencyPenalty: 0,
       presencePenalty: 0,
     };
     try {
-      // this.logger.log(
-      //   'Requesting cleaned transcript from AgentServiceRequest...',
-      // );
       const response = await this.agentServiceRequest.sendAgentRequest(
         systemPrompt,
         transcriptWithoutTimestamps,
@@ -57,6 +54,50 @@ export class CleanTranscriptService {
         `Error cleaning transcript: ${error.message}`,
         error.stack,
       );
+      // Split transcript if error occurs and length exceeds threshold
+      const tokenThreshold = 2000;
+      if (transcriptWithoutTimestamps.length > tokenThreshold) {
+        this.logger.warn(
+          'Transcript exceeds token limit, splitting into parts.',
+        );
+        const midPoint = Math.floor(transcriptWithoutTimestamps.length / 2);
+
+        const firstHalf = transcriptWithoutTimestamps.slice(0, midPoint);
+        const secondHalf = transcriptWithoutTimestamps.slice(midPoint);
+
+        const newSystemPrompt = `Initial transcript was too long, this is only half. Please feel free to remove irrelevant or redundant content and use summarization where you believe it will decrease the size of the clean transcript without missing any important details about the project discussed.${systemPrompt}`;
+
+        try {
+          const firstHalfResponse =
+            await this.agentServiceRequest.sendAgentRequest(
+              newSystemPrompt,
+              firstHalf,
+              config,
+              instanceName,
+              userId,
+            );
+
+          const secondHalfResponse =
+            await this.agentServiceRequest.sendAgentRequest(
+              newSystemPrompt,
+              secondHalf,
+              config,
+              instanceName,
+              userId,
+            );
+
+          const combinedTranscript = `${firstHalfResponse.messageContent.content}
+${secondHalfResponse.messageContent.content}`;
+          this.logger.log('Transcript cleaned successfully after splitting');
+          return combinedTranscript;
+        } catch (splitError) {
+          this.logger.error(
+            `Error cleaning split transcript parts: ${splitError.message}`,
+            splitError.stack,
+          );
+          throw new Error('Failed to clean transcript after splitting');
+        }
+      }
       throw new Error('Failed to clean transcript');
     }
   }
@@ -67,9 +108,6 @@ export class CleanTranscriptService {
     const transcriptWithoutTimestamps = transcript
       .replace(timestampRegex, '')
       .trim();
-    // this.logger.debug(
-    //   `Transcript without timestamps: ${transcriptWithoutTimestamps}`,
-    // );
     return transcriptWithoutTimestamps;
   }
 }
