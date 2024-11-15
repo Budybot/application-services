@@ -181,25 +181,7 @@ export class GoogleDocService {
     }
   }
 
-  // async appendRecommendations(
-  //   documentId: string,
-  //   updates: { [section: string]: { add?: string; remove?: string } },
-  // ) {
-  //   let recommendationsContent = 'RECOMMENDATIONS:\n\n';
-
-  //   for (const [section, changes] of Object.entries(updates)) {
-  //     recommendationsContent += `${section}\n`;
-  //     if (changes.add)
-  //       recommendationsContent += `Add:\n${changes.add.trim()}\n`;
-  //     if (changes.remove)
-  //       recommendationsContent += `Remove:\n${changes.remove.trim()}\n`;
-  //     recommendationsContent += '\n';
-  //   }
-
-  //   await this.writeToDocument(documentId, recommendationsContent, false);
-  // }
-
-  async appendRecommendations(
+  async appendRecommendationsNoStyle(
     documentId: string,
     updates: { [section: string]: { add?: string; remove?: string } },
   ) {
@@ -432,6 +414,94 @@ export class GoogleDocService {
     };
   }
 
+  async appendRecommendations(
+    documentId: string,
+    updates: { [section: string]: { add?: string; remove?: string } },
+  ) {
+    const recommendationsTitle = 'RECOMMENDATIONS';
+    const paragraphs: string[] = [];
+
+    // Create paragraphs for each section recommendation
+    for (const [section, changes] of Object.entries(updates)) {
+      paragraphs.push(section);
+      if (changes.add) {
+        paragraphs.push(`Add:\n${changes.add.trim()}`);
+      }
+      if (changes.remove) {
+        paragraphs.push(`Remove:\n${changes.remove.trim()}`);
+      }
+    }
+
+    try {
+      await this.createSection(documentId, recommendationsTitle, paragraphs);
+    } catch (error) {
+      this.logger.error(`Failed to append recommendations: ${error.message}`);
+      throw new Error('Failed to append recommendations');
+    }
+  }
+
+  async createSection(
+    documentId: string,
+    header: string,
+    paragraphs: string[],
+  ) {
+    try {
+      await this.refreshAccessTokenIfNeeded();
+      const docsService = google.docs({
+        version: 'v1',
+        auth: this.oAuth2Client,
+      });
+      const requests: any[] = [];
+
+      // Add header
+      requests.push({
+        insertText: {
+          location: { index: 1 },
+          text: `\n${header}\n`,
+        },
+      });
+
+      // Style as header
+      requests.push({
+        updateTextStyle: {
+          range: {
+            startIndex: 1,
+            endIndex: header.length + 2, // account for newline
+          },
+          textStyle: {
+            bold: true,
+            fontSize: { magnitude: 14, unit: 'PT' },
+            foregroundColor: {
+              color: { rgbColor: { blue: 0.5, green: 0.5, red: 0.2 } },
+            },
+          },
+          fields: 'bold,fontSize,foregroundColor',
+        },
+      });
+
+      // Add paragraphs
+      let cursorIndex = header.length + 2;
+      paragraphs.forEach((paragraph) => {
+        requests.push({
+          insertText: {
+            location: { index: cursorIndex },
+            text: `\n${paragraph}\n`,
+          },
+        });
+        cursorIndex += paragraph.length + 2; // account for newline
+      });
+
+      await docsService.documents.batchUpdate({
+        documentId,
+        requestBody: { requests },
+      });
+      this.logger.log(`Section '${header}' created with paragraphs`);
+    } catch (error) {
+      this.logger.error(`Failed to create section: ${error.message}`);
+      throw new Error('Failed to create section');
+    }
+  }
+
   private createInsertTextRequest(index: number, text: string) {
     return {
       insertText: {
@@ -466,6 +536,22 @@ export class GoogleDocService {
       cursorIndex += line.length + 1;
     });
     return requests;
+  }
+
+  private createUpdateTextStyleRequest(
+    startIndex: number,
+    endIndex: number,
+    style: string,
+  ) {
+    return {
+      updateParagraphStyle: {
+        range: { startIndex, endIndex },
+        paragraphStyle: {
+          namedStyleType: style,
+        },
+        fields: 'namedStyleType',
+      },
+    };
   }
 
   private async moveFileToFolder(fileId: string, folderId: string) {
