@@ -106,7 +106,7 @@ export class GoogleDocMonitoringService {
             // SEND KAFKA MESSAGE HERE
             const messageInput = {
               messageContent: {
-                functionName: 'processComment',
+                functionName: 'process-comment',
                 functionInput: {
                   commentContent: comment.content,
                   commentAuthor: comment.author?.displayName,
@@ -114,11 +114,11 @@ export class GoogleDocMonitoringService {
               },
               messageType: 'NOTIFICATION',
             };
-            const topic = 'budyos-ob1-applicationServices';
+            const topic = 'budyos-ob1-applicationService';
             const response = await this.kafkaOb1Service.sendRequest(
               userId,
               instanceName,
-              'application-services',
+              'application-service',
               'checkForNewComments',
               'system',
               messageInput,

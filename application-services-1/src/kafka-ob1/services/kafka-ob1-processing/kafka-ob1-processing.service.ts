@@ -107,6 +107,9 @@ export class KafkaOb1ProcessingService {
             messageContent: { syncResult: syncResult },
           };
           break;
+        case 'process-comment':
+          response = { messageContent: { commentProcessed: true } };
+          break;
         default:
           this.logger.error(`Function ${functionName} not found`);
           return { errorMessage: `Function ${functionName} not found` };
