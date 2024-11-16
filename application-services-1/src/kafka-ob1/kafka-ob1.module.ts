@@ -24,6 +24,7 @@ import { SummarizationService } from './services/kafka-ob1-processing/content/su
 import { CompletedActionItemsService } from './services/kafka-ob1-processing/functions/completed-action-items.service';
 import { SowSectionService } from './services/kafka-ob1-processing/content/sow-section.service';
 import { SyncAssetsService } from './services/kafka-ob1-processing/functions/sync-assets.service';
+import { GoogleDocMonitoringService } from './services/google/google-monitoring.service';
 @Module({
   imports: [
     HttpModule,
@@ -71,6 +72,7 @@ import { SyncAssetsService } from './services/kafka-ob1-processing/functions/syn
     CompletedActionItemsService,
     SowSectionService,
     SyncAssetsService,
+    GoogleDocMonitoringService,
   ],
   controllers: [KafkaOb1Controller],
 })
