@@ -56,7 +56,7 @@ export class KafkaOb1BroadcastService {
               const documentId = await this.contentService.generateContent(
                 projectName,
                 instanceName,
-                { sowData: message.messageContent, pageName },
+                { sowData: functionInput, pageName },
                 userEmail,
                 contentType,
               );
@@ -99,7 +99,7 @@ export class KafkaOb1BroadcastService {
               const documentId = await this.contentService.updateContent(
                 projectName,
                 instanceName,
-                { sowData: message.messageContent, pageName },
+                { sowData: functionInput, pageName },
                 userEmail,
                 contentType,
               );
