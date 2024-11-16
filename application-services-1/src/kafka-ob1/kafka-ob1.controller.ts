@@ -127,6 +127,66 @@ export class KafkaOb1Controller implements OnModuleInit {
       return { messageStatus: 'error', errorMessage: 'Unknown message type' };
     }
   }
+  @MessagePattern('budyos-ob1-applicationService.reply')
+  async handleSystemReplies(
+    @Payload() message: OB1MessageValue,
+    @Ctx() context: KafkaContext,
+  ) {
+    const messageKey = context.getMessage().key?.toString();
+    // Cast headers from IHeaders to OB1MessageHeader by using 'unknown' first
+    const messageHeaders = context.getMessage()
+      .headers as unknown as OB1MessageHeader;
+    const userEmail = messageHeaders.userEmail;
+    const SERVICE_NAME = process.env.SERVICE_NAME;
+    const messageType = message.messageType;
+
+    this.logger.debug(
+      `Received message with key: ${messageKey} for user ${userEmail}`,
+    );
+    this.logger.debug(`Headers: ${JSON.stringify(messageHeaders)}`);
+    this.logger.debug(`Payload: ${JSON.stringify(message)}`);
+
+    // Validate message schema; logs errors if necessary
+    try {
+      validateMessageFields(context);
+    } catch (error) {
+      this.logger.error(
+        `Message schema validation failed: ${error.message}`,
+        error.stack,
+      );
+      return {
+        messageStatus: 'error',
+        errorMessage: `Invalid message schema: ${error.message}`,
+      };
+    }
+
+    // Check if the message is intended for this service
+    if (messageHeaders.destinationService !== SERVICE_NAME) {
+      this.logger.log(
+        `Message not intended for this service (${SERVICE_NAME}) but instead for ${messageHeaders.destinationService}. Ignoring.`,
+      );
+      return null; // Explicitly return `null` to prevent any response
+    }
+
+    // Process message if intended for this service
+    this.logger.log(`Processing message intended for ${SERVICE_NAME}`);
+
+    // Route based on messageType
+    if (messageType === 'BROADCAST') {
+      // Handle BROADCAST messages as content generation
+      await this.handleBroadcastContent(message, messageHeaders, context);
+    } else if (messageType === 'REQUEST') {
+      // Handle REQUEST messages as application requests
+      return await this.processApplicationRequest(
+        message,
+        messageHeaders,
+        context,
+      );
+    } else {
+      this.logger.warn(`Unknown message type: ${messageType}`);
+      return { messageStatus: 'error', errorMessage: 'Unknown message type' };
+    }
+  }
   // Process application requests that expect a response
   private async processApplicationRequest(
     message: OB1MessageValue,

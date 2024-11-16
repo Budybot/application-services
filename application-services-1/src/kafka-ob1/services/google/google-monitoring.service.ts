@@ -112,7 +112,7 @@ export class GoogleDocMonitoringService {
                   commentAuthor: comment.author?.displayName,
                 },
               },
-              messageType: 'NOTIFICATION',
+              messageType: 'REQUEST',
             };
             const topic = 'budyos-ob1-applicationService';
             const response = await this.kafkaOb1Service.sendRequest(
