@@ -5,7 +5,8 @@ import { google } from 'googleapis';
 export class GoogleDocMonitoringService {
   private readonly logger = new Logger(GoogleDocMonitoringService.name);
   private oAuth2Client: any;
-  private pollingInterval: NodeJS.Timeout | null = null;
+  private pollingIntervals: Map<string, NodeJS.Timeout> = new Map();
+  private processedComments: Map<string, Set<string>> = new Map();
 
   constructor() {
     this.initOAuthClientFromToken();
@@ -32,7 +33,6 @@ export class GoogleDocMonitoringService {
         token_uri,
       );
 
-      // Set token credentials (including access_token and refresh_token)
       this.oAuth2Client.setCredentials({
         access_token: credentials.token,
         refresh_token: refresh_token,
@@ -52,21 +52,24 @@ export class GoogleDocMonitoringService {
   ) {
     this.logger.log(`Starting to monitor Google Doc with ID: ${documentId}`);
 
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
+    if (this.pollingIntervals.has(documentId)) {
+      clearInterval(this.pollingIntervals.get(documentId)!);
     }
 
-    this.pollingInterval = setInterval(
-      () => this.checkForNewComments(documentId),
-      pollingIntervalSeconds * 1000,
+    this.pollingIntervals.set(
+      documentId,
+      setInterval(
+        () => this.checkForNewComments(documentId),
+        pollingIntervalSeconds * 1000,
+      ),
     );
   }
 
-  async stopMonitoring() {
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
-      this.pollingInterval = null;
-      this.logger.log('Stopped monitoring Google Doc.');
+  async stopMonitoring(documentId: string) {
+    if (this.pollingIntervals.has(documentId)) {
+      clearInterval(this.pollingIntervals.get(documentId)!);
+      this.pollingIntervals.delete(documentId);
+      this.logger.log(`Stopped monitoring Google Doc with ID: ${documentId}`);
     }
   }
 
@@ -83,16 +86,20 @@ export class GoogleDocMonitoringService {
         fields: 'comments',
       });
 
-      this.logger.debug(`Fetched comments: ${JSON.stringify(response.data)}`);
-
       const comments = response.data.comments || [];
+      const processedCommentIds = this.processedComments.get(documentId) || new Set();
 
       if (comments.length) {
         comments.forEach((comment) => {
-          this.logger.log(
-            `New Comment by ${comment.author?.displayName}: ${comment.content}`,
-          );
+          if (!processedCommentIds.has(comment.id!)) {
+            this.logger.log(
+              `New Comment by ${comment.author?.displayName}: ${comment.content}`,
+            );
+            processedCommentIds.add(comment.id!);
+            // Optionally add further logic here, e.g., save comment to a database.
+          }
         });
+        this.processedComments.set(documentId, processedCommentIds);
       } else {
         this.logger.log('No new comments found.');
       }
