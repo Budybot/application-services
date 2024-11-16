@@ -26,6 +26,7 @@ import { CompletedActionItemsService } from './services/kafka-ob1-processing/fun
 import { SowSectionService } from './services/kafka-ob1-processing/content/sow-section.service';
 import { SyncAssetsService } from './services/kafka-ob1-processing/functions/sync-assets.service';
 import { GoogleDocMonitoringService } from './services/google/google-monitoring.service';
+import { SowCommentProcessingService } from './services/kafka-ob1-processing/content/sow-comment-processing.service';
 @Module({
   imports: [
     HttpModule,
@@ -75,6 +76,7 @@ import { GoogleDocMonitoringService } from './services/google/google-monitoring.
     SyncAssetsService,
     GoogleDocMonitoringService,
     KafkaOb1BroadcastService,
+    SowCommentProcessingService,
   ],
   controllers: [KafkaOb1Controller],
 })
