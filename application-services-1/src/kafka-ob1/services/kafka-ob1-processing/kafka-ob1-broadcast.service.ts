@@ -7,7 +7,7 @@ import {
 import { KafkaContext } from '@nestjs/microservices';
 import { ContentService } from 'src/kafka-ob1/services/kafka-ob1-processing/content/content.service';
 import { GoogleDocMonitoringService } from '../google/google-monitoring.service';
-
+import { SowCommentProcessingService } from './content/sow-comment-processing.service';
 @Injectable()
 export class KafkaOb1BroadcastService {
   private readonly logger = new Logger(KafkaOb1BroadcastService.name);
@@ -15,6 +15,7 @@ export class KafkaOb1BroadcastService {
   constructor(
     private readonly contentService: ContentService,
     private readonly googleDocMonitoringService: GoogleDocMonitoringService,
+    private readonly sowCommentProcessingService: SowCommentProcessingService,
   ) {} // @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
 
   async processBroadcast(
@@ -33,6 +34,13 @@ export class KafkaOb1BroadcastService {
       switch (functionName) {
         case 'process-comment':
           this.logger.log('Processing comment...');
+          const { commentData } = functionInput;
+          const budyReply = this.sowCommentProcessingService.generateBudyReply(
+            headers.instanceName,
+            headers.userId,
+            commentData,
+          );
+          this.logger.log(`Generated Budy reply: ${budyReply}`);
           break;
         case 'generate-assets':
           const { pageName, projectName } = functionInput;

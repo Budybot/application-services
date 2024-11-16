@@ -13,6 +13,7 @@ export class SowCommentProcessingService {
     commentData: any,
   ): Promise<string> {
     const { commentContent } = commentData;
+    this.logger.debug(`Generating SOW for comment: ${commentContent}`);
     const systemPrompt = `
     You are an expert consultant tasked with expanding a Statement of Work (SOW) using a provided meeting transcript. You will focus on one statement at a time, expanding it with 1-3 concise, technical bullet points that clarify, explain, or provide additional context. Use the following guidelines:
 
