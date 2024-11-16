@@ -138,14 +138,14 @@ export class GoogleDocService {
         await this.shareFileWithUser(documentId, shareWithEmail, role);
       }
 
-      this.googleDocMonitoringService
-        .startMonitoring(documentId)
-        .then(() => {
-          this.logger.log(`Started monitoring for document ID: ${documentId}`);
-        })
-        .catch((error) => {
-          this.logger.error(`Failed to start monitoring: ${error.message}`);
-        });
+      // this.googleDocMonitoringService
+      //   .startMonitoring(documentId)
+      //   .then(() => {
+      //     this.logger.log(`Started monitoring for document ID: ${documentId}`);
+      //   })
+      //   .catch((error) => {
+      //     this.logger.error(`Failed to start monitoring: ${error.message}`);
+      //   });
 
       return documentId;
     } catch (error) {

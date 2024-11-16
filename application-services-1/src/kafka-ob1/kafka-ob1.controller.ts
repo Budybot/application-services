@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { GoogleDocService } from './services/google/google-doc.service';
+import { GoogleDocMonitoringService } from './services/google/google-monitoring.service';
 import {
   // EventPattern,
   MessagePattern,
@@ -31,6 +32,7 @@ export class KafkaOb1Controller implements OnModuleInit {
   constructor(
     private readonly kafkaOb1ProcessingService: KafkaOb1ProcessingService,
     private readonly contentService: ContentService,
+    private readonly googleDocMonitoringService: GoogleDocMonitoringService,
     // private readonly kafkaOb1SystemService: KafkaOb1SystemService
   ) {}
 
@@ -214,6 +216,16 @@ export class KafkaOb1Controller implements OnModuleInit {
           this.logger.log(
             `Successfully generated ${contentType} content with document ID: ${documentId}`,
           );
+          this.googleDocMonitoringService
+            .startMonitoring(documentId, instanceName, userEmail)
+            .then(() => {
+              this.logger.log(
+                `Started monitoring for document ID: ${documentId}`,
+              );
+            })
+            .catch((error) => {
+              this.logger.error(`Failed to start monitoring: ${error.message}`);
+            });
         } catch (error) {
           this.logger.error(
             `Error generating ${contentType} for page ${pageName}: ${error.message}`,

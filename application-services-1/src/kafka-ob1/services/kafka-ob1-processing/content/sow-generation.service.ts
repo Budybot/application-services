@@ -41,7 +41,7 @@ export class SowGenerationService {
       desiredDeliverables: DD.join(', '),
       actionItems: Object.values(action_items).join(', '),
       currentPhase: 'Phase 1',
-      consultantInput: consultant_input
+      consultantInput: consultant_input,
     };
     this.logger.debug(`Mapped sowDetails: ${JSON.stringify(sowDetails)}`);
 
@@ -93,13 +93,6 @@ export class SowGenerationService {
         throw new Error('Invalid JSON format from LLM response');
       }
       return sowJson;
-      // if (response?.messageContent?.content) {
-      //   const generatedSow = response.messageContent.content;
-      //   // this.logger.debug(`Generated SOW: ${generatedSow}`);
-      //   return generatedSow;
-      // } else {
-      //   throw new Error(`Invalid response: ${JSON.stringify(response)}`);
-      // }
     } catch (error) {
       this.logger.error(`Error generating SOW: ${error.message}`, error.stack);
       throw new Error('Failed to generate SOW');

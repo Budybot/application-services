@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { google } from 'googleapis';
-
+import { KafkaOb1Service } from 'src/kafka-ob1/kafka-ob1.service';
 @Injectable()
 export class GoogleDocMonitoringService {
   private readonly logger = new Logger(GoogleDocMonitoringService.name);
@@ -8,7 +8,7 @@ export class GoogleDocMonitoringService {
   private pollingIntervals: Map<string, NodeJS.Timeout> = new Map();
   private processedComments: Map<string, Set<string>> = new Map();
 
-  constructor() {
+  constructor(private readonly kafkaOb1Service: KafkaOb1Service) {
     this.initOAuthClientFromToken();
   }
 
@@ -48,6 +48,8 @@ export class GoogleDocMonitoringService {
 
   async startMonitoring(
     documentId: string,
+    instanceName: string,
+    userId: string,
     pollingIntervalSeconds: number = 60,
   ) {
     this.logger.log(`Starting to monitor Google Doc with ID: ${documentId}`);
@@ -59,7 +61,7 @@ export class GoogleDocMonitoringService {
     this.pollingIntervals.set(
       documentId,
       setInterval(
-        () => this.checkForNewComments(documentId),
+        () => this.checkForNewComments(documentId, instanceName, userId),
         pollingIntervalSeconds * 1000,
       ),
     );
@@ -73,7 +75,11 @@ export class GoogleDocMonitoringService {
     }
   }
 
-  private async checkForNewComments(documentId: string) {
+  private async checkForNewComments(
+    documentId: string,
+    instanceName: string,
+    userId: string,
+  ) {
     try {
       await this.refreshAccessTokenIfNeeded();
       const driveService = google.drive({
@@ -87,16 +93,40 @@ export class GoogleDocMonitoringService {
       });
 
       const comments = response.data.comments || [];
-      const processedCommentIds = this.processedComments.get(documentId) || new Set();
+      const processedCommentIds =
+        this.processedComments.get(documentId) || new Set();
 
       if (comments.length) {
-        comments.forEach((comment) => {
+        comments.forEach(async (comment) => {
           if (!processedCommentIds.has(comment.id!)) {
             this.logger.log(
               `New Comment by ${comment.author?.displayName}: ${comment.content}`,
             );
             processedCommentIds.add(comment.id!);
-            // Optionally add further logic here, e.g., save comment to a database.
+            // SEND KAFKA MESSAGE HERE
+            const messageInput = {
+              messageContent: {
+                functionName: 'processComment',
+                functionInput: {
+                  commentContent: comment.content,
+                  commentAuthor: comment.author?.displayName,
+                },
+              },
+              messageType: 'NOTIFICATION',
+            };
+            const topic = 'budyos-ob1-applicationServices';
+            const response = await this.kafkaOb1Service.sendRequest(
+              userId,
+              instanceName,
+              'application-services',
+              'checkForNewComments',
+              'system',
+              messageInput,
+              'system',
+              userId,
+              topic,
+            );
+            this.logger.debug(response);
           }
         });
         this.processedComments.set(documentId, processedCommentIds);
