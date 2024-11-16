@@ -120,8 +120,12 @@ export class GoogleDocMonitoringService {
             processedCommentIds.add(comment.id!);
             const topic = 'budyos-ob1-applicationService';
             const messageValue: OB1MessageValue = {
-              messageContent: comment,
-              messageType: 'NOTIFICATION',
+              messageContent: {
+                functionName: 'process-comment',
+                commentContent: comment.content,
+                commentAuthor: comment.author?.displayName,
+              },
+              messageType: 'BROADCAST',
               projectId: projectName,
               assetId: null,
               conversationId: null,

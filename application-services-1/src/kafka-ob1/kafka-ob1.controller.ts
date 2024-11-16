@@ -186,8 +186,13 @@ export class KafkaOb1Controller implements OnModuleInit {
     headers: OB1MessageHeader,
     context: KafkaContext,
   ) {
+    this.logger.log(`Handling content emission: ${JSON.stringify(message)}`);
+    if (message.messageContent.functonName === 'process-comment') {
+      this.logger.log('Processing comment...');
+      // Process comment content
+      return { commentProcessed: true };
+    }
     try {
-      this.logger.log(`Handling content emission: ${JSON.stringify(message)}`);
       const { pageName, projectName } = message.messageContent;
       const instanceName = headers.instanceName;
       const userEmail = headers.userEmail;
