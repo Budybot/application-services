@@ -1,12 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { google } from 'googleapis';
+import { GoogleDocMonitoringService } from './google-monitoring.service';
 
 @Injectable()
 export class GoogleDocService {
   private readonly logger = new Logger(GoogleDocService.name);
   private oAuth2Client: any;
 
-  constructor() {
+  constructor(
+    private readonly googleDocMonitoringService: GoogleDocMonitoringService,
+  ) {
     this.initOAuthClientFromToken();
   }
 
@@ -134,6 +137,15 @@ export class GoogleDocService {
       if (shareWithEmail) {
         await this.shareFileWithUser(documentId, shareWithEmail, role);
       }
+
+      this.googleDocMonitoringService
+        .startMonitoring(documentId)
+        .then(() => {
+          this.logger.log(`Started monitoring for document ID: ${documentId}`);
+        })
+        .catch((error) => {
+          this.logger.error(`Failed to start monitoring: ${error.message}`);
+        });
 
       return documentId;
     } catch (error) {
@@ -448,65 +460,6 @@ export class GoogleDocService {
         index += content.length + 2;
       }
     }
-
-    // // 2. Reverse the order of sections to add content sequentially from the top down
-    // const sections = Object.entries(contentJson).reverse();
-
-    // sections.forEach(([header, paragraph]) => {
-    //   // Add header for each section
-    //   requests.push({
-    //     insertText: {
-    //       location: { index: 1 },
-    //       text: `\n${header}\n`,
-    //     },
-    //   });
-    //   requests.push({
-    //     updateTextStyle: {
-    //       range: { startIndex: 1, endIndex: header.length + 2 },
-    //       textStyle: {
-    //         bold: true,
-    //         fontSize: { magnitude: 14, unit: 'PT' },
-    //       },
-    //       fields: 'bold,fontSize',
-    //     },
-    //   });
-    //   // 3. Handle bullet points and numbered lists based on content format
-    //   if (paragraph.includes('* ')) {
-    //     // Bullet point formatting
-    //     const bulletPoints = paragraph
-    //       .split('\n')
-    //       .map((line) => line.replace('* ', ''));
-    //     bulletPoints.forEach((point) => {
-    //       requests.push({
-    //         insertText: {
-    //           location: { index: header.length + 2 },
-    //           text: `• ${point}\n`,
-    //         },
-    //       });
-    //     });
-    //   } else if (paragraph.includes('1. ')) {
-    //     // Numbered list formatting
-    //     const numberedItems = paragraph
-    //       .split('\n')
-    //       .map((line) => line.replace(/^\d+\.\s/, ''));
-    //     numberedItems.forEach((item, index) => {
-    //       requests.push({
-    //         insertText: {
-    //           location: { index: header.length + 2 },
-    //           text: `${index + 1}. ${item}\n`,
-    //         },
-    //       });
-    //     });
-    //   } else {
-    //     // Regular paragraph
-    //     requests.push({
-    //       insertText: {
-    //         location: { index: header.length + 2 },
-    //         text: `\n${paragraph}\n`,
-    //       },
-    //     });
-    //   }
-    // });
 
     // Send the batch update request to Google Docs API
     await docsService.documents.batchUpdate({
@@ -1133,4 +1086,48 @@ ${changes.remove.trim()}`,
     });
     this.logger.log(`File shared with ${email} as ${role}`);
   }
+  // async addCommentToGoogleDoc(
+  //   documentId: string,
+  //   startIndex: number,
+  //   endIndex: number,
+  //   highlightedText: string,
+  // ) {
+  //   try {
+  //     await this.refreshAccessTokenIfNeeded();
+
+  //     const docsService = google.docs({
+  //       version: 'v1',
+  //       auth: this.oAuth2Client,
+  //     });
+
+  //     const commentContent = `Statement: ${highlightedText}`;
+
+  //     // Create the comment using batchUpdate
+  //     const requests = [
+  //       {
+  //         createComment: {
+  //           content: commentContent,
+  //           anchor: {
+  //             textSegment: {
+  //               startIndex,
+  //               endIndex,
+  //             },
+  //           },
+  //         },
+  //       },
+  //     ];
+
+  //     await docsService.documents.batchUpdate({
+  //       documentId,
+  //       requestBody: { requests },
+  //     });
+
+  //     this.logger.log(
+  //       `Comment added to document ${documentId} for range ${startIndex}-${endIndex}`,
+  //     );
+  //   } catch (error) {
+  //     this.logger.error(`Failed to add comment: ${error.message}`);
+  //     throw new Error('Failed to add comment to Google Doc');
+  //   }
+  // }
 }

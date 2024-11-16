@@ -88,7 +88,6 @@ export class ContentService {
             ? 'Follow-up email after second meeting'
             : 'Follow-up email';
 
-
         await this.googleDocService.writeToDocument(documentId, emailContent);
         await this.contentAssetsService.saveDocumentAsset(
           'Email',
@@ -192,20 +191,20 @@ export class ContentService {
           contentData.sowData,
           contentData.pageName,
         );
-      // } else if (contentType === 'Email') {
-      //   this.logger.log(`Updating Email content for project: ${projectName}`);
-      //   updatedContent = await this.emailGenerationService.updateEmail(
-      //     existingContent,
-      //     contentData.sowData,
-      //   );
-      // } else if (contentType === 'ProjectPlanner') {
-      //   this.logger.log(
-      //     `Updating Project Planner content for project: ${projectName}`,
-      //   );
-      //   updatedContent = await this.projectPlannerService.updateProjectPlan(
-      //     existingContent,
-      //     contentData.pageName,
-      //   );
+        // } else if (contentType === 'Email') {
+        //   this.logger.log(`Updating Email content for project: ${projectName}`);
+        //   updatedContent = await this.emailGenerationService.updateEmail(
+        //     existingContent,
+        //     contentData.sowData,
+        //   );
+        // } else if (contentType === 'ProjectPlanner') {
+        //   this.logger.log(
+        //     `Updating Project Planner content for project: ${projectName}`,
+        //   );
+        //   updatedContent = await this.projectPlannerService.updateProjectPlan(
+        //     existingContent,
+        //     contentData.pageName,
+        //   );
       }
 
       // Step 4: Write Updated Content to Document or Sheet
