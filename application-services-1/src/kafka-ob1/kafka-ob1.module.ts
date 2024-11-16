@@ -4,6 +4,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { KafkaOb1Controller } from './kafka-ob1.controller';
 import { KafkaOb1ProcessingService } from './services/kafka-ob1-processing/kafka-ob1-processing.service';
+import { KafkaOb1BroadcastService } from './services/kafka-ob1-processing/kafka-ob1-broadcast.service';
 import { CrudOperationsService } from './services/kafka-ob1-processing/crud-operations.service';
 import { PageSubmittedService } from './services/kafka-ob1-processing/functions/page-submitted.service';
 import { CleanTranscriptService } from './services/kafka-ob1-processing/functions/clean-transcript.service';
@@ -73,6 +74,7 @@ import { GoogleDocMonitoringService } from './services/google/google-monitoring.
     SowSectionService,
     SyncAssetsService,
     GoogleDocMonitoringService,
+    KafkaOb1BroadcastService,
   ],
   controllers: [KafkaOb1Controller],
 })

@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { GoogleDocService } from './services/google/google-doc.service';
-import { GoogleDocMonitoringService } from './services/google/google-monitoring.service';
 import {
   // EventPattern,
   MessagePattern,
@@ -23,7 +22,8 @@ import {
   CURRENT_SCHEMA_VERSION,
 } from 'src/interfaces/ob1-message.interfaces';
 import { KafkaOb1ProcessingService } from './services/kafka-ob1-processing/kafka-ob1-processing.service';
-import { ContentService } from './services/kafka-ob1-processing/content/content.service';
+import { KafkaOb1BroadcastService } from './services/kafka-ob1-processing/kafka-ob1-broadcast.service';
+// import { ContentService } from './services/kafka-ob1-processing/content/content.service';
 
 @Controller('kafka-ob1')
 export class KafkaOb1Controller implements OnModuleInit {
@@ -31,8 +31,9 @@ export class KafkaOb1Controller implements OnModuleInit {
 
   constructor(
     private readonly kafkaOb1ProcessingService: KafkaOb1ProcessingService,
-    private readonly contentService: ContentService,
-    private readonly googleDocMonitoringService: GoogleDocMonitoringService,
+    private readonly kafkaOb1BroadcastService: KafkaOb1BroadcastService,
+    // private readonly contentService: ContentService,
+    // private readonly googleDocMonitoringService: GoogleDocMonitoringService,
     // private readonly kafkaOb1SystemService: KafkaOb1SystemService
   ) {}
 
@@ -187,88 +188,98 @@ export class KafkaOb1Controller implements OnModuleInit {
     context: KafkaContext,
   ) {
     this.logger.log(`Handling content emission: ${JSON.stringify(message)}`);
-    if (message.messageContent.functionName === 'process-comment') {
-      this.logger.log('Processing comment...');
-      // Process comment content
-      return { commentProcessed: true };
-    }
-    try {
-      const { pageName, projectName } = message.messageContent;
-      const instanceName = headers.instanceName;
-      const userEmail = headers.userEmail;
-      if (!projectName || !pageName) {
-        throw new Error(
-          "Required fields 'projectName' or 'pageName' are missing in messageContent.",
-        );
-      }
-      // Define content generation rules for different page names
-      const contentGenerationRules = {
-        'OB1-pages-filterPage1': ['SOW', 'Email'],
-        'OB1-pages-inputPage2': ['Email'],
-        // Add other pageNames and content types as needed
-      };
-      const contentTypesToGenerate = contentGenerationRules[pageName] || [];
-      // Iterate over content types for this page and generate each
-      for (const contentType of contentTypesToGenerate) {
-        try {
-          const documentId = await this.contentService.generateContent(
-            projectName,
-            instanceName,
-            { sowData: message.messageContent, pageName },
-            userEmail,
-            contentType,
-          );
-          this.logger.log(
-            `Successfully generated ${contentType} content with document ID: ${documentId}`,
-          );
-          this.googleDocMonitoringService
-            .startMonitoring(documentId, projectName, instanceName, userEmail)
-            .then(() => {
-              this.logger.log(
-                `Started monitoring for document ID: ${documentId}`,
-              );
-            })
-            .catch((error) => {
-              this.logger.error(`Failed to start monitoring: ${error.message}`);
-            });
-        } catch (error) {
-          this.logger.error(
-            `Error generating ${contentType} for page ${pageName}: ${error.message}`,
-          );
-        }
-      }
-      // SAME FOR CONTENT UPDATES
-      const contentUpdateRules = {
-        'OB1-pages-filterPage1': [],
-        'OB1-pages-inputPage2': ['SOW'],
-        // Add other pageNames and content types as needed
-      };
-      const contentTypesToUpdate = contentUpdateRules[pageName] || [];
-      // Iterate over content types for this page and generate each
-      for (const contentType of contentTypesToUpdate) {
-        try {
-          const documentId = await this.contentService.updateContent(
-            projectName,
-            instanceName,
-            { sowData: message.messageContent, pageName },
-            userEmail,
-            contentType,
-          );
-          this.logger.log(
-            `Successfully updated ${contentType} content with document ID: ${documentId}`,
-          );
-        } catch (error) {
-          this.logger.error(
-            `Error updating ${contentType} for page ${pageName}: ${error.message}`,
-          );
-        }
-      }
-    } catch (error) {
-      this.logger.error(
-        `Error processing broadcast content: ${error.message}`,
-        error.stack,
-      );
-    }
+    await this.kafkaOb1BroadcastService.processBroadcast(
+      message,
+      headers,
+      context,
+    );
+
+    // if (message.messageContent.functionName === 'process-comment') {
+    //   this.logger.log('Processing comment...');
+    //   // Process comment content
+    //   return { commentProcessed: true };
+    // } else if (message.messageContent.functionName === 'generate-assets') {
+    //   this.logger.log('Generating assets...');
+    //   // Generate assets
+    //   return { assetsGenerated: true };
+    // }
+    // try {
+    //   const { pageName, projectName } = message.messageContent;
+    //   const instanceName = headers.instanceName;
+    //   const userEmail = headers.userEmail;
+    //   if (!projectName || !pageName) {
+    //     throw new Error(
+    //       "Required fields 'projectName' or 'pageName' are missing in messageContent.",
+    //     );
+    //   }
+    //   // Define content generation rules for different page names
+    //   const contentGenerationRules = {
+    //     'OB1-pages-filterPage1': ['SOW', 'Email'],
+    //     'OB1-pages-inputPage2': ['Email'],
+    //     // Add other pageNames and content types as needed
+    //   };
+    //   const contentTypesToGenerate = contentGenerationRules[pageName] || [];
+    //   // Iterate over content types for this page and generate each
+    //   for (const contentType of contentTypesToGenerate) {
+    //     try {
+    //       const documentId = await this.contentService.generateContent(
+    //         projectName,
+    //         instanceName,
+    //         { sowData: message.messageContent, pageName },
+    //         userEmail,
+    //         contentType,
+    //       );
+    //       this.logger.log(
+    //         `Successfully generated ${contentType} content with document ID: ${documentId}`,
+    //       );
+    //       this.googleDocMonitoringService
+    //         .startMonitoring(documentId, projectName, instanceName, userEmail)
+    //         .then(() => {
+    //           this.logger.log(
+    //             `Started monitoring for document ID: ${documentId}`,
+    //           );
+    //         })
+    //         .catch((error) => {
+    //           this.logger.error(`Failed to start monitoring: ${error.message}`);
+    //         });
+    //     } catch (error) {
+    //       this.logger.error(
+    //         `Error generating ${contentType} for page ${pageName}: ${error.message}`,
+    //       );
+    //     }
+    //   }
+    //   // SAME FOR CONTENT UPDATES
+    //   const contentUpdateRules = {
+    //     'OB1-pages-filterPage1': [],
+    //     'OB1-pages-inputPage2': ['SOW'],
+    //     // Add other pageNames and content types as needed
+    //   };
+    //   const contentTypesToUpdate = contentUpdateRules[pageName] || [];
+    //   // Iterate over content types for this page and generate each
+    //   for (const contentType of contentTypesToUpdate) {
+    //     try {
+    //       const documentId = await this.contentService.updateContent(
+    //         projectName,
+    //         instanceName,
+    //         { sowData: message.messageContent, pageName },
+    //         userEmail,
+    //         contentType,
+    //       );
+    //       this.logger.log(
+    //         `Successfully updated ${contentType} content with document ID: ${documentId}`,
+    //       );
+    //     } catch (error) {
+    //       this.logger.error(
+    //         `Error updating ${contentType} for page ${pageName}: ${error.message}`,
+    //       );
+    //     }
+    //   }
+    // } catch (error) {
+    //   this.logger.error(
+    //     `Error processing broadcast content: ${error.message}`,
+    //     error.stack,
+    //   );
+    // }
   }
 }
 

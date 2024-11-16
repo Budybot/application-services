@@ -83,8 +83,12 @@ export class PageSubmittedService {
         this.logger.log(
           `Emitting Kafka message for filter page for project ${projectName}`,
         );
+        const messageInput = {
+          functionName: 'generate-assets',
+          functionInput: pageData,
+        };
         const messageValue: OB1MessageValue = {
-          messageContent: pageData,
+          messageContent: messageInput,
           messageType: 'BROADCAST',
           projectId: projectName,
           assetId: null,
@@ -107,8 +111,14 @@ export class PageSubmittedService {
         this.logger.log(
           `Emitting Kafka message for input page for project ${projectName}`,
         );
+        const messageInput = {
+          functionName: 'generate-assets',
+          functionInput: {
+            pageData: pageData,
+          },
+        };
         const messageValue: OB1MessageValue = {
-          messageContent: pageData,
+          messageContent: messageInput,
           messageType: 'BROADCAST',
           projectId: projectName,
           assetId: null,
