@@ -34,7 +34,7 @@ export class AgentServiceRequest {
 
     const messageInput = {
       messageContent: {
-        functionName: 'LLMgenerateResponse',
+        functionName: 'LLMgenerateResponse-V1',
         functionInput: {
           systemPrompt,
           userPrompt,
