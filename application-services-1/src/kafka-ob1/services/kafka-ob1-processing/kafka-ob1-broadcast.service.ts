@@ -119,7 +119,7 @@ export class KafkaOb1BroadcastService {
       }
     } catch (error) {
       this.logger.error(
-        `Error processing message for user with email ${userEmail}: ${error.message}`,
+        `Error processing message for user: ${error.message}`,
         error.stack,
       );
       throw new Error('Failed to process request');
