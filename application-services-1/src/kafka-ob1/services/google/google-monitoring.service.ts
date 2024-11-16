@@ -1,6 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { google } from 'googleapis';
-import { KafkaOb1Service } from 'src/kafka-ob1/kafka-ob1.service';
+import { ClientKafka } from '@nestjs/microservices';
+import {
+  OB1MessageValue,
+  OB1MessageHeader,
+  CURRENT_SCHEMA_VERSION,
+} from 'src/interfaces/ob1-message.interfaces';
 @Injectable()
 export class GoogleDocMonitoringService {
   private readonly logger = new Logger(GoogleDocMonitoringService.name);
@@ -8,7 +13,9 @@ export class GoogleDocMonitoringService {
   private pollingIntervals: Map<string, NodeJS.Timeout> = new Map();
   private processedComments: Map<string, Set<string>> = new Map();
 
-  constructor(private readonly kafkaOb1Service: KafkaOb1Service) {
+  constructor(
+    @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka,
+  ) {
     this.initOAuthClientFromToken();
   }
 
@@ -48,6 +55,7 @@ export class GoogleDocMonitoringService {
 
   async startMonitoring(
     documentId: string,
+    projectName: string,
     instanceName: string,
     userId: string,
     pollingIntervalSeconds: number = 60,
@@ -61,7 +69,13 @@ export class GoogleDocMonitoringService {
     this.pollingIntervals.set(
       documentId,
       setInterval(
-        () => this.checkForNewComments(documentId, instanceName, userId),
+        () =>
+          this.checkForNewComments(
+            documentId,
+            projectName,
+            instanceName,
+            userId,
+          ),
         pollingIntervalSeconds * 1000,
       ),
     );
@@ -77,6 +91,7 @@ export class GoogleDocMonitoringService {
 
   private async checkForNewComments(
     documentId: string,
+    projectName: string,
     instanceName: string,
     userId: string,
   ) {
@@ -103,30 +118,34 @@ export class GoogleDocMonitoringService {
               `New Comment by ${comment.author?.displayName}: ${comment.content}`,
             );
             processedCommentIds.add(comment.id!);
-            // SEND KAFKA MESSAGE HERE
-            const messageInput = {
-              messageContent: {
-                functionName: 'process-comment',
-                functionInput: {
-                  commentContent: comment.content,
-                  commentAuthor: comment.author?.displayName,
-                },
-              },
-              messageType: 'REQUEST',
-            };
             const topic = 'budyos-ob1-applicationService';
-            const response = await this.kafkaOb1Service.sendRequest(
-              userId,
-              instanceName,
-              'application-service',
-              'checkForNewComments',
-              'system',
-              messageInput,
-              'system',
-              userId,
-              topic,
-            );
-            this.logger.debug(response);
+            const messageValue: OB1MessageValue = {
+              messageContent: comment,
+              messageType: 'NOTIFICATION',
+              projectId: projectName,
+              assetId: null,
+              conversationId: null,
+            };
+            const messageHeaders: OB1MessageHeader = {
+              instanceName: instanceName,
+              userEmail: userId,
+              sourceService: process.env.SERVICE_NAME || 'unknown-service',
+              schemaVersion: CURRENT_SCHEMA_VERSION,
+              destinationService: 'application-service',
+            };
+            this.emitMessage(messageValue, messageHeaders, topic);
+            // const response = await this.kafkaOb1Service.sendRequest(
+            //   userId,
+            //   instanceName,
+            //   'application-service',
+            //   'checkForNewComments',
+            //   'system',
+            //   messageInput,
+            //   'system',
+            //   userId,
+            //   topic,
+            // );
+            // this.logger.debug(response);
           }
         });
         this.processedComments.set(documentId, processedCommentIds);
@@ -149,6 +168,37 @@ export class GoogleDocMonitoringService {
       );
       await this.oAuth2Client.getAccessToken();
       this.logger.log('Token refreshed successfully');
+    }
+  }
+  emitMessage(
+    messageValue: OB1MessageValue,
+    messageHeaders: OB1MessageHeader,
+    topic: string,
+  ): void {
+    try {
+      this.logger.log(
+        `Emitting message to topic: ${topic}, with content: ${JSON.stringify(messageValue)}`,
+      );
+      // Emit the message to Kafka topic without awaiting a response
+      this.kafkaClient
+        .emit(topic, {
+          value: messageValue,
+          headers: messageHeaders,
+        })
+        .subscribe({
+          error: (err) =>
+            this.logger.error(
+              `Failed to emit Kafka message: ${err.message}`,
+              err.stack,
+            ),
+        });
+
+      this.logger.log('Kafka message emitted successfully');
+    } catch (error) {
+      this.logger.error(
+        `Failed to emit Kafka message: ${error.message}`,
+        error.stack,
+      );
     }
   }
 }
