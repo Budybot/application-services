@@ -83,6 +83,8 @@ export class GoogleDocMonitoringService {
         fields: 'comments',
       });
 
+      this.logger.debug(`Fetched comments: ${JSON.stringify(response.data)}`);
+
       const comments = response.data.comments || [];
 
       if (comments.length) {
