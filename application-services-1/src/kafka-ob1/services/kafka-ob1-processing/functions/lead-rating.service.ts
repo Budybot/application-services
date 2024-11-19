@@ -9,8 +9,8 @@ export class LeadRatingService {
   async rateLead(
     serverUrl: string,
     recordToolId: string,
-    activityToolId: string,
     describeToolId: string,
+    activityToolId: string,
     recordId: string,
   ): Promise<any> {
     try {
