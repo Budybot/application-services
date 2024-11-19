@@ -134,10 +134,10 @@ export class KafkaOb1ProcessingService {
           );
           const leadRatingResult = await this.rateLead.rateLead(
             '35.161.118.26',
-            leadId,
             recordToolId,
             describeToolId,
             activityToolId,
+            leadId,
           );
           response = { messageContent: { leadRatingResult: leadRatingResult } };
           break;
