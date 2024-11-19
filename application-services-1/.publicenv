@@ -1,5 +1,5 @@
 # Public .env file
 SERVICE_NAME=application-service
-SERVICE_ID=application-services-1
+SERVICE_ID=application-service-1
 KAFKAJS_NO_PARTITIONER_WARNING=1
-CREDENTIALS_PATH=/usr/src/app/credentials.json
+GOOGLE_TOKEN=
