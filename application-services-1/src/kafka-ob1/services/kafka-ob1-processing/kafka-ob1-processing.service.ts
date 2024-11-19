@@ -11,6 +11,7 @@ import { PageSubmittedService } from './functions/page-submitted.service';
 import { CreateProjectPlanService } from './functions/create-project-plan.service';
 import { CompletedActionItemsService } from './functions/completed-action-items.service';
 import { SyncAssetsService } from './functions/sync-assets.service';
+import { ToolTestingService } from './tool-tester.service';
 
 @Injectable()
 export class KafkaOb1ProcessingService {
@@ -23,6 +24,7 @@ export class KafkaOb1ProcessingService {
     private readonly createProjectPlanService: CreateProjectPlanService,
     private readonly completedActionItemsService: CompletedActionItemsService,
     private readonly syncAssetsService: SyncAssetsService,
+    private readonly testTool: ToolTestingService,
     // @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
   ) {}
 
@@ -109,6 +111,18 @@ export class KafkaOb1ProcessingService {
           break;
         case 'process-comment':
           response = { messageContent: { commentProcessed: true } };
+          break;
+        case 'test-tool':
+          const { toolId, toolInput } = functionInput;
+          this.logger.log(
+            `Testing tool with ID ${toolId} and input: ${toolInput}`,
+          );
+          const toolTestResult = await this.testTool.runTest(
+            '35.161.118.26',
+            toolId,
+            toolInput,
+          );
+          response = { messageContent: { toolTestResult: toolTestResult } };
           break;
         default:
           this.logger.error(`Function ${functionName} not found`);

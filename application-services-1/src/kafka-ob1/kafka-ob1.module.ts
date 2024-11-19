@@ -27,6 +27,7 @@ import { SowSectionService } from './services/kafka-ob1-processing/content/sow-s
 import { SyncAssetsService } from './services/kafka-ob1-processing/functions/sync-assets.service';
 import { GoogleDocMonitoringService } from './services/google/google-monitoring.service';
 import { SowCommentProcessingService } from './services/kafka-ob1-processing/content/sow-comment-processing.service';
+import { ToolTestingService } from './services/kafka-ob1-processing/tool-tester.service';
 @Module({
   imports: [
     HttpModule,
@@ -77,6 +78,7 @@ import { SowCommentProcessingService } from './services/kafka-ob1-processing/con
     GoogleDocMonitoringService,
     KafkaOb1BroadcastService,
     SowCommentProcessingService,
+    ToolTestingService,
   ],
   controllers: [KafkaOb1Controller],
 })
