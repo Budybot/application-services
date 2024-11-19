@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ToolTestingService } from '../tool-tester.service';
 
 @Injectable()
 export class LeadRatingService {
+  private readonly logger = new Logger(LeadRatingService.name);
   constructor(private readonly toolTestingService: ToolTestingService) {}
 
   async rateLead(
@@ -22,6 +23,7 @@ export class LeadRatingService {
           objectName: 'Lead',
         },
       );
+      this.logger.debug(`Lead data: ${JSON.stringify(leadData)}`);
 
       // Step 2: Run the describe tool twice (once with "Event" and once with "Task")
       const describeEvent = await this.toolTestingService.runTest(
@@ -29,11 +31,13 @@ export class LeadRatingService {
         describeToolId,
         { objectName: 'Event' },
       );
+      this.logger.debug(`Describe results: ${JSON.stringify(describeEvent)}`);
       const describeTask = await this.toolTestingService.runTest(
         serverUrl,
         describeToolId,
         { objectName: 'Task' },
       );
+      this.logger.debug(`Describe results: ${JSON.stringify(describeTask)}`);
 
       // Step 3: Run the activity tool twice:
       // First with { event: true, recordId }
@@ -46,6 +50,7 @@ export class LeadRatingService {
             `,
         },
       );
+      this.logger.debug(`Activity results: ${JSON.stringify(activityTask)}`);
 
       // Second with { event: false, recordId }
       const activityEvent = await this.toolTestingService.runTest(
@@ -57,6 +62,7 @@ export class LeadRatingService {
             `,
         },
       );
+      this.logger.debug(`Activity results: ${JSON.stringify(activityEvent)}`);
 
       // Combine results into a single object
       return {

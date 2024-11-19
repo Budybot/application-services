@@ -127,7 +127,8 @@ export class KafkaOb1ProcessingService {
           response = { messageContent: { toolTestResult: toolTestResult } };
           break;
         case 'rate-lead':
-          const { leadId, recordToolId, describeToolId, activityToolId } = functionInput;
+          const { leadId, recordToolId, describeToolId, activityToolId } =
+            functionInput;
           this.logger.log(
             `Rating lead with ID ${leadId} and record tool ID: ${recordToolId}, describe tool ID: ${describeToolId}, activity tool ID: ${activityToolId}`,
           );
