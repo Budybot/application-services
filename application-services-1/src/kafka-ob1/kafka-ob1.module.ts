@@ -28,6 +28,7 @@ import { SyncAssetsService } from './services/kafka-ob1-processing/functions/syn
 import { GoogleDocMonitoringService } from './services/google/google-monitoring.service';
 import { SowCommentProcessingService } from './services/kafka-ob1-processing/content/sow-comment-processing.service';
 import { ToolTestingService } from './services/kafka-ob1-processing/tool-tester.service';
+import { LeadRatingService } from './services/kafka-ob1-processing/functions/lead-rating.service';
 @Module({
   imports: [
     HttpModule,
@@ -79,6 +80,7 @@ import { ToolTestingService } from './services/kafka-ob1-processing/tool-tester.
     KafkaOb1BroadcastService,
     SowCommentProcessingService,
     ToolTestingService,
+    LeadRatingService,
   ],
   controllers: [KafkaOb1Controller],
 })

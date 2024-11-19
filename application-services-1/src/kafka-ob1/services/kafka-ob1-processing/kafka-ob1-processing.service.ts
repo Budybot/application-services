@@ -12,6 +12,7 @@ import { CreateProjectPlanService } from './functions/create-project-plan.servic
 import { CompletedActionItemsService } from './functions/completed-action-items.service';
 import { SyncAssetsService } from './functions/sync-assets.service';
 import { ToolTestingService } from './tool-tester.service';
+import { LeadRatingService } from './functions/lead-rating.service';
 
 @Injectable()
 export class KafkaOb1ProcessingService {
@@ -25,6 +26,7 @@ export class KafkaOb1ProcessingService {
     private readonly completedActionItemsService: CompletedActionItemsService,
     private readonly syncAssetsService: SyncAssetsService,
     private readonly testTool: ToolTestingService,
+    private readonly rateLead: LeadRatingService,
     // @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
   ) {}
 
@@ -123,6 +125,20 @@ export class KafkaOb1ProcessingService {
             toolInput,
           );
           response = { messageContent: { toolTestResult: toolTestResult } };
+          break;
+        case 'rate-lead':
+          const { leadId, recordToolId, describeToolId, activityToolId } = functionInput;
+          this.logger.log(
+            `Rating lead with ID ${leadId} and record tool ID: ${recordToolId}, describe tool ID: ${describeToolId}, activity tool ID: ${activityToolId}`,
+          );
+          const leadRatingResult = await this.rateLead.rateLead(
+            '35.161.118.26',
+            leadId,
+            recordToolId,
+            describeToolId,
+            activityToolId,
+          );
+          response = { messageContent: { leadRatingResult: leadRatingResult } };
           break;
         default:
           this.logger.error(`Function ${functionName} not found`);
