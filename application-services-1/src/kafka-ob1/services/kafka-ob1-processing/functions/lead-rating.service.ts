@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ToolTestingService } from '../tool-tester.service';
 import { AgentServiceRequest } from '../agent-service-request.service';
+import { GoogleSheetService } from '../../google/google-sheet.service';
 
 @Injectable()
 export class LeadRatingService {
@@ -8,6 +9,7 @@ export class LeadRatingService {
   constructor(
     private readonly toolTestingService: ToolTestingService,
     private readonly agentServiceRequest: AgentServiceRequest,
+    private readonly googleSheetService: GoogleSheetService,
   ) {}
 
   async rateLead(
@@ -275,7 +277,24 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         }
       }
 
-      return tableData; // Return the table data
+      // Create a Google Folder
+      const folderTitle = 'Lead Ratings Folder';
+      const folderId =
+        await this.googleSheetService.createGoogleDriveFolder(folderTitle);
+
+      // Create a Google Sheet
+      const sheetTitle = 'Lead Ratings';
+      const sheetId = await this.googleSheetService.createGoogleSheet(
+        sheetTitle,
+        folderId,
+        userId,
+      );
+
+      // Add the table data to a sheet
+      await this.googleSheetService.writeToSheet(sheetId, tableData);
+      this.logger.debug(`Wrote data to Google Sheet: ${sheetId}`);
+
+      return tableData;
     } catch (error) {
       throw new Error(`Error in rateLeads: ${error.message}`);
     }
