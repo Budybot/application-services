@@ -188,4 +188,69 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       records: cleanedRecords,
     };
   }
+  async rateLeads(
+    serverUrl: string,
+    recordToolId: string,
+    describeToolId: string,
+    activityToolId: string,
+    recordIds: string[], // List of record IDs
+    instanceName: string,
+    userId: string,
+  ): Promise<any[]> {
+    try {
+      // Prepare an array to hold the processed results
+      const tableData: any[] = [];
+
+      // Initialize the column names (header row for the table)
+      const columns = [
+        'LeadId',
+        'Was the SDR responsive to the lead?',
+        'Justification',
+        'Did the SDR follow proper Salesforce protocols?',
+        'Justification',
+        'Was the lead outcome successful?',
+        'Justification',
+        'Did the SDR demonstrate strong sales skills?',
+        'Justification',
+      ];
+      tableData.push(columns); // Add the header row to the table
+
+      // Process each lead
+      for (const recordId of recordIds) {
+        try {
+          // Call rateLead for each record ID
+          const leadEvaluation = await this.rateLead(
+            serverUrl,
+            recordToolId,
+            describeToolId,
+            activityToolId,
+            recordId,
+            instanceName,
+            userId,
+          );
+
+          // Extract evaluation data
+          const evaluation = leadEvaluation?.evaluation || [];
+          const row: any[] = [recordId]; // Start the row with the LeadId
+
+          // Append evaluation results to the row
+          for (const entry of evaluation) {
+            row.push(entry.outcome); // Add outcome
+            row.push(entry.justification); // Add justification
+          }
+
+          // Add the row to the table data
+          tableData.push(row);
+        } catch (error) {
+          this.logger.error(
+            `Error processing LeadId ${recordId}: ${error.message}`,
+          );
+        }
+      }
+
+      return tableData; // Return the table data
+    } catch (error) {
+      throw new Error(`Error in rateLeads: ${error.message}`);
+    }
+  }
 }
