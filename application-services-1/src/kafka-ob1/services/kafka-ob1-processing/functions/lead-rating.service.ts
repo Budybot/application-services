@@ -161,7 +161,11 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         // Parse the cleaned string into JSON
         const jsonResponse = JSON.parse(cleanedResponse);
 
-        return jsonResponse; // Return the parsed JSON
+        const leadName = leadData.result?.Name || 'Unknown'; // Default to 'Unknown' if Name is missing
+        return {
+          leadName, // Include lead's name
+          evaluation: jsonResponse.evaluation, // Keep existing evaluation data
+        };
       } catch (error) {
         console.error('Error processing LLM response:', error);
         throw new Error('Failed to process LLM response');
@@ -207,6 +211,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       // Initialize the column names (header row for the table)
       const columns = [
         'LeadId',
+        'Lead Name',
         'Was the SDR responsive to the lead?',
         'Justification',
         'Did the SDR follow proper Salesforce protocols?',
@@ -234,7 +239,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
 
           // Extract evaluation data
           const evaluation = leadEvaluation?.evaluation || [];
-          const row: any[] = [recordId]; // Start the row with the LeadId
+          const row: any[] = [recordId, leadEvaluation.leadName]; // Start the row with the LeadId
 
           // Append evaluation results to the row
           for (const entry of evaluation) {
