@@ -143,17 +143,29 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         instanceName,
         userId,
       );
-      // Clean the response: Remove backticks and whitespace
-      const cleanedResponse = llmResponse
-        .trim()
-        .replace(/^```json/, '')
-        .replace(/```$/, '')
-        .trim();
+      try {
+        // Access the content field
+        const rawContent = llmResponse?.messageContent?.content;
 
-      // Parse the cleaned response into JSON
-      const jsonResponse = JSON.parse(cleanedResponse);
+        if (!rawContent) {
+          throw new Error('Response content is missing or invalid');
+        }
 
-      return jsonResponse;
+        // Clean the response: Remove backticks and unnecessary text
+        const cleanedResponse = rawContent
+          .trim()
+          .replace(/^```json/, '')
+          .replace(/```$/, '')
+          .trim();
+
+        // Parse the cleaned string into JSON
+        const jsonResponse = JSON.parse(cleanedResponse);
+
+        return jsonResponse; // Return the parsed JSON
+      } catch (error) {
+        console.error('Error processing LLM response:', error);
+        throw new Error('Failed to process LLM response');
+      }
     } catch (error) {
       throw new Error(`Error in rateLead: ${error.message}`);
     }
