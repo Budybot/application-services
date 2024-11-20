@@ -144,10 +144,14 @@ export class KafkaOb1ProcessingService {
           response = { messageContent: { leadRatingResult: leadRatingResult } };
           break;
         case 'rate-leads':
-          const { leadIds, recordToolId2, describeToolId2, activityToolId2 } =
-            functionInput;
+          const {
+            leadIds,
+            recordToolId: recordToolId2,
+            describeToolId: describeToolId2,
+            activityToolId: activityToolId2,
+          } = functionInput;
           // this.logger.log(
-          //   `Rating lead ids and record tool ID: ${recordToolId}, describe tool ID: ${describeToolId}, activity tool ID: ${activityToolId}`,
+          //   `Rating lead ids and record tool ID: ${recordToolId2}, describe tool ID: ${describeToolId2}, activity tool ID: ${activityToolId2}`,
           // );
           const ratingResult = await this.rateLead.rateLeads(
             '35.161.118.26',
