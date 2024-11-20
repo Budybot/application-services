@@ -15,7 +15,7 @@ export class LeadRatingService {
   ): Promise<any> {
     try {
       // Step 1: Run the record tool to get lead data
-      const leadData = await this.toolTestingService.runTest(
+      const leadDataRaw = await this.toolTestingService.runTest(
         serverUrl,
         recordToolId,
         {
@@ -23,7 +23,15 @@ export class LeadRatingService {
           objectName: 'Lead',
         },
       );
-      this.logger.debug(`Lead data: ${JSON.stringify(leadData)}`);
+      this.logger.debug(`Raw Lead Data: ${JSON.stringify(leadDataRaw)}`);
+
+      // Restructure the lead data to only contain field names and values
+      const leadData = {
+        success: leadDataRaw.success,
+        executionTime: leadDataRaw.executionTime,
+        result: JSON.parse(leadDataRaw.result.body)?.result.recordData || {},
+      };
+      this.logger.debug(`Restructured Lead Data: ${JSON.stringify(leadData)}`);
 
       // Step 2: Run the describe tool twice (once with "Event" and once with "Task")
       const describeEvent = await this.toolTestingService.runTest(
@@ -31,13 +39,13 @@ export class LeadRatingService {
         describeToolId,
         { objectName: 'Event' },
       );
-      this.logger.debug(`Describe results: ${JSON.stringify(describeEvent)}`);
+      //   this.logger.debug(`Describe results: ${JSON.stringify(describeEvent)}`);
       const describeTask = await this.toolTestingService.runTest(
         serverUrl,
         describeToolId,
         { objectName: 'Task' },
       );
-      this.logger.debug(`Describe results: ${JSON.stringify(describeTask)}`);
+      //   this.logger.debug(`Describe results: ${JSON.stringify(describeTask)}`);
 
       const eventFields =
         JSON.parse(describeEvent.result.body)?.result.fieldNames || [];
@@ -60,7 +68,7 @@ export class LeadRatingService {
           //     `,
         },
       );
-      this.logger.debug(`Activity results: ${JSON.stringify(activityTask)}`);
+      //   this.logger.debug(`Activity results: ${JSON.stringify(activityTask)}`);
 
       // Second with { event: false, recordId }
       const activityEvent = await this.toolTestingService.runTest(
@@ -73,15 +81,15 @@ export class LeadRatingService {
           //     `,
         },
       );
-      this.logger.debug(`Activity results: ${JSON.stringify(activityEvent)}`);
+      //   this.logger.debug(`Activity results: ${JSON.stringify(activityEvent)}`);
 
       // Combine results into a single object
       return {
         leadData,
-        describeResults: {
-          event: describeEvent,
-          task: describeTask,
-        },
+        // describeResults: {
+        //   event: describeEvent,
+        //   task: describeTask,
+        // },
         activityResults: {
           event: activityEvent,
           task: activityTask,
