@@ -149,7 +149,7 @@ export class KafkaOb1ProcessingService {
           // this.logger.log(
           //   `Rating lead ids and record tool ID: ${recordToolId}, describe tool ID: ${describeToolId}, activity tool ID: ${activityToolId}`,
           // );
-          const ratingResult = await this.rateLead.rateLead(
+          const ratingResult = await this.rateLead.rateLeads(
             '35.161.118.26',
             recordToolId2,
             describeToolId2,

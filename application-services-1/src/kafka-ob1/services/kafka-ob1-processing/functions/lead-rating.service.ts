@@ -198,6 +198,9 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
     userId: string,
   ): Promise<any[]> {
     try {
+      this.logger.debug(
+        `Rating leads: ${recordIds} with tools: ${recordToolId}, ${describeToolId}, ${activityToolId}`,
+      );
       // Prepare an array to hold the processed results
       const tableData: any[] = [];
 
