@@ -99,6 +99,33 @@ Did the SDR follow proper Salesforce protocols?
 Was the lead outcome successful?
 Did the SDR demonstrate strong sales skills?
 For each question, provide a response of either 'Yes,' 'No,' or 'NA.' Justify your answer in one sentence, referencing the provided data. If the available data is insufficient to answer a question, respond with 'NA' and note that there is not enough information to make a determination.
+Provide your response only as a structured JSON object in the following format, without any additional text or explanation:
+    {
+  "evaluation": [
+    {
+      "question": "Was the SDR responsive to the lead?",
+      "outcome": "Yes/No/NA",
+      "justification": "Provide justification here."
+    },
+    {
+      "question": "Did the SDR follow proper Salesforce protocols?",
+      "outcome": "Yes/No/NA",
+      "justification": "Provide justification here."
+    },
+    {
+      "question": "Was the lead outcome successful?",
+      "outcome": "Yes/No/NA",
+      "justification": "Provide justification here."
+    },
+    {
+      "question": "Did the SDR demonstrate strong sales skills?",
+      "outcome": "Yes/No/NA",
+      "justification": "Provide justification here."
+    }
+  ]
+}
+Ensure that justifications reference the provided data and that outcomes of 'NA' include a note indicating insufficient data. The output must conform strictly to this JSON format.
+  
 `;
       const userPrompt = `Lead Data: ${JSON.stringify(leadData)} \n Activity Results: ${JSON.stringify(activityResults)}`;
       const config = {
@@ -116,7 +143,17 @@ For each question, provide a response of either 'Yes,' 'No,' or 'NA.' Justify yo
         instanceName,
         userId,
       );
-      return llmResponse;
+      // Clean the response: Remove backticks and whitespace
+      const cleanedResponse = llmResponse
+        .trim()
+        .replace(/^```json/, '')
+        .replace(/```$/, '')
+        .trim();
+
+      // Parse the cleaned response into JSON
+      const jsonResponse = JSON.parse(cleanedResponse);
+
+      return jsonResponse;
     } catch (error) {
       throw new Error(`Error in rateLead: ${error.message}`);
     }
