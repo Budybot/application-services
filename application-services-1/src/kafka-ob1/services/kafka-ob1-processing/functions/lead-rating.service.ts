@@ -29,7 +29,7 @@ export class LeadRatingService {
           objectName: 'Lead',
         },
       );
-      this.logger.debug(`Raw Lead Data: ${JSON.stringify(leadDataRaw)}`);
+      //   this.logger.debug(`Raw Lead Data: ${JSON.stringify(leadDataRaw)}`);
 
       // Restructure the lead data to only contain field names and values
       const leadData = {
@@ -37,7 +37,7 @@ export class LeadRatingService {
         executionTime: leadDataRaw.executionTime,
         result: JSON.parse(leadDataRaw.result.body)?.result.recordData || {},
       };
-      this.logger.debug(`Restructured Lead Data: ${JSON.stringify(leadData)}`);
+      //   this.logger.debug(`Restructured Lead Data: ${JSON.stringify(leadData)}`);
 
       // Step 2: Run the describe tool twice (once with "Event" and once with "Task")
       const describeEvent = await this.toolTestingService.runTest(
@@ -87,7 +87,19 @@ export class LeadRatingService {
       };
 
       // Step 4: Run LLM call
-      const systemPrompt = 'Rate the lead on a scale of 1 to 10';
+      const systemPrompt = `
+      You are an expert Salesforce evaluator tasked with assessing an SDR's responsiveness and performance for a given lead. You will be provided with two data sets:
+
+Lead Data: Detailed Salesforce information about the lead.
+Activity Data: Records of interactions, activities, or communications associated with the lead.
+Using this information, evaluate the following:
+
+Was the SDR responsive to the lead?
+Did the SDR follow proper Salesforce protocols?
+Was the lead outcome successful?
+Did the SDR demonstrate strong sales skills?
+For each question, provide a response of either 'Yes,' 'No,' or 'NA.' Justify your answer in one sentence, referencing the provided data. If the available data is insufficient to answer a question, respond with 'NA' and note that there is not enough information to make a determination.
+`;
       const userPrompt = `Lead Data: ${JSON.stringify(leadData)} \n Activity Results: ${JSON.stringify(activityResults)}`;
       const config = {
         provider: 'openai',
@@ -105,14 +117,6 @@ export class LeadRatingService {
         userId,
       );
       return llmResponse;
-
-
-
-    //   // Combine results into a single object
-    //   return {
-    //     leadData,
-    //     activityResults: activityResults,
-    //   };
     } catch (error) {
       throw new Error(`Error in rateLead: ${error.message}`);
     }
