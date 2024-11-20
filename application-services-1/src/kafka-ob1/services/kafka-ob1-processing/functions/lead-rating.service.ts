@@ -161,9 +161,17 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         // Parse the cleaned string into JSON
         const jsonResponse = JSON.parse(cleanedResponse);
 
-        const leadName = leadData.result?.Name || 'Unknown'; // Default to 'Unknown' if Name is missing
+        const leadName = leadData.result?.Name || 'Unknown';
+        const ownerId = leadData.result?.OwnerId || 'Unknown';
+        const status = leadData.result?.Status || 'Unknown';
+        const createdDate = leadData.result?.CreatedDate || 'Unknown';
+        const country = leadData.result?.Country__c || 'Unknown';
         return {
           leadName, // Include lead's name
+          ownerId, // Include lead's owner ID
+          status, // Include lead's status
+          createdDate, // Include lead's created date
+          country, // Include lead's country
           evaluation: jsonResponse.evaluation, // Keep existing evaluation data
         };
       } catch (error) {
@@ -212,6 +220,10 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       const columns = [
         'LeadId',
         'Lead Name',
+        'Status',
+        'Owner ID',
+        'Created Date',
+        'Country',
         'Was the SDR responsive to the lead?',
         'Justification',
         'Did the SDR follow proper Salesforce protocols?',
@@ -239,7 +251,14 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
 
           // Extract evaluation data
           const evaluation = leadEvaluation?.evaluation || [];
-          const row: any[] = [recordId, leadEvaluation.leadName]; // Start the row with the LeadId
+          const row: any[] = [
+            recordId,
+            leadEvaluation.leadName,
+            leadEvaluation.status,
+            leadEvaluation.ownerId,
+            leadEvaluation.createdDate,
+            leadEvaluation.country,
+          ]; // Start the row with the LeadId
 
           // Append evaluation results to the row
           for (const entry of evaluation) {
