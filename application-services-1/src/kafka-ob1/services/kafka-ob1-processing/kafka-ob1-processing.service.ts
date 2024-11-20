@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import {
   OB1MessageValue,
-//   OB1MessageHeader,
+  //   OB1MessageHeader,
 } from 'src/interfaces/ob1-message.interfaces';
 // import { ClientKafka } from '@nestjs/microservices';
 import { KafkaContext } from '@nestjs/microservices';
@@ -142,6 +142,23 @@ export class KafkaOb1ProcessingService {
             userEmail,
           );
           response = { messageContent: { leadRatingResult: leadRatingResult } };
+          break;
+        case 'rate-leads':
+          const { leadIds, recordToolId2, describeToolId2, activityToolId2 } =
+            functionInput;
+          this.logger.log(
+            `Rating lead with ID ${leadId} and record tool ID: ${recordToolId}, describe tool ID: ${describeToolId}, activity tool ID: ${activityToolId}`,
+          );
+          const ratingResult = await this.rateLead.rateLead(
+            '35.161.118.26',
+            recordToolId2,
+            describeToolId2,
+            activityToolId2,
+            leadIds,
+            instanceName,
+            userEmail,
+          );
+          response = { messageContent: { leadRatingResult: ratingResult } };
           break;
         default:
           this.logger.error(`Function ${functionName} not found`);
