@@ -146,9 +146,9 @@ export class KafkaOb1ProcessingService {
         case 'rate-leads':
           const { leadIds, recordToolId2, describeToolId2, activityToolId2 } =
             functionInput;
-          this.logger.log(
-            `Rating lead with ID ${leadId} and record tool ID: ${recordToolId}, describe tool ID: ${describeToolId}, activity tool ID: ${activityToolId}`,
-          );
+          // this.logger.log(
+          //   `Rating lead ids and record tool ID: ${recordToolId}, describe tool ID: ${describeToolId}, activity tool ID: ${activityToolId}`,
+          // );
           const ratingResult = await this.rateLead.rateLead(
             '35.161.118.26',
             recordToolId2,
