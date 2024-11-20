@@ -138,6 +138,8 @@ export class KafkaOb1ProcessingService {
             describeToolId,
             activityToolId,
             leadId,
+            instanceName,
+            userEmail,
           );
           response = { messageContent: { leadRatingResult: leadRatingResult } };
           break;

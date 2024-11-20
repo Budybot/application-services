@@ -1,10 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ToolTestingService } from '../tool-tester.service';
+import { AgentServiceRequest } from '../agent-service-request.service';
 
 @Injectable()
 export class LeadRatingService {
   private readonly logger = new Logger(LeadRatingService.name);
-  constructor(private readonly toolTestingService: ToolTestingService) {}
+  constructor(
+    private readonly toolTestingService: ToolTestingService,
+    private readonly agentServiceRequest: AgentServiceRequest,
+  ) {}
 
   async rateLead(
     serverUrl: string,
@@ -12,6 +16,8 @@ export class LeadRatingService {
     describeToolId: string,
     activityToolId: string,
     recordId: string,
+    instanceName: string,
+    userId: string,
   ): Promise<any> {
     try {
       // Step 1: Run the record tool to get lead data
@@ -79,15 +85,34 @@ export class LeadRatingService {
         event: this.transformActivityResult(activityEventRaw),
         task: this.transformActivityResult(activityTaskRaw),
       };
-      // Combine results into a single object
-      return {
-        leadData,
-        // describeResults: {
-        //   event: describeEvent,
-        //   task: describeTask,
-        // },
-        activityResults: activityResults,
+
+      // Step 4: Run LLM call
+      const systemPrompt = 'Rate the lead on a scale of 1 to 10';
+      const userPrompt = `Lead Data: ${JSON.stringify(leadData)} \n Activity Results: ${JSON.stringify(activityResults)}`;
+      const config = {
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+        temperature: 0.7,
+        maxTokens: 4096,
+        frequencyPenalty: 0,
+        presencePenalty: 0,
       };
+      const llmResponse = await this.agentServiceRequest.sendAgentRequest(
+        systemPrompt,
+        userPrompt,
+        config,
+        instanceName,
+        userId,
+      );
+      return llmResponse;
+
+
+
+    //   // Combine results into a single object
+    //   return {
+    //     leadData,
+    //     activityResults: activityResults,
+    //   };
     } catch (error) {
       throw new Error(`Error in rateLead: ${error.message}`);
     }
