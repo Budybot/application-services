@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ToolTestingService } from '../tool-tester.service';
 import { AgentServiceRequest } from '../agent-service-request.service';
-import { GoogleSheetService } from '../../google/google-sheet.service';
+// import { GoogleSheetService } from '../../google/google-sheet.service';
 
 @Injectable()
 export class LeadRatingService {
@@ -9,14 +9,16 @@ export class LeadRatingService {
   constructor(
     private readonly toolTestingService: ToolTestingService,
     private readonly agentServiceRequest: AgentServiceRequest,
-    private readonly googleSheetService: GoogleSheetService,
+    // private readonly googleSheetService: GoogleSheetService,
   ) {}
 
   async rateLead(
     serverUrl: string,
     recordToolId: string,
-    describeToolId: string,
     activityToolId: string,
+    eventFields: string[],
+    taskFields: string[],
+    criteriaQuestions: string[],
     recordId: string,
     instanceName: string,
     userId: string,
@@ -41,24 +43,24 @@ export class LeadRatingService {
       };
       //   this.logger.debug(`Restructured Lead Data: ${JSON.stringify(leadData)}`);
 
-      // Step 2: Run the describe tool twice (once with "Event" and once with "Task")
-      const describeEvent = await this.toolTestingService.runTest(
-        serverUrl,
-        describeToolId,
-        { objectName: 'Event' },
-      );
-      //   this.logger.debug(`Describe results: ${JSON.stringify(describeEvent)}`);
-      const describeTask = await this.toolTestingService.runTest(
-        serverUrl,
-        describeToolId,
-        { objectName: 'Task' },
-      );
-      //   this.logger.debug(`Describe results: ${JSON.stringify(describeTask)}`);
+      //   // Step 2: Run the describe tool twice (once with "Event" and once with "Task")
+      //   const describeEvent = await this.toolTestingService.runTest(
+      //     serverUrl,
+      //     describeToolId,
+      //     { objectName: 'Event' },
+      //   );
+      //   //   this.logger.debug(`Describe results: ${JSON.stringify(describeEvent)}`);
+      //   const describeTask = await this.toolTestingService.runTest(
+      //     serverUrl,
+      //     describeToolId,
+      //     { objectName: 'Task' },
+      //   );
+      //   //   this.logger.debug(`Describe results: ${JSON.stringify(describeTask)}`);
 
-      const eventFields =
-        JSON.parse(describeEvent.result.body)?.result.fieldNames || [];
-      const taskFields =
-        JSON.parse(describeTask.result.body)?.result.fieldNames || [];
+      //   const eventFields =
+      //     JSON.parse(describeEvent.result.body)?.result.fieldNames || [];
+      //   const taskFields =
+      //     JSON.parse(describeTask.result.body)?.result.fieldNames || [];
 
       // Build queries dynamically
       const eventQuery = `SELECT ${eventFields.join(', ')} FROM Event WHERE WhoId = '${recordId}'`;
@@ -88,6 +90,7 @@ export class LeadRatingService {
         task: this.transformActivityResult(activityTaskRaw),
       };
 
+      // put questions inside prompt
       // Step 4: Run LLM call
       const systemPrompt = `
       You are an expert Salesforce evaluator tasked with assessing an SDR's responsiveness and performance for a given lead. You will be provided with two data sets:
@@ -95,6 +98,8 @@ export class LeadRatingService {
 Lead Data: Detailed Salesforce information about the lead.
 Activity Data: Records of interactions, activities, or communications associated with the lead.
 Using this information, evaluate the following:
+
+${criteriaQuestions.join('\n')}
 
 Was the SDR responsive to the lead?
 Did the SDR follow proper Salesforce protocols?
@@ -207,6 +212,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
     recordToolId: string,
     describeToolId: string,
     activityToolId: string,
+    patchToolId: string,
     recordIds: string[], // List of record IDs
     instanceName: string,
     userId: string,
@@ -219,23 +225,53 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       const tableData: any[] = [];
 
       // Initialize the column names (header row for the table)
-      const columns = [
-        'LeadId',
-        'Lead Name',
-        'Status',
-        'Owner ID',
-        'Created Date',
-        'Country',
-        'Was the SDR responsive to the lead?',
-        'Justification',
-        'Did the SDR follow proper Salesforce protocols?',
-        'Justification',
-        'Was the lead outcome successful?',
-        'Justification',
-        'Did the SDR demonstrate strong sales skills?',
-        'Justification',
-      ];
-      tableData.push(columns); // Add the header row to the table
+      //   const columns = [
+      //     'LeadId',
+      //     'Lead Name',
+      //     'Status',
+      //     'Owner ID',
+      //     'Created Date',
+      //     'Country',
+      //     'Was the SDR responsive to the lead?',
+      //     'Justification',
+      //     'Did the SDR follow proper Salesforce protocols?',
+      //     'Justification',
+      //     'Was the lead outcome successful?',
+      //     'Justification',
+      //     'Did the SDR demonstrate strong sales skills?',
+      //     'Justification',
+      //   ];
+      //   tableData.push(columns); // Add the header row to the table
+
+      // Step 2: Run the describe tool twice (once with "Event" and once with "Task")
+      const describeEvent = await this.toolTestingService.runTest(
+        serverUrl,
+        describeToolId,
+        { objectName: 'Event' },
+      );
+      //   this.logger.debug(`Describe results: ${JSON.stringify(describeEvent)}`);
+      const describeTask = await this.toolTestingService.runTest(
+        serverUrl,
+        describeToolId,
+        { objectName: 'Task' },
+      );
+      //   this.logger.debug(`Describe results: ${JSON.stringify(describeTask)}`);
+
+      const eventFields =
+        JSON.parse(describeEvent.result.body)?.result.fieldNames || [];
+      const taskFields =
+        JSON.parse(describeTask.result.body)?.result.fieldNames || [];
+
+      // Get criteria record data
+      const criteriaRecordData = await this.toolTestingService.runTest(
+        serverUrl,
+        recordToolId,
+        {
+          recordId: 'PLACEHOLDER',
+          objectName: 'Budy_Lead_Criteria__c',
+        },
+      );
+      const criteriaQuestions = criteriaRecordData.result?.recordData || []; // get questions from criteria objects
 
       // Process each lead
       for (const recordId of recordIds) {
@@ -244,8 +280,10 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
           const leadEvaluation = await this.rateLead(
             serverUrl,
             recordToolId,
-            describeToolId,
             activityToolId,
+            eventFields,
+            taskFields,
+            criteriaQuestions,
             recordId,
             instanceName,
             userId,
@@ -255,11 +293,11 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
           const evaluation = leadEvaluation?.evaluation || [];
           const row: any[] = [
             recordId,
-            leadEvaluation.leadName,
-            leadEvaluation.status,
-            leadEvaluation.ownerId,
-            leadEvaluation.createdDate,
-            leadEvaluation.country,
+            // leadEvaluation.leadName,
+            // leadEvaluation.status,
+            // leadEvaluation.ownerId,
+            // leadEvaluation.createdDate,
+            // leadEvaluation.country,
           ]; // Start the row with the LeadId
 
           // Append evaluation results to the row
@@ -267,6 +305,8 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
             row.push(entry.outcome); // Add outcome
             row.push(entry.justification); // Add justification
           }
+          const leadScore = this.computeLeadScore(evaluation);
+          row.push(leadScore); // Add the lead score to the row
 
           // Add the row to the table data
           tableData.push(row);
@@ -277,26 +317,50 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         }
       }
 
-      // Create a Google Folder
-      const folderTitle = 'Lead Ratings Folder';
-      const folderId =
-        await this.googleSheetService.createGoogleDriveFolder(folderTitle);
+    //   await this.toolTestingService.runTest(serverUrl, patchToolId, {
+    //     objectName: 'Lead',
+    //     fieldNames: [
+    //       'id',
+    //       'Budy_Criteria_1__c',
+    //       'Budy_Jusitification_1__c',
+    //       'Budy_Criteria_2__c',
+    //       'Budy_Jusitification_2__c',
+    //       'Budy_Criteria_3__c',
+    //       'Budy_Jusitification_3__c',
+    //       'Budy_Criteria_4__c',
+    //       'Budy_Jusitification_4__c',
+    //       'Budy_Lead_Score__c',
+    //     ],
+    //     records: tableData,
+    //   });
 
-      // Create a Google Sheet
-      const sheetTitle = 'Lead Ratings';
-      const sheetId = await this.googleSheetService.createGoogleSheet(
-        sheetTitle,
-        folderId,
-        userId,
-      );
+      //   // Create a Google Folder
+      //   const folderTitle = 'Lead Ratings Folder';
+      //   const folderId =
+      //     await this.googleSheetService.createGoogleDriveFolder(folderTitle);
 
-      // Add the table data to a sheet
-      await this.googleSheetService.writeToSheet(sheetId, tableData);
-      this.logger.debug(`Wrote data to Google Sheet: ${sheetId}`);
+      //   // Create a Google Sheet
+      //   const sheetTitle = 'Lead Ratings';
+      //   const sheetId = await this.googleSheetService.createGoogleSheet(
+      //     sheetTitle,
+      //     folderId,
+      //     userId,
+      //   );
 
+      //   // Add the table data to a sheet
+      //   await this.googleSheetService.writeToSheet(sheetId, tableData);
+      //   this.logger.debug(`Wrote data to Google Sheet: ${sheetId}`);
+      this.logger.debug(`Table Data: ${JSON.stringify(tableData)}`);
       return tableData;
     } catch (error) {
       throw new Error(`Error in rateLeads: ${error.message}`);
     }
+  }
+  // write a function to compute lead score from the evaluation (percentage of yes out of four questions)
+  private computeLeadScore(evaluation: any): number {
+    const yesCount = evaluation.filter(
+      (entry: any) => entry.outcome === 'Yes',
+    ).length;
+    return (yesCount / 4) * 100;
   }
 }
