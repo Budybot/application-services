@@ -211,7 +211,11 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       apiCount++;
       console.log('Lead Records Response:', leadRecords);
 
-      const recordIds = leadRecords.result.body.records.map(
+      // Parse the JSON string to an object
+      const responseBody = JSON.parse(leadRecords.result.body);
+
+      // Now access the records
+      const recordIds = responseBody.result.records.map(
         (record: any) => record.Id,
       );
 
@@ -364,7 +368,8 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         { query: statusQuery },
       );
       apiCount++;
-      const statusData = statusResults.result.records;
+      const statusJson = JSON.parse(statusResults.result.body);
+      const statusData = statusJson.result.body.records;
       //   // Get score data for each SDR
       //   const scoreQuery = `SELECT OwnerId, Status, COUNT(Id) LeadCount
       //                         FROM Lead
