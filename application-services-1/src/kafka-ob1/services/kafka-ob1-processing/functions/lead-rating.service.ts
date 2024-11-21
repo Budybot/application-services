@@ -253,8 +253,16 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         },
       );
       apiCount++;
-      const criteriaQuestions =
-        JSON.parse(criteriaRecordData.result.body).result?.recordData || []; // get questions from criteria objects
+      const criteriaResponseBody = JSON.parse(criteriaRecordData.result.body);
+      const recordData = criteriaResponseBody.result?.recordData || {};
+
+      // Extract the questions into a list
+      const criteriaQuestions = [
+        recordData.Question_1__c,
+        recordData.Question_2__c,
+        recordData.Question_3__c,
+        recordData.Question_4__c,
+      ];
       this.logger.debug(`Criteria Questions: ${criteriaQuestions}`);
       // Step 4: Process each lead
       for (const recordId of recordIds) {
