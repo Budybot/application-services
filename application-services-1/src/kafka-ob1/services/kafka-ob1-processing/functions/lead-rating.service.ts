@@ -201,6 +201,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
     try {
       let apiCount = 0;
       const NDays = 100;
+      // Step 1: Get the first 10 lead records
       const leadRecords = await this.toolTestingService.runTest(
         serverUrl,
         activityToolId,
@@ -224,7 +225,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       );
       const tableData: any[] = [];
 
-      // Step 1: Run the describe tool twice (once with "Event" and once with "Task")
+      // Step 2: Run the describe tool twice (once with "Event" and once with "Task")
       const describeEvent = await this.toolTestingService.runTest(
         serverUrl,
         describeToolId,
@@ -242,7 +243,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       const taskFields =
         JSON.parse(describeTask.result.body)?.result.fieldNames || [];
 
-      // Step 2: Get criteria record data
+      // Step 3: Get criteria record data
       const criteriaRecordData = await this.toolTestingService.runTest(
         serverUrl,
         recordToolId,
@@ -252,12 +253,13 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         },
       );
       apiCount++;
-      const criteriaQuestions = criteriaRecordData.result?.recordData || []; // get questions from criteria objects
-
-      // Step 3: Process each lead
+      const criteriaQuestions =
+        JSON.parse(criteriaRecordData.result.body).result?.recordData || []; // get questions from criteria objects
+      this.logger.debug(`Criteria Questions: ${criteriaQuestions}`);
+      // Step 4: Process each lead
       for (const recordId of recordIds) {
         try {
-          // Step 3.1: Call rateLead for each record ID
+          // Step 4.1: Call rateLead for each record ID
           const leadEvaluation = await this.rateLead(
             serverUrl,
             recordToolId,
@@ -271,27 +273,27 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
             userId,
           );
 
-          // Step 3.2: Extract evaluation data
+          // Step 4.2: Extract evaluation data
           const evaluation = leadEvaluation?.evaluation || [];
           const leadData: Record<string, any> = {
             id: recordId,
           };
 
-          // Step 3.3: Append evaluation results to the row
+          // Step 4.3: Append evaluation results to the row
           evaluation.forEach((entry, index) => {
             const criteriaKey = `Budy_Criteria_${index + 1}__c`;
             const justificationKey = `Budy_Justification_${index + 1}__c`;
             leadData[criteriaKey] = entry.outcome;
             leadData[justificationKey] = entry.justification;
           });
-          // Step 3.4: Compute lead score
+          // Step 4.4: Compute lead score
           const leadScore = this.computeLeadScore(evaluation);
           leadData['Budy_Lead_Score__c'] = leadScore;
 
-          // Step 3.5: Add the row to the table data
+          // Step 4.5: Add the row to the table data
           tableData.push(leadData);
 
-          // Step 3.7: Update the API count
+          // Step 4.6: Update the API count
           apiCount = leadEvaluation.apiCount;
         } catch (error) {
           this.logger.error(
@@ -300,6 +302,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         }
       }
       this.logger.debug(`Lead Results: ${JSON.stringify(tableData)}`);
+      // Step 5: Run the patch tool to update the records
       await this.toolTestingService.runTest(serverUrl, patchToolId, {
         objectName: 'Lead',
         fieldNames: [
@@ -368,8 +371,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         { query: statusQuery },
       );
       apiCount++;
-      const statusJson = JSON.parse(statusResults.result.body);
-      const statusData = statusJson.result.body.records;
+      const statusData = JSON.parse(statusResults.result.body).records;
       //   // Get score data for each SDR
       //   const scoreQuery = `SELECT OwnerId, Status, COUNT(Id) LeadCount
       //                         FROM Lead
