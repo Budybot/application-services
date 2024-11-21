@@ -147,7 +147,8 @@ export class KafkaOb1ProcessingService {
         //   break;
         case 'rate-leads':
           const {
-            leadIds,
+            // leadIds,
+            criteriaRecordId,
             recordToolId: recordToolId2,
             describeToolId: describeToolId2,
             activityToolId: activityToolId2,
@@ -162,7 +163,8 @@ export class KafkaOb1ProcessingService {
             describeToolId2,
             activityToolId2,
             patchToolId,
-            leadIds,
+            // leadIds,
+            criteriaRecordId,
             instanceName,
             userEmail,
           );

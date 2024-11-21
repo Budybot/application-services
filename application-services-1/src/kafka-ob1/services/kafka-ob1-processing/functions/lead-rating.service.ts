@@ -20,6 +20,7 @@ export class LeadRatingService {
     taskFields: string[],
     criteriaQuestions: string[],
     recordId: string,
+    apiCount: number,
     instanceName: string,
     userId: string,
   ): Promise<any> {
@@ -33,6 +34,7 @@ export class LeadRatingService {
           objectName: 'Lead',
         },
       );
+      apiCount++;
       //   this.logger.debug(`Raw Lead Data: ${JSON.stringify(leadDataRaw)}`);
 
       // Restructure the lead data to only contain field names and values
@@ -41,28 +43,8 @@ export class LeadRatingService {
         executionTime: leadDataRaw.executionTime,
         result: JSON.parse(leadDataRaw.result.body)?.result.recordData || {},
       };
-      //   this.logger.debug(`Restructured Lead Data: ${JSON.stringify(leadData)}`);
 
-      //   // Step 2: Run the describe tool twice (once with "Event" and once with "Task")
-      //   const describeEvent = await this.toolTestingService.runTest(
-      //     serverUrl,
-      //     describeToolId,
-      //     { objectName: 'Event' },
-      //   );
-      //   //   this.logger.debug(`Describe results: ${JSON.stringify(describeEvent)}`);
-      //   const describeTask = await this.toolTestingService.runTest(
-      //     serverUrl,
-      //     describeToolId,
-      //     { objectName: 'Task' },
-      //   );
-      //   //   this.logger.debug(`Describe results: ${JSON.stringify(describeTask)}`);
-
-      //   const eventFields =
-      //     JSON.parse(describeEvent.result.body)?.result.fieldNames || [];
-      //   const taskFields =
-      //     JSON.parse(describeTask.result.body)?.result.fieldNames || [];
-
-      // Build queries dynamically
+      // Step 2: Build queries dynamically
       const eventQuery = `SELECT ${eventFields.join(', ')} FROM Event WHERE WhoId = '${recordId}'`;
       const taskQuery = `SELECT ${taskFields.join(', ')} FROM Task WHERE WhoId = '${recordId}'`;
 
@@ -75,6 +57,7 @@ export class LeadRatingService {
           query: eventQuery,
         },
       );
+      apiCount++;
 
       const activityTaskRaw = await this.toolTestingService.runTest(
         serverUrl,
@@ -83,6 +66,7 @@ export class LeadRatingService {
           query: taskQuery,
         },
       );
+      apiCount++;
 
       // Transform activity results
       const activityResults = {
@@ -90,7 +74,6 @@ export class LeadRatingService {
         task: this.transformActivityResult(activityTaskRaw),
       };
 
-      // put questions inside prompt
       // Step 4: Run LLM call
       const systemPrompt = `
       You are an expert Salesforce evaluator tasked with assessing an SDR's responsiveness and performance for a given lead. You will be provided with two data sets:
@@ -101,31 +84,27 @@ Using this information, evaluate the following:
 
 ${criteriaQuestions.join('\n')}
 
-Was the SDR responsive to the lead?
-Did the SDR follow proper Salesforce protocols?
-Was the lead outcome successful?
-Did the SDR demonstrate strong sales skills?
 For each question, provide a response of either 'Yes,' 'No,' or 'NA.' Justify your answer in one sentence, referencing the provided data. If the available data is insufficient to answer a question, respond with 'NA' and note that there is not enough information to make a determination.
 Provide your response only as a structured JSON object in the following format, without any additional text or explanation:
     {
   "evaluation": [
     {
-      "question": "Was the SDR responsive to the lead?",
+      "question": "${criteriaQuestions[0]}",
       "outcome": "Yes/No/NA",
       "justification": "Provide justification here."
     },
     {
-      "question": "Did the SDR follow proper Salesforce protocols?",
+      "question": "${criteriaQuestions[1]}",
       "outcome": "Yes/No/NA",
       "justification": "Provide justification here."
     },
     {
-      "question": "Was the lead outcome successful?",
+      "question": "${criteriaQuestions[2]}",
       "outcome": "Yes/No/NA",
       "justification": "Provide justification here."
     },
     {
-      "question": "Did the SDR demonstrate strong sales skills?",
+      "question": "${criteriaQuestions[3]}",
       "outcome": "Yes/No/NA",
       "justification": "Provide justification here."
     }
@@ -180,6 +159,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
           createdDate, // Include lead's created date
           country, // Include lead's country
           evaluation: jsonResponse.evaluation, // Keep existing evaluation data
+          apiCount, // Include the API count
         };
       } catch (error) {
         console.error('Error processing LLM response:', error);
@@ -213,70 +193,66 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
     describeToolId: string,
     activityToolId: string,
     patchToolId: string,
-    recordIds: string[], // List of record IDs
+    criteriaRecordId: string,
+    // recordIds: string[],
     instanceName: string,
     userId: string,
   ): Promise<any[]> {
     try {
+      let apiCount = 0;
+      const NDays = 3;
+      const leadRecords = await this.toolTestingService.runTest(
+        serverUrl,
+        activityToolId,
+        {
+          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays}`,
+        },
+      );
+      apiCount++;
+
+      const recordIds = leadRecords.result.records.map(
+        (record: any) => record.Id,
+      );
+
       this.logger.debug(
         `Rating leads: ${recordIds} with tools: ${recordToolId}, ${describeToolId}, ${activityToolId}`,
       );
-      // Prepare an array to hold the processed results
       const tableData: any[] = [];
 
-      // Initialize the column names (header row for the table)
-      //   const columns = [
-      //     'LeadId',
-      //     'Lead Name',
-      //     'Status',
-      //     'Owner ID',
-      //     'Created Date',
-      //     'Country',
-      //     'Was the SDR responsive to the lead?',
-      //     'Justification',
-      //     'Did the SDR follow proper Salesforce protocols?',
-      //     'Justification',
-      //     'Was the lead outcome successful?',
-      //     'Justification',
-      //     'Did the SDR demonstrate strong sales skills?',
-      //     'Justification',
-      //   ];
-      //   tableData.push(columns); // Add the header row to the table
-
-      // Step 2: Run the describe tool twice (once with "Event" and once with "Task")
+      // Step 1: Run the describe tool twice (once with "Event" and once with "Task")
       const describeEvent = await this.toolTestingService.runTest(
         serverUrl,
         describeToolId,
         { objectName: 'Event' },
       );
-      //   this.logger.debug(`Describe results: ${JSON.stringify(describeEvent)}`);
+      apiCount++;
       const describeTask = await this.toolTestingService.runTest(
         serverUrl,
         describeToolId,
         { objectName: 'Task' },
       );
-      //   this.logger.debug(`Describe results: ${JSON.stringify(describeTask)}`);
-
+      apiCount++;
       const eventFields =
         JSON.parse(describeEvent.result.body)?.result.fieldNames || [];
       const taskFields =
         JSON.parse(describeTask.result.body)?.result.fieldNames || [];
 
-      // Get criteria record data
+      // Step 2: Get criteria record data
       const criteriaRecordData = await this.toolTestingService.runTest(
         serverUrl,
         recordToolId,
         {
-          recordId: 'PLACEHOLDER',
+          recordId: criteriaRecordId,
           objectName: 'Budy_Lead_Criteria__c',
         },
       );
+      apiCount++;
       const criteriaQuestions = criteriaRecordData.result?.recordData || []; // get questions from criteria objects
 
-      // Process each lead
+      // Step 3: Process each lead
       for (const recordId of recordIds) {
         try {
-          // Call rateLead for each record ID
+          // Step 3.1: Call rateLead for each record ID
           const leadEvaluation = await this.rateLead(
             serverUrl,
             recordToolId,
@@ -285,54 +261,57 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
             taskFields,
             criteriaQuestions,
             recordId,
+            apiCount,
             instanceName,
             userId,
           );
 
-          // Extract evaluation data
+          // Step 3.2: Extract evaluation data
           const evaluation = leadEvaluation?.evaluation || [];
-          const row: any[] = [
-            recordId,
-            // leadEvaluation.leadName,
-            // leadEvaluation.status,
-            // leadEvaluation.ownerId,
-            // leadEvaluation.createdDate,
-            // leadEvaluation.country,
-          ]; // Start the row with the LeadId
+          const leadData: Record<string, any> = {
+            id: recordId,
+          };
 
-          // Append evaluation results to the row
-          for (const entry of evaluation) {
-            row.push(entry.outcome); // Add outcome
-            row.push(entry.justification); // Add justification
-          }
+          // Step 3.3: Append evaluation results to the row
+          evaluation.forEach((entry, index) => {
+            const criteriaKey = `Budy_Criteria_${index + 1}__c`;
+            const justificationKey = `Budy_Justification_${index + 1}__c`;
+            leadData[criteriaKey] = entry.outcome;
+            leadData[justificationKey] = entry.justification;
+          });
+          // Step 3.4: Compute lead score
           const leadScore = this.computeLeadScore(evaluation);
-          row.push(leadScore); // Add the lead score to the row
+          leadData['Budy_Lead_Score__c'] = leadScore;
 
-          // Add the row to the table data
-          tableData.push(row);
+          // Step 3.5: Add the row to the table data
+          tableData.push(leadData);
+
+          // Step 3.7: Update the API count
+          apiCount = leadEvaluation.apiCount;
         } catch (error) {
           this.logger.error(
             `Error processing LeadId ${recordId}: ${error.message}`,
           );
         }
       }
-
-    //   await this.toolTestingService.runTest(serverUrl, patchToolId, {
-    //     objectName: 'Lead',
-    //     fieldNames: [
-    //       'id',
-    //       'Budy_Criteria_1__c',
-    //       'Budy_Jusitification_1__c',
-    //       'Budy_Criteria_2__c',
-    //       'Budy_Jusitification_2__c',
-    //       'Budy_Criteria_3__c',
-    //       'Budy_Jusitification_3__c',
-    //       'Budy_Criteria_4__c',
-    //       'Budy_Jusitification_4__c',
-    //       'Budy_Lead_Score__c',
-    //     ],
-    //     records: tableData,
-    //   });
+      this.logger.debug(`Lead Results: ${JSON.stringify(tableData)}`);
+      await this.toolTestingService.runTest(serverUrl, patchToolId, {
+        objectName: 'Lead',
+        fieldNames: [
+          'id',
+          'Budy_Criteria_1__c',
+          'Budy_Jusitification_1__c',
+          'Budy_Criteria_2__c',
+          'Budy_Jusitification_2__c',
+          'Budy_Criteria_3__c',
+          'Budy_Jusitification_3__c',
+          'Budy_Criteria_4__c',
+          'Budy_Jusitification_4__c',
+          'Budy_Lead_Score__c',
+        ],
+        records: tableData,
+      });
+      apiCount++;
 
       //   // Create a Google Folder
       //   const folderTitle = 'Lead Ratings Folder';
@@ -350,7 +329,93 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       //   // Add the table data to a sheet
       //   await this.googleSheetService.writeToSheet(sheetId, tableData);
       //   this.logger.debug(`Wrote data to Google Sheet: ${sheetId}`);
-      this.logger.debug(`Table Data: ${JSON.stringify(tableData)}`);
+
+      // query to get all SDRs
+      // query to get count per lead status for all SDRs
+      // query to get count per lead score for all SDRs
+
+      // Get all SDR Ids
+      //   const sdrQuery = `SELECT OwnerId
+      //                     FROM Lead
+      //                     WHERE CreatedDate = LAST_N_DAYS:3
+      //                     GROUP BY OwnerId
+      //                     `;
+      //   const sdrResults = await this.toolTestingService.runTest(
+      //     serverUrl,
+      //     activityToolId,
+      //     { query: sdrQuery },
+      //   );
+      //   apiCount++;
+      //   const sdrIds = sdrResults.result.records.map(
+      //     (record: any) => record.OwnerId,
+      //   );
+
+      //  // Get status data for each SDR
+      const statusQuery = `SELECT OwnerId, Status, COUNT(Id) LeadCount
+                            FROM Lead
+                            WHERE CreatedDate = LAST_N_DAYS:${NDays}
+                            GROUP BY OwnerId, Status
+                            ORDER BY OwnerId
+                            `;
+      const statusResults = await this.toolTestingService.runTest(
+        serverUrl,
+        activityToolId,
+        { query: statusQuery },
+      );
+      apiCount++;
+      const statusData = statusResults.result.records;
+      //   // Get score data for each SDR
+      //   const scoreQuery = `SELECT OwnerId, Status, COUNT(Id) LeadCount
+      //                         FROM Lead
+      //                         WHERE CreatedDate = LAST_N_DAYS:14
+      //                         GROUP BY OwnerId, Status
+      //                         ORDER BY OwnerId
+      //                         `;
+      //   const scoreResults = await this.toolTestingService.runTest(
+      //     serverUrl,
+      //     activityToolId,
+      //     { query: scoreQuery },
+      //   );
+      //   apiCount++;
+      //   const scoreData = statusResults.result.records;
+
+      const parseSDRReport = (response) => {
+        const report = {};
+
+        response.records.forEach((record) => {
+          const { OwnerId, Status, LeadCount } = record;
+
+          // Initialize SDR report if not already present
+          if (!report[OwnerId]) {
+            report[OwnerId] = {
+              'Open Leads': 0,
+              'Dropped Leads': 0,
+              'Qualified Leads': 0,
+              'Total Leads': 0,
+            };
+          }
+
+          // Categorize counts based on Status
+          if (['New', 'Working'].includes(Status)) {
+            report[OwnerId]['Open Leads'] += LeadCount;
+          } else if (Status === 'Dropped') {
+            report[OwnerId]['Dropped Leads'] += LeadCount;
+          } else if (Status === 'Qualified') {
+            report[OwnerId]['Qualified Leads'] += LeadCount;
+          }
+
+          // Increment total lead count
+          report[OwnerId]['Total Leads'] += LeadCount;
+        });
+
+        return report;
+      };
+
+      const sdrReport = parseSDRReport(statusData);
+      this.logger.debug(`SDR Report: ${JSON.stringify(sdrReport)}`);
+
+      this.logger.debug(`Approximate API Count: ${apiCount}`);
+
       return tableData;
     } catch (error) {
       throw new Error(`Error in rateLeads: ${error.message}`);
