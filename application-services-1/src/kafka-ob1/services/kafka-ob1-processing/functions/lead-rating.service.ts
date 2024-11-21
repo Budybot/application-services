@@ -379,7 +379,9 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         { query: statusQuery },
       );
       apiCount++;
-      const statusData = JSON.parse(statusResults.result.body).records;
+      const statusResponse = JSON.parse(statusResults.result.body);
+      console.log('Status Data:', statusResponse);
+
       //   // Get score data for each SDR
       //   const scoreQuery = `SELECT OwnerId, Status, COUNT(Id) LeadCount
       //                         FROM Lead
@@ -427,7 +429,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         return report;
       };
 
-      const sdrReport = parseSDRReport(statusData);
+      const sdrReport = parseSDRReport(statusResponse);
       this.logger.debug(`SDR Report: ${JSON.stringify(sdrReport)}`);
 
       this.logger.debug(`Approximate API Count: ${apiCount}`);
