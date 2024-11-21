@@ -206,7 +206,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         serverUrl,
         activityToolId,
         {
-          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays} LIMIT 10`,
+          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays} LIMIT 5`,
         },
       );
       apiCount++;
@@ -371,7 +371,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
                             FROM Lead
                             WHERE CreatedDate = LAST_N_DAYS:${NDays}
                             GROUP BY OwnerId, Status
-                            ORDER BY OwnerId LIMIT 10
+                            ORDER BY OwnerId LIMIT 5
                             `;
       const statusResults = await this.toolTestingService.runTest(
         serverUrl,
@@ -429,7 +429,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         return report;
       };
 
-      const sdrReport = parseSDRReport(statusResponse);
+      const sdrReport = parseSDRReport(statusResponse.result);
       this.logger.debug(`SDR Report: ${JSON.stringify(sdrReport)}`);
 
       this.logger.debug(`Approximate API Count: ${apiCount}`);
