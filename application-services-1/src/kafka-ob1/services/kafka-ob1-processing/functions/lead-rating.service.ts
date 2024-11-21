@@ -200,18 +200,18 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
   ): Promise<any[]> {
     try {
       let apiCount = 0;
-      const NDays = 3;
+      const NDays = 100;
       const leadRecords = await this.toolTestingService.runTest(
         serverUrl,
         activityToolId,
         {
-          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays}`,
+          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays} LIMIT 10`,
         },
       );
       apiCount++;
       console.log('Lead Records Response:', leadRecords);
 
-      const recordIds = leadRecords.result.records.map(
+      const recordIds = leadRecords.result.body.records.map(
         (record: any) => record.Id,
       );
 
@@ -356,7 +356,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
                             FROM Lead
                             WHERE CreatedDate = LAST_N_DAYS:${NDays}
                             GROUP BY OwnerId, Status
-                            ORDER BY OwnerId
+                            ORDER BY OwnerId LIMIT 10
                             `;
       const statusResults = await this.toolTestingService.runTest(
         serverUrl,
