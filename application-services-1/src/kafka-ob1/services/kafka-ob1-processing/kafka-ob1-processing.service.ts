@@ -145,7 +145,7 @@ export class KafkaOb1ProcessingService {
         //   );
         //   response = { messageContent: { leadRatingResult: leadRatingResult } };
         //   break;
-        case 'rate-leads-PLACEHOLDER':
+        case 'rate-leads':
           const {
             leadIds,
             recordToolId: recordToolId2,
