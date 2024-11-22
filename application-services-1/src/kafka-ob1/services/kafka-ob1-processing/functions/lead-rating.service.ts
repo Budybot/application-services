@@ -194,6 +194,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
     patchToolId: string,
     createToolId: string,
     criteriaRecordId: string,
+    rateLeads: boolean = true,
     makeSnapshot: boolean,
     instanceName: string,
     userId: string,
@@ -215,7 +216,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         },
       );
       apiCount++;
-      console.log('Lead Records Response:', leadRecords);
+    //   console.log('Lead Records Response:', leadRecords);
       const responseBody = JSON.parse(leadRecords.toolresult.body);
 
       const recordIds = responseBody.result.records.map(
@@ -265,7 +266,11 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         recordData.Question_4__c,
       ];
       // Step 4: Process each lead
-      for (const recordId of recordIds) {
+      let recordIdsToRate = recordIds;
+      if (!rateLeads) {
+        recordIdsToRate = [];
+      }
+      for (const recordId of recordIdsToRate) {
         try {
           // Step 4.1: Call rateLead for each record ID
           const leadEvaluation = await this.rateLead(
@@ -358,7 +363,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       //  Step 6.1: Get status data for each SDR
       const statusQuery = `SELECT OwnerId, Owner.Name, Status, COUNT(Id) LeadCount
                             FROM Lead
-                            WHERE CreatedDate = LAST_N_DAYS:${NDays}
+                            WHERE Id IN ${recordIds.join(',')}
                             GROUP BY OwnerId, Owner.Name, Status
                             ORDER BY OwnerId
                             `;
@@ -375,7 +380,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       // Step 6.2: Get score data for each SDR
       const scoreQuery = `SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
                     FROM Lead
-                    WHERE CreatedDate = LAST_N_DAYS:${NDays}
+                    WHERE Id IN ${recordIds.join(',')}
                     GROUP BY OwnerId, Budy_Lead_Score_Bucket__c
                     ORDER BY OwnerId
                     `;
