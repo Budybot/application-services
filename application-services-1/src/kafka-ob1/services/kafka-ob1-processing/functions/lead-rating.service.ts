@@ -341,7 +341,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
                             FROM Lead
                             WHERE CreatedDate = LAST_N_DAYS:${NDays}
                             GROUP BY OwnerId, Owner.Name, Status
-                            ORDER BY OwnerId
+                            ORDER BY OwnerId LIMIT 20
                             `;
 
       const statusResults = await this.toolTestingService.runTest(
@@ -358,7 +358,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
                     FROM Lead
                     WHERE CreatedDate = LAST_N_DAYS:${NDays}
                     GROUP BY OwnerId, Budy_Lead_Score_Bucket__c
-                    ORDER BY OwnerId
+                    ORDER BY OwnerId LIMIT 20
                     `;
       const scoreResults = await this.toolTestingService.runTest(
         serverUrl,
