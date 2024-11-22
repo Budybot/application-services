@@ -22,6 +22,7 @@ export class ToolTestingService {
       });
 
       // Return the response data
+      this.logger.debug(`Response from tool: ${JSON.stringify(response.data)}`);
       return response.data;
     } catch (error) {
       // Handle errors and throw an HTTPException
