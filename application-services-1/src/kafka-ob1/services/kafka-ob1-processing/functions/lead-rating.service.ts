@@ -382,20 +382,21 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       const statusResponse = JSON.parse(statusResults.result.body);
       console.log('Status Data:', statusResponse);
 
-      //   // Get score data for each SDR
-      //   const scoreQuery = `SELECT OwnerId, Status, COUNT(Id) LeadCount
-      //                         FROM Lead
-      //                         WHERE CreatedDate = LAST_N_DAYS:14
-      //                         GROUP BY OwnerId, Status
-      //                         ORDER BY OwnerId
-      //                         `;
-      //   const scoreResults = await this.toolTestingService.runTest(
-      //     serverUrl,
-      //     activityToolId,
-      //     { query: scoreQuery },
-      //   );
-      //   apiCount++;
-      //   const scoreData = statusResults.result.records;
+      // Get score data for each SDR
+      const scoreQuery = `SELECT OwnerId, Budy_Lead_Score__c, COUNT(Id) LeadCount
+                    FROM Lead
+                    WHERE CreatedDate = LAST_N_DAYS:${NDays}
+                    GROUP BY OwnerId, Budy_Lead_Score__c
+                    ORDER BY OwnerId LIMIT 5
+                    `;
+      const scoreResults = await this.toolTestingService.runTest(
+        serverUrl,
+        queryToolId,
+        { query: scoreQuery },
+      );
+      apiCount++;
+      const scoreResponse = JSON.parse(scoreResults.result.body);
+      console.log('Score Data:', scoreResponse);
 
       const parseSDRReport = (response) => {
         const report = {};
@@ -428,23 +429,71 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
 
         return report;
       };
+      const parseScoreReport = (response) => {
+        const scoreReport = {};
 
-      const transformToSnapshotRecords = (sdrReport) => {
+        response.records.forEach((record) => {
+          const { OwnerId, Budy_Lead_Score__c, LeadCount } = record;
+          const score = Budy_Lead_Score__c;
+          const leadCount = Number(LeadCount);
+
+          // Determine bucket based on score
+          let bucket = 0;
+          if (score === 0) {
+            bucket = 1;
+          } else if (score === 25) {
+            bucket = 2;
+          } else if (score === 50) {
+            bucket = 3;
+          } else if (score === 75 || score === 100) {
+            bucket = 4;
+          } else {
+            // Handle unexpected score values if necessary
+            bucket = 0;
+          }
+
+          // Initialize SDR report if not already present
+          if (!scoreReport[OwnerId]) {
+            scoreReport[OwnerId] = {
+              Bucket_1_Leads__c: 0,
+              Bucket_2_Leads__c: 0,
+              Bucket_3_Leads__c: 0,
+              Bucket_4_Leads__c: 0,
+            };
+          }
+
+          // Increment bucket count
+          if (bucket >= 1 && bucket <= 4) {
+            scoreReport[OwnerId][`Bucket_${bucket}_Leads__c`] += leadCount;
+          }
+        });
+
+        return scoreReport;
+      };
+
+      const transformToSnapshotRecords = (sdrReport, scoreReport) => {
         const records = [];
 
         Object.entries(sdrReport).forEach(([ownerId, leadData]) => {
+          const scoreData = scoreReport[ownerId] || {
+            Bucket_1_Leads__c: 0,
+            Bucket_2_Leads__c: 0,
+            Bucket_3_Leads__c: 0,
+            Bucket_4_Leads__c: 0,
+          };
+
           records.push({
             SDR_Id__c: ownerId,
             Name: 'Placeholder Name', // Replace with actual SDR name if available
-            Bucket_1_Leads__c: 0, // Placeholder for bucket logic
-            Bucket_2_Leads__c: 0, // Placeholder for bucket logic
-            Bucket_3_Leads__c: 0, // Placeholder for bucket logic
-            Bucket_4_Leads__c: 0, // Placeholder for bucket logic
+            Bucket_1_Leads__c: scoreData.Bucket_1_Leads__c,
+            Bucket_2_Leads__c: scoreData.Bucket_2_Leads__c,
+            Bucket_3_Leads__c: scoreData.Bucket_3_Leads__c,
+            Bucket_4_Leads__c: scoreData.Bucket_4_Leads__c,
             Open_Leads__c: leadData['Open Leads'],
             Dropped_Leads__c: leadData['Dropped Leads'],
             Qualified_Leads__c: leadData['Qualified Leads'],
             Total_Leads__c: leadData['Total Leads'],
-            Lead_Criteria_Version__c: '1', // Static version value, replace as needed
+            Lead_Criteria_Version__c: recordData.Name, // Replace as needed
             Year_Work_Week__c: '2024_Week_1', // Replace with dynamic calculation if needed
           });
         });
@@ -456,7 +505,13 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
 
       const sdrReport = parseSDRReport(statusResponse.result);
       this.logger.debug(`SDR Report: ${JSON.stringify(sdrReport)}`);
-      const snapshotRecords = transformToSnapshotRecords(sdrReport);
+      const scoreReport = parseScoreReport(scoreResponse.result);
+      this.logger.debug(`Score Report: ${JSON.stringify(scoreReport)}`);
+
+      const snapshotRecords = transformToSnapshotRecords(
+        sdrReport,
+        scoreReport,
+      );
 
       await this.toolTestingService.runTest(serverUrl, createToolId, {
         object_name: 'Budy_SDR_Snapshot__c',
