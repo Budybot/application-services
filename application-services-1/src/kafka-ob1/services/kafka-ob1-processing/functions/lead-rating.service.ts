@@ -207,7 +207,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         serverUrl,
         queryToolId,
         {
-          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays} LIMIT 5`,
+          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays} LIMIT 1`,
         },
       );
       apiCount++;
@@ -542,11 +542,20 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         sdrReport,
         scoreReport,
       );
+      const snapshotRecordChunks = chunkArray(snapshotRecords, chunkSize);
 
-      await this.toolTestingService.runTest(serverUrl, createToolId, {
-        object_name: 'Budy_SDR_Snapshot__c',
-        records: snapshotRecords,
-      });
+      for (const chunk of snapshotRecordChunks) {
+        await this.toolTestingService.runTest(serverUrl, createToolId, {
+          object_name: 'Budy_SDR_Snapshot__c',
+          records: chunk,
+        });
+        apiCount++;
+      }
+
+      //   await this.toolTestingService.runTest(serverUrl, createToolId, {
+      //     object_name: 'Budy_SDR_Snapshot__c',
+      //     records: snapshotRecords,
+      //   });
 
       this.logger.debug(
         `Lead rating process completed successfully. Total API calls: ${apiCount}`,
