@@ -39,7 +39,7 @@ export class LeadRatingService {
       const leadData = {
         success: leadDataRaw.success,
         executionTime: leadDataRaw.executionTime,
-        result: JSON.parse(leadDataRaw.result.body)?.result.recordData || {},
+        result: JSON.parse(leadDataRaw.toolresult.body)?.result.recordData || {},
       };
 
       // Step 2: Build queries dynamically
@@ -145,7 +145,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         // Parse the cleaned string into JSON
         const jsonResponse = JSON.parse(cleanedResponse);
 
-        const leadName = leadData.result?.Name || 'Unknown';
+        const leadName = leadData.results?.Name || 'Unknown';
         const ownerId = leadData.result?.OwnerId || 'Unknown';
         const status = leadData.result?.Status || 'Unknown';
         const createdDate = leadData.result?.CreatedDate || 'Unknown';
@@ -168,7 +168,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
     }
   }
   private transformActivityResult(activityResultRaw: any): any {
-    const parsedBody = JSON.parse(activityResultRaw.result.body);
+    const parsedBody = JSON.parse(activityResultRaw.toolresult.body);
     const records = parsedBody?.result?.records || [];
 
     // Filter out null fields from each record
@@ -215,7 +215,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       );
       apiCount++;
       console.log('Lead Records Response:', leadRecords);
-      const responseBody = JSON.parse(leadRecords.result.body);
+      const responseBody = JSON.parse(leadRecords.toolresult.body);
 
       const recordIds = responseBody.result.records.map(
         (record: any) => record.Id,
@@ -237,9 +237,9 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       );
       apiCount++;
       const eventFields =
-        JSON.parse(describeEvent.result.body)?.result.fieldNames || [];
+        JSON.parse(describeEvent.toolresult.body)?.result.fieldNames || [];
       const taskFields =
-        JSON.parse(describeTask.result.body)?.result.fieldNames || [];
+        JSON.parse(describeTask.toolresult.body)?.result.fieldNames || [];
 
       // Step 3: Get criteria record data
       const criteriaRecordData = await this.toolTestingService.runTest(
@@ -251,7 +251,9 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         },
       );
       apiCount++;
-      const criteriaResponseBody = JSON.parse(criteriaRecordData.result.body);
+      const criteriaResponseBody = JSON.parse(
+        criteriaRecordData.toolresult.body,
+      );
       const recordData = criteriaResponseBody.result?.recordData || {};
 
       // Extract the questions into a list
@@ -366,7 +368,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         { query: statusQuery },
       );
       apiCount++;
-      const statusResponse = JSON.parse(statusResults.result.body);
+      const statusResponse = JSON.parse(statusResults.toolresult.body);
       //   console.log('Status Data:', statusResponse.result.records[0]);
 
       // Step 6.2: Get score data for each SDR
@@ -382,7 +384,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         { query: scoreQuery },
       );
       apiCount++;
-      const scoreResponse = JSON.parse(scoreResults.result.body);
+      const scoreResponse = JSON.parse(scoreResults.toolresult.body);
       //   console.log('Sample Score Data:', scoreResponse.result.records[0]);
 
       const parseSDRReport = (response) => {
