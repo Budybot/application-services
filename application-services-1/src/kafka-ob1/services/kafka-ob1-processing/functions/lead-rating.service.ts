@@ -318,30 +318,62 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       }
       //   this.logger.debug(`Lead Results: ${JSON.stringify(tableData)}`);
       // Step 5: Run the patch tool to update the records
-      await this.toolTestingService.runTest(serverUrl, patchToolId, {
-        record_type: 'Lead',
-        field_names: [
-          'Budy_Criteria_1__c',
-          'Budy_Justification_1__c',
-          'Budy_Criteria_2__c',
-          'Budy_Justification_2__c',
-          'Budy_Criteria_3__c',
-          'Budy_Justification_3__c',
-          'Budy_Criteria_4__c',
-          'Budy_Justification_4__c',
-          'Budy_Lead_Score__c',
-          'Budy_Lead_Score_Bucket__c',
-        ],
-        records: tableData,
-      });
-      apiCount++;
+      //   await this.toolTestingService.runTest(serverUrl, patchToolId, {
+      //     record_type: 'Lead',
+      //     field_names: [
+      //       'Budy_Criteria_1__c',
+      //       'Budy_Justification_1__c',
+      //       'Budy_Criteria_2__c',
+      //       'Budy_Justification_2__c',
+      //       'Budy_Criteria_3__c',
+      //       'Budy_Justification_3__c',
+      //       'Budy_Criteria_4__c',
+      //       'Budy_Justification_4__c',
+      //       'Budy_Lead_Score__c',
+      //       'Budy_Lead_Score_Bucket__c',
+      //     ],
+      //     records: tableData,
+      //   });
+      //   apiCount++;
+      // Helper function to split the array into chunks of 20
+      function chunkArray(array: any[], chunkSize: number): any[][] {
+        const chunks = [];
+        for (let i = 0; i < array.length; i += chunkSize) {
+          chunks.push(array.slice(i, i + chunkSize));
+        }
+        return chunks;
+      }
+
+      // Process tableData in chunks of 20
+      const chunkSize = 20;
+      const tableDataChunks = chunkArray(tableData, chunkSize);
+
+      for (const chunk of tableDataChunks) {
+        await this.toolTestingService.runTest(serverUrl, patchToolId, {
+          record_type: 'Lead',
+          field_names: [
+            'Budy_Criteria_1__c',
+            'Budy_Justification_1__c',
+            'Budy_Criteria_2__c',
+            'Budy_Justification_2__c',
+            'Budy_Criteria_3__c',
+            'Budy_Justification_3__c',
+            'Budy_Criteria_4__c',
+            'Budy_Justification_4__c',
+            'Budy_Lead_Score__c',
+            'Budy_Lead_Score_Bucket__c',
+          ],
+          records: chunk,
+        });
+        apiCount++;
+      }
 
       //  // Get status data for each SDR
       const statusQuery = `SELECT OwnerId, Owner.Name, Status, COUNT(Id) LeadCount
                             FROM Lead
                             WHERE CreatedDate = LAST_N_DAYS:${NDays}
                             GROUP BY OwnerId, Owner.Name, Status
-                            ORDER BY OwnerId LIMIT 20
+                            ORDER BY OwnerId
                             `;
 
       const statusResults = await this.toolTestingService.runTest(
@@ -358,7 +390,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
                     FROM Lead
                     WHERE CreatedDate = LAST_N_DAYS:${NDays}
                     GROUP BY OwnerId, Budy_Lead_Score_Bucket__c
-                    ORDER BY OwnerId LIMIT 20
+                    ORDER BY OwnerId
                     `;
       const scoreResults = await this.toolTestingService.runTest(
         serverUrl,
