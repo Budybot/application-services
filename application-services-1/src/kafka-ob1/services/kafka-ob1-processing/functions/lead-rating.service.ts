@@ -39,7 +39,8 @@ export class LeadRatingService {
       const leadData = {
         success: leadDataRaw.success,
         executionTime: leadDataRaw.executionTime,
-        result: JSON.parse(leadDataRaw.toolresult.body)?.result.recordData || {},
+        result:
+          JSON.parse(leadDataRaw.toolresult.body)?.result.recordData || {},
       };
 
       // Step 2: Build queries dynamically
@@ -145,7 +146,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         // Parse the cleaned string into JSON
         const jsonResponse = JSON.parse(cleanedResponse);
 
-        const leadName = leadData.results?.Name || 'Unknown';
+        const leadName = leadData.result?.Name || 'Unknown';
         const ownerId = leadData.result?.OwnerId || 'Unknown';
         const status = leadData.result?.Status || 'Unknown';
         const createdDate = leadData.result?.CreatedDate || 'Unknown';
