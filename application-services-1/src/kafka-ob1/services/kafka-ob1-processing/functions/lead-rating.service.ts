@@ -207,7 +207,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         serverUrl,
         queryToolId,
         {
-          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays} LIMIT 5`,
+          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays} LIMIT 10`,
         },
       );
       apiCount++;
@@ -419,6 +419,8 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
             bucketNumber = 3;
           } else if (bucket === 'Green') {
             bucketNumber = 4;
+          } else {
+            this.logger.warn(`Unknown bucket: ${bucket}`);
           }
 
           // Initialize SDR report if not already present
