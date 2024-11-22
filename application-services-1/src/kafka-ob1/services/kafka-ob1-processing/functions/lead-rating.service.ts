@@ -35,8 +35,6 @@ export class LeadRatingService {
         },
       );
       apiCount++;
-      //   this.logger.debug(`Raw Lead Data: ${JSON.stringify(leadDataRaw)}`);
-
       // Restructure the lead data to only contain field names and values
       const leadData = {
         success: leadDataRaw.success,
@@ -195,35 +193,34 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
     patchToolId: string,
     createToolId: string,
     criteriaRecordId: string,
-    // recordIds: string[],
+    makeSnapshot: boolean,
     instanceName: string,
     userId: string,
+    NDays: number = 14,
+    limit?: number,
   ): Promise<any[]> {
     try {
       let apiCount = 0;
-      const NDays = 100;
       // Step 1: Get the first 10 lead records
+      let leadRecordQuery = `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays}`;
+      if (limit) {
+        leadRecordQuery += ` LIMIT ${limit}`;
+      }
       const leadRecords = await this.toolTestingService.runTest(
         serverUrl,
         queryToolId,
         {
-          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays} LIMIT 1`,
+          query: leadRecordQuery,
         },
       );
       apiCount++;
-      console.log('Lead Records Response:', leadRecords);
-
-      // Parse the JSON string to an object
+    //   console.log('Lead Records Response:', leadRecords);
       const responseBody = JSON.parse(leadRecords.result.body);
 
-      // Now access the records
       const recordIds = responseBody.result.records.map(
         (record: any) => record.Id,
       );
 
-      //   this.logger.debug(
-      //     `Rating leads: ${recordIds} with tools: ${recordToolId}, ${describeToolId}, ${queryToolId}, ${patchToolId}, ${createToolId}`,
-      //   );
       const tableData: any[] = [];
 
       // Step 2: Run the describe tool twice (once with "Event" and once with "Task")
@@ -264,7 +261,6 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         recordData.Question_3__c,
         recordData.Question_4__c,
       ];
-      //   this.logger.debug(`Criteria Questions: ${criteriaQuestions}`);
       // Step 4: Process each lead
       for (const recordId of recordIds) {
         try {
@@ -316,26 +312,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
           );
         }
       }
-      //   this.logger.debug(`Lead Results: ${JSON.stringify(tableData)}`);
-      // Step 5: Run the patch tool to update the records
-      //   await this.toolTestingService.runTest(serverUrl, patchToolId, {
-      //     record_type: 'Lead',
-      //     field_names: [
-      //       'Budy_Criteria_1__c',
-      //       'Budy_Justification_1__c',
-      //       'Budy_Criteria_2__c',
-      //       'Budy_Justification_2__c',
-      //       'Budy_Criteria_3__c',
-      //       'Budy_Justification_3__c',
-      //       'Budy_Criteria_4__c',
-      //       'Budy_Justification_4__c',
-      //       'Budy_Lead_Score__c',
-      //       'Budy_Lead_Score_Bucket__c',
-      //     ],
-      //     records: tableData,
-      //   });
-      //   apiCount++;
-      // Helper function to split the array into chunks of 20
+      // Helper function to chunk an array into smaller arrays
       function chunkArray(array: any[], chunkSize: number): any[][] {
         const chunks = [];
         for (let i = 0; i < array.length; i += chunkSize) {
@@ -344,7 +321,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         return chunks;
       }
 
-      // Process tableData in chunks of 20
+      // Step 5: Split the table data into chunks and run the patch tool for each chunk
       const chunkSize = 20;
       const tableDataChunks = chunkArray(tableData, chunkSize);
 
@@ -368,7 +345,8 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         apiCount++;
       }
 
-      //  // Get status data for each SDR
+      // Step 6: Create snapshot records
+      //  Step 6.1: Get status data for each SDR
       const statusQuery = `SELECT OwnerId, Owner.Name, Status, COUNT(Id) LeadCount
                             FROM Lead
                             WHERE CreatedDate = LAST_N_DAYS:${NDays}
@@ -383,9 +361,9 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       );
       apiCount++;
       const statusResponse = JSON.parse(statusResults.result.body);
-      console.log('Status Data:', statusResponse.result.records[0]);
+    //   console.log('Status Data:', statusResponse.result.records[0]);
 
-      // Get score data for each SDR
+      // Step 6.2: Get score data for each SDR
       const scoreQuery = `SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
                     FROM Lead
                     WHERE CreatedDate = LAST_N_DAYS:${NDays}
@@ -399,7 +377,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       );
       apiCount++;
       const scoreResponse = JSON.parse(scoreResults.result.body);
-      console.log('Sample Score Data:', scoreResponse.result.records[0]);
+    //   console.log('Sample Score Data:', scoreResponse.result.records[0]);
 
       const parseSDRReport = (response) => {
         const report = {};
@@ -499,7 +477,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       }
 
       const currentYearWeek = getYearAndWeek();
-      console.log('Current Year Week:', currentYearWeek);
+    //   console.log('Current Year Week:', currentYearWeek);
 
       const transformToSnapshotRecords = (sdrReport, scoreReport) => {
         const records = [];
@@ -524,14 +502,12 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
             Qualified_Leads__c: leadData['Qualified Leads'],
             Total_Leads__c: leadData['Total Leads'],
             Lead_Criteria_Version__c: recordData.Name,
-            Year_Work_Week__c: '2024_Week_48', //currentYearWeek,
+            Year_Work_Week__c: currentYearWeek,
           });
         });
 
         return records;
       };
-
-      // Example usage
 
       const sdrReport = parseSDRReport(statusResponse.result);
       //   this.logger.debug(`SDR Report: ${JSON.stringify(sdrReport)}`);
@@ -544,6 +520,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       );
       const snapshotRecordChunks = chunkArray(snapshotRecords, chunkSize);
 
+      // Step 7: Run the create tool for each snapshot record chunk
       for (const chunk of snapshotRecordChunks) {
         await this.toolTestingService.runTest(serverUrl, createToolId, {
           object_name: 'Budy_SDR_Snapshot__c',
@@ -551,11 +528,6 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         });
         apiCount++;
       }
-
-      //   await this.toolTestingService.runTest(serverUrl, createToolId, {
-      //     object_name: 'Budy_SDR_Snapshot__c',
-      //     records: snapshotRecords,
-      //   });
 
       this.logger.debug(
         `Lead rating process completed successfully. Total API calls: ${apiCount}`,
