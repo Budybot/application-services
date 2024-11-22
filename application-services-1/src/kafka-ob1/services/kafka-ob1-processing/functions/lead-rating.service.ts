@@ -222,7 +222,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       );
 
       this.logger.debug(
-        `Rating leads: ${recordIds} with tools: ${recordToolId}, ${describeToolId}, ${activityToolId}`,
+        `Rating leads: ${recordIds} with tools: ${recordToolId}, ${describeToolId}, ${queryToolId}, ${patchToolId}, ${createToolId}`,
       );
       const tableData: any[] = [];
 
