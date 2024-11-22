@@ -214,7 +214,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         },
       );
       apiCount++;
-      //   console.log('Lead Records Response:', leadRecords);
+      console.log('Lead Records Response:', leadRecords);
       const responseBody = JSON.parse(leadRecords.result.body);
 
       const recordIds = responseBody.result.records.map(
