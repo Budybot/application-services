@@ -346,6 +346,12 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       }
 
       // Step 6: Create snapshot records
+      if (!makeSnapshot) {
+        this.logger.debug(
+          `Lead rating process completed successfully. Total API calls: ${apiCount}`,
+        );
+        return tableData;
+      }
       //  Step 6.1: Get status data for each SDR
       const statusQuery = `SELECT OwnerId, Owner.Name, Status, COUNT(Id) LeadCount
                             FROM Lead
