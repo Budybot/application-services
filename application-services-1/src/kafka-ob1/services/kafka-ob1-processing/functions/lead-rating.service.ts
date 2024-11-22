@@ -329,50 +329,14 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       });
       apiCount++;
 
-      //   // Create a Google Folder
-      //   const folderTitle = 'Lead Ratings Folder';
-      //   const folderId =
-      //     await this.googleSheetService.createGoogleDriveFolder(folderTitle);
-
-      //   // Create a Google Sheet
-      //   const sheetTitle = 'Lead Ratings';
-      //   const sheetId = await this.googleSheetService.createGoogleSheet(
-      //     sheetTitle,
-      //     folderId,
-      //     userId,
-      //   );
-
-      //   // Add the table data to a sheet
-      //   await this.googleSheetService.writeToSheet(sheetId, tableData);
-      //   this.logger.debug(`Wrote data to Google Sheet: ${sheetId}`);
-
-      // query to get all SDRs
-      // query to get count per lead status for all SDRs
-      // query to get count per lead score for all SDRs
-
-      // Get all SDR Ids
-      //   const sdrQuery = `SELECT OwnerId
-      //                     FROM Lead
-      //                     WHERE CreatedDate = LAST_N_DAYS:3
-      //                     GROUP BY OwnerId
-      //                     `;
-      //   const sdrResults = await this.toolTestingService.runTest(
-      //     serverUrl,
-      //     activityToolId,
-      //     { query: sdrQuery },
-      //   );
-      //   apiCount++;
-      //   const sdrIds = sdrResults.result.records.map(
-      //     (record: any) => record.OwnerId,
-      //   );
-
       //  // Get status data for each SDR
-      const statusQuery = `SELECT OwnerId, Status, COUNT(Id) LeadCount
+      const statusQuery = `SELECT OwnerId, Owner.Name, Status, COUNT(Id) LeadCount
                             FROM Lead
                             WHERE CreatedDate = LAST_N_DAYS:${NDays}
-                            GROUP BY OwnerId, Status
-                            ORDER BY OwnerId LIMIT 5
+                            GROUP BY OwnerId, Owner.Name, Status
+                            ORDER BY OwnerId
                             `;
+
       const statusResults = await this.toolTestingService.runTest(
         serverUrl,
         queryToolId,
@@ -387,7 +351,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
                     FROM Lead
                     WHERE CreatedDate = LAST_N_DAYS:${NDays}
                     GROUP BY OwnerId, Budy_Lead_Score__c
-                    ORDER BY OwnerId LIMIT 5
+                    ORDER BY OwnerId
                     `;
       const scoreResults = await this.toolTestingService.runTest(
         serverUrl,
@@ -402,11 +366,12 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         const report = {};
 
         response.records.forEach((record) => {
-          const { OwnerId, Status, LeadCount } = record;
+          const { OwnerId, Name, Status, LeadCount } = record;
 
           // Initialize SDR report if not already present
           if (!report[OwnerId]) {
             report[OwnerId] = {
+              Name: Name,
               'Open Leads': 0,
               'Dropped Leads': 0,
               'Qualified Leads': 0,
@@ -470,6 +435,31 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
 
         return scoreReport;
       };
+      function getYearAndWeek() {
+        const now = new Date();
+
+        // Calculate the start of the year
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+        // Get the number of days between the start of the year and now
+        const dayOfYear = Math.ceil(
+          (now.getTime() -
+            startOfYear.getTime() +
+            (startOfYear.getTimezoneOffset() - now.getTimezoneOffset()) *
+              60 *
+              1000) /
+            (1000 * 60 * 60 * 24),
+        );
+
+        // Calculate the week number
+        const weekNumber = Math.ceil(dayOfYear / 7);
+
+        // Return in "YYYY_Week_X" format
+        return `${now.getFullYear()}_Week_${weekNumber}`;
+      }
+
+      const currentYearWeek = getYearAndWeek();
+      console.log('Current Year Week:', currentYearWeek);
 
       const transformToSnapshotRecords = (sdrReport, scoreReport) => {
         const records = [];
@@ -484,7 +474,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
 
           records.push({
             SDR_Id__c: ownerId,
-            Name: 'Placeholder Name', // Replace with actual SDR name if available
+            Name: leadData['Name'],
             Bucket_1_Leads__c: scoreData.Bucket_1_Leads__c,
             Bucket_2_Leads__c: scoreData.Bucket_2_Leads__c,
             Bucket_3_Leads__c: scoreData.Bucket_3_Leads__c,
@@ -493,8 +483,8 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
             Dropped_Leads__c: leadData['Dropped Leads'],
             Qualified_Leads__c: leadData['Qualified Leads'],
             Total_Leads__c: leadData['Total Leads'],
-            Lead_Criteria_Version__c: recordData.Name, // Replace as needed
-            Year_Work_Week__c: '2024_Week_1', // Replace with dynamic calculation if needed
+            Lead_Criteria_Version__c: recordData.Name,
+            Year_Work_Week__c: currentYearWeek,
           });
         });
 
