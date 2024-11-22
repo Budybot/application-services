@@ -174,7 +174,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
     // Filter out null fields from each record
     const cleanedRecords = records.map((record: any) => {
       return Object.fromEntries(
-        Object.entries(record).filter(([key, value]) => value !== null),
+        Object.entries(record).filter(([, value]) => value !== null),
       );
     });
 
@@ -214,7 +214,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         },
       );
       apiCount++;
-    //   console.log('Lead Records Response:', leadRecords);
+      //   console.log('Lead Records Response:', leadRecords);
       const responseBody = JSON.parse(leadRecords.result.body);
 
       const recordIds = responseBody.result.records.map(
@@ -367,7 +367,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       );
       apiCount++;
       const statusResponse = JSON.parse(statusResults.result.body);
-    //   console.log('Status Data:', statusResponse.result.records[0]);
+      //   console.log('Status Data:', statusResponse.result.records[0]);
 
       // Step 6.2: Get score data for each SDR
       const scoreQuery = `SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
@@ -383,7 +383,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       );
       apiCount++;
       const scoreResponse = JSON.parse(scoreResults.result.body);
-    //   console.log('Sample Score Data:', scoreResponse.result.records[0]);
+      //   console.log('Sample Score Data:', scoreResponse.result.records[0]);
 
       const parseSDRReport = (response) => {
         const report = {};
@@ -483,7 +483,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       }
 
       const currentYearWeek = getYearAndWeek();
-    //   console.log('Current Year Week:', currentYearWeek);
+      //   console.log('Current Year Week:', currentYearWeek);
 
       const transformToSnapshotRecords = (sdrReport, scoreReport) => {
         const records = [];
