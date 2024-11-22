@@ -361,9 +361,10 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         return tableData;
       }
       //  Step 6.1: Get status data for each SDR
+      const recordIdsQuoted = recordIds.map((id) => `'${id}'`); // Wrap each recordId in single quotes
       const statusQuery = `SELECT OwnerId, Owner.Name, Status, COUNT(Id) LeadCount
                             FROM Lead
-                            WHERE Id IN ${recordIds.join(',')}
+                            WHERE Id IN (${recordIdsQuoted.join(',')})
                             GROUP BY OwnerId, Owner.Name, Status
                             ORDER BY OwnerId
                             `;
@@ -378,12 +379,13 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       //   console.log('Status Data:', statusResponse.result.records[0]);
 
       // Step 6.2: Get score data for each SDR
-      const scoreQuery = `SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
-                    FROM Lead
-                    WHERE Id IN ${recordIds.join(',')}
-                    GROUP BY OwnerId, Budy_Lead_Score_Bucket__c
-                    ORDER BY OwnerId
-                    `;
+      const scoreQuery = `
+        SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
+        FROM Lead
+        WHERE Id IN (${recordIdsQuoted.join(',')})
+        GROUP BY OwnerId, Budy_Lead_Score_Bucket__c
+        ORDER BY OwnerId
+      `;
       const scoreResults = await this.toolTestingService.runTest(
         serverUrl,
         queryToolId,
