@@ -191,8 +191,9 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
     serverUrl: string,
     recordToolId: string,
     describeToolId: string,
-    activityToolId: string,
+    queryToolId: string,
     patchToolId: string,
+    createToolId: string,
     criteriaRecordId: string,
     // recordIds: string[],
     instanceName: string,
@@ -204,7 +205,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       // Step 1: Get the first 10 lead records
       const leadRecords = await this.toolTestingService.runTest(
         serverUrl,
-        activityToolId,
+        queryToolId,
         {
           query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays} LIMIT 5`,
         },
@@ -271,7 +272,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
           const leadEvaluation = await this.rateLead(
             serverUrl,
             recordToolId,
-            activityToolId,
+            queryToolId,
             eventFields,
             taskFields,
             criteriaQuestions,
@@ -312,9 +313,8 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       this.logger.debug(`Lead Results: ${JSON.stringify(tableData)}`);
       // Step 5: Run the patch tool to update the records
       await this.toolTestingService.runTest(serverUrl, patchToolId, {
-        objectName: 'Lead',
-        fieldNames: [
-          'id',
+        record_type: 'Lead',
+        field_names: [
           'Budy_Criteria_1__c',
           'Budy_Jusitification_1__c',
           'Budy_Criteria_2__c',
@@ -375,7 +375,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
                             `;
       const statusResults = await this.toolTestingService.runTest(
         serverUrl,
-        activityToolId,
+        queryToolId,
         { query: statusQuery },
       );
       apiCount++;
@@ -429,8 +429,39 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         return report;
       };
 
+      const transformToSnapshotRecords = (sdrReport) => {
+        const records = [];
+
+        Object.entries(sdrReport).forEach(([ownerId, leadData]) => {
+          records.push({
+            SDR_Id__c: ownerId,
+            Name: 'Placeholder Name', // Replace with actual SDR name if available
+            Bucket_1_Leads__c: 0, // Placeholder for bucket logic
+            Bucket_2_Leads__c: 0, // Placeholder for bucket logic
+            Bucket_3_Leads__c: 0, // Placeholder for bucket logic
+            Bucket_4_Leads__c: 0, // Placeholder for bucket logic
+            Open_Leads__c: leadData['Open Leads'],
+            Dropped_Leads__c: leadData['Dropped Leads'],
+            Qualified_Leads__c: leadData['Qualified Leads'],
+            Total_Leads__c: leadData['Total Leads'],
+            Lead_Criteria_Version__c: '1', // Static version value, replace as needed
+            Year_Work_Week__c: '2024_Week_0', // Replace with dynamic calculation if needed
+          });
+        });
+
+        return records;
+      };
+
+      // Example usage
+
       const sdrReport = parseSDRReport(statusResponse.result);
       this.logger.debug(`SDR Report: ${JSON.stringify(sdrReport)}`);
+      const snapshotRecords = transformToSnapshotRecords(sdrReport);
+
+      await this.toolTestingService.runTest(serverUrl, createToolId, {
+        object_name: 'Budy_SDR_Snapshot__c',
+        records: snapshotRecords,
+      });
 
       this.logger.debug(`Approximate API Count: ${apiCount}`);
 
