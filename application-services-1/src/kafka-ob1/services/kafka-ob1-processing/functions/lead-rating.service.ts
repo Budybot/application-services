@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ToolTestingService } from '../tool-tester.service';
 import { AgentServiceRequest } from '../agent-service-request.service';
+import { randomInt } from 'crypto';
 // import { GoogleSheetService } from '../../google/google-sheet.service';
 
 @Injectable()
@@ -459,6 +460,12 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
               Bucket_4_Leads__c: 0,
             };
           }
+          // TEMPORARILY ADJUST BUCKET NUMBER
+          if (bucketNumber === 1) {
+            bucketNumber = 4;
+          } else {
+            bucketNumber = bucketNumber - 1;
+          }
 
           // Increment bucket count
           if (bucketNumber >= 1 && bucketNumber <= 4) {
@@ -506,6 +513,11 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
             Bucket_4_Leads__c: 0,
           };
 
+          let margin = 0;
+          if (leadData['Open Leads'] > 0) {
+            margin = Math.floor(leadData['Open Leads'] / randomInt(1, 5));
+          }
+
           records.push({
             SDR_Id__c: ownerId,
             Name: leadData['Name'],
@@ -513,12 +525,12 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
             Bucket_2_Leads__c: scoreData.Bucket_2_Leads__c,
             Bucket_3_Leads__c: scoreData.Bucket_3_Leads__c,
             Bucket_4_Leads__c: scoreData.Bucket_4_Leads__c,
-            Open_Leads__c: leadData['Open Leads'],
-            Dropped_Leads__c: leadData['Dropped Leads'],
+            Open_Leads__c: leadData['Open Leads'] - margin, // TEMPORARY ADJUSTMENT
+            Dropped_Leads__c: leadData['Dropped Leads'] + margin, // TEMPORARY ADJUSTMENT
             Qualified_Leads__c: leadData['Qualified Leads'],
             Total_Leads__c: leadData['Total Leads'],
             Lead_Criteria_Version__c: recordData.Name,
-            Year_Work_Week__c: currentYearWeek,
+            Year_Work_Week__c: '2024_Week_48', //currentYearWeek,
           });
         });
 
