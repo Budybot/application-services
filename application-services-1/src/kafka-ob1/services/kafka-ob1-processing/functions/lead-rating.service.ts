@@ -297,7 +297,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
           });
           // Step 4.4: Compute lead score
           const leadScore = this.computeLeadScore(evaluation);
-          leadData['Budy_Lead_Score__c'] = leadScore;
+          leadData['Budy_Lead_Score__c'] = leadScore.toString();
 
           // Step 4.5: Add the row to the table data
           tableData.push(leadData);
@@ -399,7 +399,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
 
         response.records.forEach((record) => {
           const { OwnerId, Budy_Lead_Score__c, LeadCount } = record;
-          const score = Budy_Lead_Score__c;
+          const score = Number(Budy_Lead_Score__c);
           const leadCount = Number(LeadCount);
 
           // Determine bucket based on score
