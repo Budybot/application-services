@@ -524,7 +524,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
             Qualified_Leads__c: leadData['Qualified Leads'],
             Total_Leads__c: leadData['Total Leads'],
             Lead_Criteria_Version__c: recordData.Name,
-            Year_Work_Week__c: currentYearWeek,
+            Year_Work_Week__c: '2024_Week_48', //currentYearWeek,
           });
         });
 
