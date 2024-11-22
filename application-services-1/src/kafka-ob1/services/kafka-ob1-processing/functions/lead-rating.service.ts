@@ -454,7 +454,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
           } else {
             this.logger.warn(`Unknown bucket: ${bucket}`);
           }
-          this.logger.debug(`Bucket: ${bucket}`);
+          this.logger.debug(`Bucket: ${bucket} for ${OwnerId}`);
 
           // Initialize SDR report if not already present
           if (!scoreReport[OwnerId]) {
@@ -467,7 +467,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
           }
 
           // Increment bucket count
-          if (bucket >= 1 && bucket <= 4) {
+          if (bucketNumber >= 1 && bucketNumber <= 4) {
             scoreReport[OwnerId][`Bucket_${bucketNumber}_Leads__c`] +=
               leadCount;
           }
