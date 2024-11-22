@@ -297,8 +297,14 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
           });
           // Step 4.4: Compute lead score
           const leadScore = this.computeLeadScore(evaluation);
-          leadData['Budy_Lead_Score__c'] = leadScore.toString();
-
+          function getLeadScoreColor(leadScore) {
+            if (leadScore < 25) return 'Red';
+            if (leadScore < 50) return 'Yellow';
+            if (leadScore < 75) return 'Blue';
+            return 'Green';
+          }
+          leadData['Budy_Lead_Score__c'] = leadScore;
+          leadData['Budy_Lead_Score_Bucket__c'] = getLeadScoreColor(leadScore);
           // Step 4.5: Add the row to the table data
           tableData.push(leadData);
 
@@ -324,6 +330,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
           'Budy_Criteria_4__c',
           'Budy_Justification_4__c',
           'Budy_Lead_Score__c',
+          'Budy_Lead_Score_Bucket__c',
         ],
         records: tableData,
       });
@@ -347,10 +354,10 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       console.log('Status Data:', statusResponse);
 
       // Get score data for each SDR
-      const scoreQuery = `SELECT OwnerId, Budy_Lead_Score__c, COUNT(Id) LeadCount
+      const scoreQuery = `SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
                     FROM Lead
                     WHERE CreatedDate = LAST_N_DAYS:${NDays}
-                    GROUP BY OwnerId, Budy_Lead_Score__c
+                    GROUP BY OwnerId, Budy_Lead_Score_Bucket__c
                     ORDER BY OwnerId
                     `;
       const scoreResults = await this.toolTestingService.runTest(
@@ -398,23 +405,20 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         const scoreReport = {};
 
         response.records.forEach((record) => {
-          const { OwnerId, Budy_Lead_Score__c, LeadCount } = record;
-          const score = Number(Budy_Lead_Score__c);
+          const { OwnerId, Budy_Lead_Score_Bucket__c, LeadCount } = record;
+          const bucket = Budy_Lead_Score_Bucket__c;
           const leadCount = Number(LeadCount);
 
           // Determine bucket based on score
-          let bucket = 0;
-          if (score === 0) {
-            bucket = 1;
-          } else if (score === 25) {
-            bucket = 2;
-          } else if (score === 50) {
-            bucket = 3;
-          } else if (score === 75 || score === 100) {
-            bucket = 4;
-          } else {
-            // Handle unexpected score values if necessary
-            bucket = 0;
+          let bucketNumber = 0;
+          if (bucket === 'Red') {
+            bucketNumber = 1;
+          } else if (bucket === 'Yellow') {
+            bucketNumber = 2;
+          } else if (bucket === 'Blue') {
+            bucketNumber = 3;
+          } else if (bucket === 'Green') {
+            bucketNumber = 4;
           }
 
           // Initialize SDR report if not already present
@@ -429,7 +433,8 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
 
           // Increment bucket count
           if (bucket >= 1 && bucket <= 4) {
-            scoreReport[OwnerId][`Bucket_${bucket}_Leads__c`] += leadCount;
+            scoreReport[OwnerId][`Bucket_${bucketNumber}_Leads__c`] +=
+              leadCount;
           }
         });
 
