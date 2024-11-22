@@ -207,7 +207,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         serverUrl,
         queryToolId,
         {
-          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays} LIMIT 50`,
+          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays} LIMIT 5`,
         },
       );
       apiCount++;
@@ -383,7 +383,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       );
       apiCount++;
       const statusResponse = JSON.parse(statusResults.result.body);
-      console.log('Status Data:', statusResponse);
+      console.log('Status Data:', statusResponse.result.records[0]);
 
       // Get score data for each SDR
       const scoreQuery = `SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
@@ -399,7 +399,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       );
       apiCount++;
       const scoreResponse = JSON.parse(scoreResults.result.body);
-      console.log('Score Data:', scoreResponse);
+      console.log('Sample Score Data:', scoreResponse.result.records[0]);
 
       const parseSDRReport = (response) => {
         const report = {};
@@ -454,6 +454,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
           } else {
             this.logger.warn(`Unknown bucket: ${bucket}`);
           }
+          this.logger.debug(`Bucket: ${bucket}`);
 
           // Initialize SDR report if not already present
           if (!scoreReport[OwnerId]) {
