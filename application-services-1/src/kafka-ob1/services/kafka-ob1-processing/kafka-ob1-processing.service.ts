@@ -145,34 +145,80 @@ export class KafkaOb1ProcessingService {
         //   );
         //   response = { messageContent: { leadRatingResult: leadRatingResult } };
         //   break;
+        // case 'rate-leads':
+        //   const {
+        //     // leadIds,
+        //     criteriaRecordId,
+        //     recordToolId,
+        //     describeToolId,
+        //     queryToolId,
+        //     patchToolId,
+        //     createToolId,
+
+        //   } = functionInput;
+        //   // this.logger.log(
+        //   //   `Rating lead ids and record tool ID: ${recordToolId2}, describe tool ID: ${describeToolId2}, activity tool ID: ${activityToolId2}`,
+        //   // );
+        //   const ratingResult = await this.rateLead.rateLeads(
+        //     '35.161.118.26',
+        //     recordToolId,
+        //     describeToolId,
+        //     queryToolId,
+        //     patchToolId,
+        //     createToolId,
+        //     // leadIds,
+        //     criteriaRecordId,
+        //     instanceName,
+        //     userEmail,
+        //   );
+        //   response = { messageContent: { leadRatingResult: ratingResult } };
+        //   break;
         case 'rate-leads':
           const {
-            // leadIds,
             criteriaRecordId,
             recordToolId,
             describeToolId,
             queryToolId,
             patchToolId,
             createToolId,
-
           } = functionInput;
-          // this.logger.log(
-          //   `Rating lead ids and record tool ID: ${recordToolId2}, describe tool ID: ${describeToolId2}, activity tool ID: ${activityToolId2}`,
-          // );
-          const ratingResult = await this.rateLead.rateLeads(
-            '35.161.118.26',
-            recordToolId,
-            describeToolId,
-            queryToolId,
-            patchToolId,
-            createToolId,
-            // leadIds,
-            criteriaRecordId,
-            instanceName,
-            userEmail,
+
+          // Step 1: Log that the process has started
+          this.logger.log(
+            'Received rate-leads request. Initiating processing...',
           );
-          response = { messageContent: { leadRatingResult: ratingResult } };
+          response = {
+            messageContent: {
+              status: 'Processing',
+              message:
+                'Lead rating process started. You will receive updates shortly.',
+            },
+          };
+
+          // Step 2: Trigger the rating process asynchronously
+          this.rateLead
+            .rateLeads(
+              '35.161.118.26',
+              recordToolId,
+              describeToolId,
+              queryToolId,
+              patchToolId,
+              createToolId,
+              criteriaRecordId,
+              instanceName,
+              userEmail,
+            )
+            .then((result) => {
+              this.logger.log(
+                `Lead rating process completed: ${JSON.stringify(result)}`,
+              );
+            })
+            .catch((error) => {
+              this.logger.error(`Lead rating process failed: ${error.message}`);
+            });
+
           break;
+
         default:
           this.logger.error(`Function ${functionName} not found`);
           return { errorMessage: `Function ${functionName} not found` };

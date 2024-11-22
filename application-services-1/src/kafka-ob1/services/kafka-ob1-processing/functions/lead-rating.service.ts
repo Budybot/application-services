@@ -207,7 +207,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         serverUrl,
         queryToolId,
         {
-          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays} LIMIT 10`,
+          query: `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays} LIMIT 50`,
         },
       );
       apiCount++;
@@ -221,9 +221,9 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         (record: any) => record.Id,
       );
 
-      this.logger.debug(
-        `Rating leads: ${recordIds} with tools: ${recordToolId}, ${describeToolId}, ${queryToolId}, ${patchToolId}, ${createToolId}`,
-      );
+      //   this.logger.debug(
+      //     `Rating leads: ${recordIds} with tools: ${recordToolId}, ${describeToolId}, ${queryToolId}, ${patchToolId}, ${createToolId}`,
+      //   );
       const tableData: any[] = [];
 
       // Step 2: Run the describe tool twice (once with "Event" and once with "Task")
@@ -264,7 +264,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         recordData.Question_3__c,
         recordData.Question_4__c,
       ];
-      this.logger.debug(`Criteria Questions: ${criteriaQuestions}`);
+      //   this.logger.debug(`Criteria Questions: ${criteriaQuestions}`);
       // Step 4: Process each lead
       for (const recordId of recordIds) {
         try {
@@ -316,7 +316,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
           );
         }
       }
-      this.logger.debug(`Lead Results: ${JSON.stringify(tableData)}`);
+      //   this.logger.debug(`Lead Results: ${JSON.stringify(tableData)}`);
       // Step 5: Run the patch tool to update the records
       await this.toolTestingService.runTest(serverUrl, patchToolId, {
         record_type: 'Lead',
@@ -501,9 +501,9 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       // Example usage
 
       const sdrReport = parseSDRReport(statusResponse.result);
-      this.logger.debug(`SDR Report: ${JSON.stringify(sdrReport)}`);
+      //   this.logger.debug(`SDR Report: ${JSON.stringify(sdrReport)}`);
       const scoreReport = parseScoreReport(scoreResponse.result);
-      this.logger.debug(`Score Report: ${JSON.stringify(scoreReport)}`);
+      //   this.logger.debug(`Score Report: ${JSON.stringify(scoreReport)}`);
 
       const snapshotRecords = transformToSnapshotRecords(
         sdrReport,
@@ -515,7 +515,9 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         records: snapshotRecords,
       });
 
-      this.logger.debug(`Approximate API Count: ${apiCount}`);
+      this.logger.debug(
+        `Lead rating process completed successfully. Total API calls: ${apiCount}`,
+      );
 
       return tableData;
     } catch (error) {
