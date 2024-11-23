@@ -1,5 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { KafkaOb1Service } from 'src/kafka-ob1/kafka-ob1.service';
+import {
+  OB1Global, CURRENT_SCHEMA_VERSION,
+} from 'src/interfaces/ob1-message.interfaces';
 @Injectable()
 export class CrudOperationsService {
   private readonly logger = new Logger(CrudOperationsService.name);
@@ -9,8 +12,8 @@ export class CrudOperationsService {
   async fetchData(
     tableEntity: string,
     projectName: string,
-    instanceName: string,
-    messageKey: string,
+    userOrgId: string,
+    personId: string,
   ): Promise<any> {
     const messageInput = {
       messageContent: {
@@ -27,16 +30,20 @@ export class CrudOperationsService {
     };
 
     try {
+      const headers: OB1Global.MessageHeaderV2 = {
+        sourceService: process.env.SERVICE_NAME || 'unknown-service',
+        schemaVersion: CURRENT_SCHEMA_VERSION,
+        sourceFunction: 'fetchData',
+        sourceType: 'service',
+        destinationService: 'database-service',
+        requestId: `REQ-fetchData-${Date.now()}`,
+        personId: personId,
+        userOrgId: userOrgId,
+      };
       const response = await this.kafkaOb1Service.sendRequest(
-        messageKey, // Key for Kafka message
-        instanceName,
-        'database-service',
-        'fetchData',
-        'user',
         messageInput,
-        'consultant',
-        messageKey,
-        'budyos-ob1-databaseService', // Kafka topic
+        headers,
+        'budyos-ob1-databaseService',
       );
       this.logger.log(
         `Fetched data from table ${tableEntity} for project ${projectName}`,
@@ -52,8 +59,8 @@ export class CrudOperationsService {
     tableEntity: string,
     projectName: string,
     data: any,
-    instanceName: string,
-    messageKey: string,
+    userOrgId: string,
+    personId: string,
   ): Promise<any> {
     const messageInput = {
       messageContent: {
@@ -69,18 +76,22 @@ export class CrudOperationsService {
       },
       messageType: 'REQUEST',
     };
+    const headers: OB1Global.MessageHeaderV2 = {
+      sourceService: process.env.SERVICE_NAME || 'unknown-service',
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      sourceFunction: 'fetchData',
+      sourceType: 'service',
+      destinationService: 'database-service',
+      requestId: `REQ-fetchData-${Date.now()}`,
+      personId: personId,
+      userOrgId: userOrgId,
+    };
 
     try {
       const response = await this.kafkaOb1Service.sendRequest(
-        messageKey,
-        instanceName,
-        'database-service',
-        'savePage',
-        'user',
         messageInput,
-        'consultant',
-        messageKey,
-        'budyos-ob1-databaseService', // Kafka topic
+        headers,
+        'budyos-ob1-databaseService',
       );
       this.logger.log(
         `Posted data to table ${tableEntity} for project ${projectName}`,
