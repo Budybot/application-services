@@ -53,7 +53,6 @@ export class LeadRatingService {
       const taskQuery = `SELECT ${taskFields.join(', ')} FROM Task WHERE WhoId = '${recordId}'`;
 
       // Step 3: Run the activity tool twice:
-      // First with { event: true, recordId }
       const activityEventRaw = await this.toolTestingService.runTest(
         serverUrl,
         activityToolId,
@@ -79,44 +78,6 @@ export class LeadRatingService {
       };
 
       // Step 4: Run LLM call
-      //       const systemPrompt = `
-      //       You are an expert Salesforce evaluator tasked with assessing an SDR's responsiveness and performance for a given lead. You will be provided with two data sets:
-
-      // Lead Data: Detailed Salesforce information about the lead.
-      // Activity Data: Records of interactions, activities, or communications associated with the lead.
-      // Using this information, evaluate the following:
-
-      // ${criteriaQuestions.join('\n')}
-
-      // For each question, provide a response of either 'Yes,' 'No,' or 'NA.' Justify your answer in one sentence, referencing the provided data. If the available data is insufficient to answer a question, respond with 'NA' and note that there is not enough information to make a determination.
-      // Provide your response only as a structured JSON object in the following format, without any additional text or explanation:
-      //     {
-      //   "evaluation": [
-      //     {
-      //       "question": "${criteriaQuestions[0]}",
-      //       "outcome": "Yes/No/NA",
-      //       "justification": "Provide justification here."
-      //     },
-      //     {
-      //       "question": "${criteriaQuestions[1]}",
-      //       "outcome": "Yes/No/NA",
-      //       "justification": "Provide justification here."
-      //     },
-      //     {
-      //       "question": "${criteriaQuestions[2]}",
-      //       "outcome": "Yes/No/NA",
-      //       "justification": "Provide justification here."
-      //     },
-      //     {
-      //       "question": "${criteriaQuestions[3]}",
-      //       "outcome": "Yes/No/NA",
-      //       "justification": "Provide justification here."
-      //     }
-      //   ]
-      // }
-      // Ensure that justifications reference the provided data and that outcomes of 'NA' include a note indicating insufficient data. The output must conform strictly to this JSON format.
-
-      // `;
       const userPrompt = `Lead Data: ${JSON.stringify(leadData)} \n Activity Results: ${JSON.stringify(activityResults)}`;
       const config = {
         provider: 'openai',
@@ -126,13 +87,6 @@ export class LeadRatingService {
         frequencyPenalty: 0,
         presencePenalty: 0,
       };
-      //   const llmResponse = await this.agentServiceRequest.sendAgentRequest(
-      //     systemPrompt,
-      //     userPrompt,
-      //     config,
-      //     instanceName,
-      //     userId,
-      //   );
       const llmResponse =
         await this.agentServiceRequest.sendPromptExecutionRequest(
           personId,
@@ -151,7 +105,6 @@ export class LeadRatingService {
           throw new Error('Response content is missing or invalid');
         }
 
-        // No need to clean, parse, or trim; assume `content` is valid JSON
         const evaluation = content.evaluation;
 
         const leadName = leadData.result?.Name || 'Unknown';
@@ -160,13 +113,13 @@ export class LeadRatingService {
         const createdDate = leadData.result?.CreatedDate || 'Unknown';
         const country = leadData.result?.Country__c || 'Unknown';
         return {
-          leadName, // Include lead's name
-          ownerId, // Include lead's owner ID
-          status, // Include lead's status
-          createdDate, // Include lead's created date
-          country, // Include lead's country
-          evaluation: evaluation, // Keep existing evaluation data
-          apiCount, // Include the API count
+          leadName,
+          ownerId,
+          status,
+          createdDate,
+          country,
+          evaluation: evaluation,
+          apiCount,
         };
       } catch (error) {
         console.error('Error processing LLM response:', error);
@@ -212,7 +165,7 @@ export class LeadRatingService {
   ): Promise<number> {
     try {
       let apiCount = 0;
-      // Step 1: Get the first 10 lead records
+      // Step 1: Get the lead records
       let leadRecordQuery = `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays}`;
       if (limit) {
         leadRecordQuery += ` LIMIT ${limit}`;
@@ -225,7 +178,6 @@ export class LeadRatingService {
         },
       );
       apiCount++;
-      //   console.log('Lead Records Response:', leadRecords);
       const responseBody = JSON.parse(leadRecords.toolresult.body);
 
       const recordIds = responseBody.result.records.map(
@@ -309,7 +261,7 @@ export class LeadRatingService {
             leadData[criteriaKey] = entry.outcome;
             leadData[justificationKey] = entry.justification;
           });
-          // Step 4.4: Compute lead score
+          // Step 4.4: Compute lead score and bucket
           const leadScore = this.computeLeadScore(evaluation);
           function getLeadScoreColor(leadScore) {
             if (leadScore < 25) return 'Red';
@@ -396,8 +348,6 @@ export class LeadRatingService {
       );
       apiCount++;
       const statusResponse = JSON.parse(statusResults.toolresult.body);
-      //   console.log('Status Data:', statusResponse.result.records[0]);
-
       // Step 6.2: Get score data for each SDR
       const scoreQuery = `
         SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
@@ -413,8 +363,6 @@ export class LeadRatingService {
       );
       apiCount++;
       const scoreResponse = JSON.parse(scoreResults.toolresult.body);
-      //   console.log('Sample Score Data:', scoreResponse.result.records[0]);
-
       const parseSDRReport = (response) => {
         const report = {};
 
@@ -546,10 +494,7 @@ export class LeadRatingService {
       };
 
       const sdrReport = parseSDRReport(statusResponse.result);
-      //   this.logger.debug(`SDR Report: ${JSON.stringify(sdrReport)}`);
       const scoreReport = parseScoreReport(scoreResponse.result);
-      //   this.logger.debug(`Score Report: ${JSON.stringify(scoreReport)}`);
-
       const snapshotRecords = transformToSnapshotRecords(
         sdrReport,
         scoreReport,
