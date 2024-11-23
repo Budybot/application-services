@@ -132,53 +132,6 @@ export class KafkaOb1ProcessingService {
           );
           response = { messageContent: { toolTestResult: toolTestResult } };
           break;
-        // case 'rate-lead':
-        //   const { leadId, recordToolId, describeToolId, activityToolId } =
-        //     functionInput;
-        //   this.logger.log(
-        //     `Rating lead with ID ${leadId} and record tool ID: ${recordToolId}, describe tool ID: ${describeToolId}, activity tool ID: ${activityToolId}`,
-        //   );
-        //   const leadRatingResult = await this.rateLead.rateLead(
-        //     '35.161.118.26',
-        //     recordToolId,
-        //     activityToolId,
-        //     [''],
-        //     [''],
-        //     [''],
-        //     leadId,
-        //     instanceName,
-        //     userEmail,
-        //   );
-        //   response = { messageContent: { leadRatingResult: leadRatingResult } };
-        //   break;
-        // case 'rate-leads':
-        //   const {
-        //     // leadIds,
-        //     criteriaRecordId,
-        //     recordToolId,
-        //     describeToolId,
-        //     queryToolId,
-        //     patchToolId,
-        //     createToolId,
-
-        //   } = functionInput;
-        //   // this.logger.log(
-        //   //   `Rating lead ids and record tool ID: ${recordToolId2}, describe tool ID: ${describeToolId2}, activity tool ID: ${activityToolId2}`,
-        //   // );
-        //   const ratingResult = await this.rateLead.rateLeads(
-        //     '35.161.118.26',
-        //     recordToolId,
-        //     describeToolId,
-        //     queryToolId,
-        //     patchToolId,
-        //     createToolId,
-        //     // leadIds,
-        //     criteriaRecordId,
-        //     instanceName,
-        //     userEmail,
-        //   );
-        //   response = { messageContent: { leadRatingResult: ratingResult } };
-        //   break;
         case 'rate-leads':
           const {
             criteriaRecordId,
@@ -226,7 +179,7 @@ export class KafkaOb1ProcessingService {
             )
             .then((result) => {
               this.logger.log(
-                `Lead rating process completed: ${JSON.stringify(result)}`,
+                `Lead rating process completed: Total API Count is ${result}`,
               );
             })
             .catch((error) => {

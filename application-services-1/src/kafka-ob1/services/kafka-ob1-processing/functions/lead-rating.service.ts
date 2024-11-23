@@ -209,7 +209,7 @@ export class LeadRatingService {
     userOrgId: string,
     NDays: number = 14,
     limit?: number,
-  ): Promise<any[]> {
+  ): Promise<number> {
     try {
       let apiCount = 0;
       // Step 1: Get the first 10 lead records
@@ -368,7 +368,7 @@ export class LeadRatingService {
         this.logger.debug(
           `Lead rating process completed successfully. Total API calls: ${apiCount}`,
         );
-        return tableData;
+        return apiCount;
       }
       //  Step 6.1: Get status data for each SDR
       const recordIdsQuoted = recordIds.map((id) => `'${id}'`); // Wrap each recordId in single quotes
@@ -555,32 +555,42 @@ export class LeadRatingService {
         apiCount++;
       }
 
-      this.logger.debug(
-        `Lead rating process completed successfully. Total API calls: ${apiCount}`,
-      );
       const messageInput = {
         content: `Lead rating process completed successfully. Total API calls: ${apiCount}`,
       };
-      this.emitMessage(
-        messageInput,
-        'budyos-ob1-notifications',
-        false,
-        personId,
-        userOrgId,
-      );
+      this.kafkaClient.emit('budyos-ob1-notifications', {
+        value: {
+          messageContent: messageInput,
+          messageType: 'NOTIFICATION',
+          error: false,
+        },
+        headers: {
+          sourceService: process.env.SERVICE_NAME || 'unknown-service',
+          schemaVersion: CURRENT_SCHEMA_VERSION,
+          personId: personId,
+          userOrgId: userOrgId,
+        },
+      });
+    //   this.emitMessage(
+    //     messageInput,
+    //     'budyos-ob1-notifications',
+    //     false,
+    //     personId,
+    //     userOrgId,
+    //   );
 
-      return tableData;
+      return apiCount;
     } catch (error) {
-      const errorMessageInput = {
-        content: `Error in rateLeads: ${error.message}. Stack: ${error.stack}.`,
-      };
-      this.emitMessage(
-        errorMessageInput,
-        'budyos-ob1-notifications',
-        true,
-        personId,
-        userOrgId,
-      );
+    //   const errorMessageInput = {
+    //     content: `Error in rateLeads: ${error.message}. Stack: ${error.stack}.`,
+    //   };
+    //   this.emitMessage(
+    //     errorMessageInput,
+    //     'budyos-ob1-notifications',
+    //     true,
+    //     personId,
+    //     userOrgId,
+    //   );
       throw new Error(`Error in rateLeads: ${error.message}`);
     }
   }
