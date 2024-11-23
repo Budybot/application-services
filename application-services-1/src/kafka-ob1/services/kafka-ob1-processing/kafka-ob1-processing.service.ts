@@ -144,7 +144,6 @@ export class KafkaOb1ProcessingService {
             ndays,
             limit,
             makeSnapshots,
-            rateLeads,
           } = functionInput;
 
           // Step 1: Log that the process has started
@@ -170,7 +169,6 @@ export class KafkaOb1ProcessingService {
               createToolId,
               criteriaRecordId,
               promptId,
-              rateLeads,
               makeSnapshots,
               personId,
               userOrgId,
