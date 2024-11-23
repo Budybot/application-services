@@ -145,21 +145,14 @@ export class LeadRatingService {
       console.log('LLM Response:', llmResponse);
       try {
         // Access the content field
-        const rawContent = llmResponse?.messageContent?.content;
+        const content = llmResponse?.messageContent?.content;
 
-        if (!rawContent) {
+        if (!content || typeof content !== 'object') {
           throw new Error('Response content is missing or invalid');
         }
 
-        // Clean the response: Remove backticks and unnecessary text
-        const cleanedResponse = rawContent
-          .trim()
-          .replace(/^```json/, '')
-          .replace(/```$/, '')
-          .trim();
-
-        // Parse the cleaned string into JSON
-        const jsonResponse = JSON.parse(cleanedResponse);
+        // No need to clean, parse, or trim; assume `content` is valid JSON
+        const evaluation = content.evaluation;
 
         const leadName = leadData.result?.Name || 'Unknown';
         const ownerId = leadData.result?.OwnerId || 'Unknown';
@@ -172,7 +165,7 @@ export class LeadRatingService {
           status, // Include lead's status
           createdDate, // Include lead's created date
           country, // Include lead's country
-          evaluation: jsonResponse.evaluation, // Keep existing evaluation data
+          evaluation: evaluation, // Keep existing evaluation data
           apiCount, // Include the API count
         };
       } catch (error) {
