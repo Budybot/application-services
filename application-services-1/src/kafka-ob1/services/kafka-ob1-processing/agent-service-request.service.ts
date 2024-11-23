@@ -156,7 +156,7 @@ export class AgentServiceRequest {
     // Prepare the Kafka message payload
     const messageInput = {
       messageContent: {
-        functionName: 'ExecutePromptWithUserPrompt',
+        functionName: 'promptCRUD-V1',
         functionInput: requestBody,
       },
       messageType: 'REQUEST',
