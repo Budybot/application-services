@@ -221,7 +221,7 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         },
       );
       apiCount++;
-    //   console.log('Lead Records Response:', leadRecords);
+      //   console.log('Lead Records Response:', leadRecords);
       const responseBody = JSON.parse(leadRecords.toolresult.body);
 
       const recordIds = responseBody.result.records.map(
@@ -556,6 +556,19 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       const messageInput = {
         content: `Lead rating process completed successfully. Total API calls: ${apiCount}`,
       };
+      this.emitMessage(messageInput, 'budyos-ob1-notifications');
+
+      return tableData;
+    } catch (error) {
+      const errorMessageInput = {
+        content: `Error in rateLeads: ${error.message}. Stack: ${error.stack}.`,
+      };
+      this.emitMessage(errorMessageInput, 'budyos-ob1-notifications');
+      throw new Error(`Error in rateLeads: ${error.message}`);
+    }
+  }
+  emitMessage(messageInput: any, topic: string): void {
+    try {
       const messageValue: OB1MessageValue = {
         messageContent: messageInput,
         messageType: 'NOTIFICATION',
@@ -564,23 +577,6 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         sourceService: process.env.SERVICE_NAME || 'unknown-service',
         schemaVersion: CURRENT_SCHEMA_VERSION,
       };
-      this.emitMessage(
-        messageValue,
-        messageHeaders,
-        'budyos-ob1-notifications',
-      );
-
-      return tableData;
-    } catch (error) {
-      throw new Error(`Error in rateLeads: ${error.message}`);
-    }
-  }
-  emitMessage(
-    messageValue: OB1MessageValue,
-    messageHeaders: OB1MessageHeader,
-    topic: string,
-  ): void {
-    try {
       this.logger.log(
         `Emitting message to topic: ${topic}, with content: ${JSON.stringify(messageValue)}`,
       );
