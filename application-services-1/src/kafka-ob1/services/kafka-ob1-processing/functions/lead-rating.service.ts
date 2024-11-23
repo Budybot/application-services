@@ -3,8 +3,7 @@ import { ToolTestingService } from '../tool-tester.service';
 import { AgentServiceRequest } from '../agent-service-request.service';
 import { ClientKafka } from '@nestjs/microservices';
 import {
-  OB1MessageValue,
-  OB1MessageHeader,
+  OB1Global,
   CURRENT_SCHEMA_VERSION,
 } from 'src/interfaces/ob1-message.interfaces';
 @Injectable()
@@ -21,13 +20,14 @@ export class LeadRatingService {
     serverUrl: string,
     recordToolId: string,
     activityToolId: string,
+    promptId: string,
     eventFields: string[],
     taskFields: string[],
     criteriaQuestions: string[],
     recordId: string,
     apiCount: number,
-    instanceName: string,
-    userId: string,
+    personId: string,
+    userOrgId: string,
   ): Promise<any> {
     try {
       // Step 1: Run the record tool to get lead data
@@ -79,44 +79,44 @@ export class LeadRatingService {
       };
 
       // Step 4: Run LLM call
-      const systemPrompt = `
-      You are an expert Salesforce evaluator tasked with assessing an SDR's responsiveness and performance for a given lead. You will be provided with two data sets:
+      //       const systemPrompt = `
+      //       You are an expert Salesforce evaluator tasked with assessing an SDR's responsiveness and performance for a given lead. You will be provided with two data sets:
 
-Lead Data: Detailed Salesforce information about the lead.
-Activity Data: Records of interactions, activities, or communications associated with the lead.
-Using this information, evaluate the following:
+      // Lead Data: Detailed Salesforce information about the lead.
+      // Activity Data: Records of interactions, activities, or communications associated with the lead.
+      // Using this information, evaluate the following:
 
-${criteriaQuestions.join('\n')}
+      // ${criteriaQuestions.join('\n')}
 
-For each question, provide a response of either 'Yes,' 'No,' or 'NA.' Justify your answer in one sentence, referencing the provided data. If the available data is insufficient to answer a question, respond with 'NA' and note that there is not enough information to make a determination.
-Provide your response only as a structured JSON object in the following format, without any additional text or explanation:
-    {
-  "evaluation": [
-    {
-      "question": "${criteriaQuestions[0]}",
-      "outcome": "Yes/No/NA",
-      "justification": "Provide justification here."
-    },
-    {
-      "question": "${criteriaQuestions[1]}",
-      "outcome": "Yes/No/NA",
-      "justification": "Provide justification here."
-    },
-    {
-      "question": "${criteriaQuestions[2]}",
-      "outcome": "Yes/No/NA",
-      "justification": "Provide justification here."
-    },
-    {
-      "question": "${criteriaQuestions[3]}",
-      "outcome": "Yes/No/NA",
-      "justification": "Provide justification here."
-    }
-  ]
-}
-Ensure that justifications reference the provided data and that outcomes of 'NA' include a note indicating insufficient data. The output must conform strictly to this JSON format.
-  
-`;
+      // For each question, provide a response of either 'Yes,' 'No,' or 'NA.' Justify your answer in one sentence, referencing the provided data. If the available data is insufficient to answer a question, respond with 'NA' and note that there is not enough information to make a determination.
+      // Provide your response only as a structured JSON object in the following format, without any additional text or explanation:
+      //     {
+      //   "evaluation": [
+      //     {
+      //       "question": "${criteriaQuestions[0]}",
+      //       "outcome": "Yes/No/NA",
+      //       "justification": "Provide justification here."
+      //     },
+      //     {
+      //       "question": "${criteriaQuestions[1]}",
+      //       "outcome": "Yes/No/NA",
+      //       "justification": "Provide justification here."
+      //     },
+      //     {
+      //       "question": "${criteriaQuestions[2]}",
+      //       "outcome": "Yes/No/NA",
+      //       "justification": "Provide justification here."
+      //     },
+      //     {
+      //       "question": "${criteriaQuestions[3]}",
+      //       "outcome": "Yes/No/NA",
+      //       "justification": "Provide justification here."
+      //     }
+      //   ]
+      // }
+      // Ensure that justifications reference the provided data and that outcomes of 'NA' include a note indicating insufficient data. The output must conform strictly to this JSON format.
+
+      // `;
       const userPrompt = `Lead Data: ${JSON.stringify(leadData)} \n Activity Results: ${JSON.stringify(activityResults)}`;
       const config = {
         provider: 'openai',
@@ -126,13 +126,23 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
         frequencyPenalty: 0,
         presencePenalty: 0,
       };
-      const llmResponse = await this.agentServiceRequest.sendAgentRequest(
-        systemPrompt,
-        userPrompt,
-        config,
-        instanceName,
-        userId,
-      );
+      //   const llmResponse = await this.agentServiceRequest.sendAgentRequest(
+      //     systemPrompt,
+      //     userPrompt,
+      //     config,
+      //     instanceName,
+      //     userId,
+      //   );
+      const llmResponse =
+        await this.agentServiceRequest.sendPromptExecutionRequest(
+          personId,
+          userOrgId,
+          promptId,
+          userPrompt,
+          config,
+          { criteriaQuestions: criteriaQuestions },
+        );
+      console.log('LLM Response:', llmResponse);
       try {
         // Access the content field
         const rawContent = llmResponse?.messageContent?.content;
@@ -199,10 +209,11 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
     patchToolId: string,
     createToolId: string,
     criteriaRecordId: string,
+    promptId: string,
     rateLeads: boolean = true,
     makeSnapshot: boolean,
-    instanceName: string,
-    userId: string,
+    personId: string,
+    userOrgId: string,
     NDays: number = 14,
     limit?: number,
   ): Promise<any[]> {
@@ -282,13 +293,14 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
             serverUrl,
             recordToolId,
             queryToolId,
+            promptId,
             eventFields,
             taskFields,
             criteriaQuestions,
             recordId,
             apiCount,
-            instanceName,
-            userId,
+            personId,
+            userOrgId,
           );
 
           // Step 4.2: Extract evaluation data

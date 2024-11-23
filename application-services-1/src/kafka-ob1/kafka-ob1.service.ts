@@ -1,13 +1,9 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-
+import { firstValueFrom, lastValueFrom } from 'rxjs';
 import { filter, timeout, take } from 'rxjs/operators';
-import { lastValueFrom } from 'rxjs';
-
 import {
-//   OB1MessageHeader,
-//   OB1MessageValue,
+  OB1Global,
   CURRENT_SCHEMA_VERSION,
 } from 'src/interfaces/ob1-message.interfaces';
 
@@ -39,39 +35,21 @@ export class KafkaOb1Service implements OnModuleInit {
     this.kafkaClient.emit('budyos-ob1-databaseService', { content });
   }
 
+  // Request-response with proper message headers and validation
   async sendRequest(
-    messageKey: string,
-    instanceName: string,
-    destinationService: string,
-    sourceFunction: string,
-    sourceType: string,
     messageInput: any,
-    userRole: string,
-    userEmail: string,
+    messageHeaders: OB1Global.MessageHeaderV2,
     topic: string,
   ) {
-    const SERVICE_NAME = process.env.SERVICE_NAME;
-    const messageHeader: any = {
-      schemaVersion: CURRENT_SCHEMA_VERSION,
-      sourceService: SERVICE_NAME,
-      sourceFunction: sourceFunction,
-      instanceName: instanceName,
-      destinationService: destinationService,
-      sourceType: sourceType,
-      userRole: userRole,
-      userEmail: userEmail,
-      requestId: `RQ-${sourceFunction}-${Date.now()}`,
-    };
-
-    console.log('Sending Kafka request with headers:', messageHeader);
+    console.log('Sending Kafka request with headers:', messageHeaders);
     console.log('Sending Kafka request with content:', messageInput);
 
     // Send the message and apply filters to the observable stream
     const response$ = this.kafkaClient
       .send(topic, {
-        key: messageKey,
+        key: null, // Optional: Define key as needed, or leave null
         value: messageInput,
-        headers: messageHeader,
+        headers: messageHeaders,
       })
       .pipe(
         filter((response) => response !== null && response !== undefined), // Filter out null/undefined responses
@@ -89,5 +67,23 @@ export class KafkaOb1Service implements OnModuleInit {
     }
   }
 
-
+  // Helper method to construct message headers based on OB1Global.MessageHeaderV2
+  constructHeaders(
+    sourceFunction: string,
+    destinationService: string,
+    sourceType: string,
+    additionalHeaders: Partial<OB1Global.MessageHeaderV2> = {},
+  ): OB1Global.MessageHeaderV2 {
+    return {
+      sourceService: process.env.SERVICE_NAME || 'unknown-service',
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      personId: additionalHeaders.personId || 'default-person-id', // Ensure personId is always included
+      userOrgId: additionalHeaders.userOrgId || 'default-org-id', // Ensure userOrgId is always included
+      sourceFunction: sourceFunction,
+      sourceType: sourceType,
+      destinationService: destinationService,
+      requestId: `RQ-${sourceFunction}-${Date.now()}`,
+      ...additionalHeaders,
+    };
+  }
 }

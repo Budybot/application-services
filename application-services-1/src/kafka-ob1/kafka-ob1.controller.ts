@@ -16,9 +16,10 @@ import {
   KafkaContext,
 } from '@nestjs/microservices';
 import {
-  OB1MessageValue,
-  OB1MessageHeader,
-  validateMessageFields,
+  OB1Global,
+  OB1AgentService,
+  validateIncomingKafkaMessageFields,
+  validateOutgoingMessageHeader,
   CURRENT_SCHEMA_VERSION,
 } from 'src/interfaces/ob1-message.interfaces';
 import { KafkaOb1ProcessingService } from './services/kafka-ob1-processing/kafka-ob1-processing.service';
@@ -32,69 +33,92 @@ export class KafkaOb1Controller implements OnModuleInit {
   constructor(
     private readonly kafkaOb1ProcessingService: KafkaOb1ProcessingService,
     private readonly kafkaOb1BroadcastService: KafkaOb1BroadcastService,
-    // private readonly contentService: ContentService,
-    // private readonly googleDocMonitoringService: GoogleDocMonitoringService,
-    // private readonly kafkaOb1SystemService: KafkaOb1SystemService
   ) {}
 
   onModuleInit() {
     this.logger.log('Kafka consumer initialized and started');
-    // Add any initialization logic if necessary
   }
 
-  // // Saving the message
-  // @EventPattern('budyos-ob1-usertopic.reply')
-  // async handleUserReplyTopicLogging(@Payload() message: OB1MessageValue | null, @Ctx() context: KafkaContext) {
-  //   // Check if the message value is null and ignore it if so
-  //   if (!message || message.value === null) {
-  //     this.logger.log('ignoring null message on usertopic.reply topic, skipping saving');
-  //     return;
-  //   }
+  // @MessagePattern('budyos-ob1-applicationService')
+  // async handleSystemMessages(
+  //   @Payload() message: OB1MessageValue,
+  //   @Ctx() context: KafkaContext,
+  // ) {
+  //   const messageKey = context.getMessage().key?.toString();
+  //   // Cast headers from IHeaders to OB1MessageHeader by using 'unknown' first
+  //   const messageHeaders = context.getMessage()
+  //     .headers as unknown as OB1MessageHeader;
+  //   const userEmail = messageHeaders.userEmail;
+  //   const SERVICE_NAME = process.env.SERVICE_NAME;
+  //   const messageType = message.messageType;
+
+  //   this.logger.debug(
+  //     `Received message with key: ${messageKey} for user ${userEmail}`,
+  //   );
+  //   this.logger.debug(`Headers: ${JSON.stringify(messageHeaders)}`);
+  //   this.logger.debug(`Payload: ${JSON.stringify(message)}`);
 
   //   // Validate message schema; logs errors if necessary
   //   try {
   //     validateMessageFields(context);
   //   } catch (error) {
-  //     this.logger.error(`Message schema validation failed: ${error.message}`, error.stack);
-  //     return { messageStatus: 'error', errorMessage: `Invalid message schema: ${error.message}` };
+  //     this.logger.error(
+  //       `Message schema validation failed: ${error.message}`,
+  //       error.stack,
+  //     );
+  //     return {
+  //       messageStatus: 'error',
+  //       errorMessage: `Invalid message schema: ${error.message}`,
+  //     };
   //   }
 
-  //   try {
-  //     await this.kafkaOb1SavingService.saveMessage(message, context);
-  //     this.logger.log('Processed message successfully');
-  //   } catch (error) {
-  //     this.logger.error('Error processing message', error.stack);
+  //   // Check if the message is intended for this service
+  //   if (messageHeaders.destinationService !== SERVICE_NAME) {
+  //     this.logger.log(
+  //       `Message not intended for this service (${SERVICE_NAME}) but instead for ${messageHeaders.destinationService}. Ignoring.`,
+  //     );
+  //     return null; // Explicitly return `null` to prevent any response
+  //   }
+
+  //   // Process message if intended for this service
+  //   this.logger.log(`Processing message intended for ${SERVICE_NAME}`);
+
+  //   // Route based on messageType
+  //   if (messageType === 'BROADCAST') {
+  //     // Handle BROADCAST messages as content generation
+  //     await this.handleBroadcastContent(message, messageHeaders, context);
+  //   } else if (messageType === 'REQUEST') {
+  //     // Handle REQUEST messages as application requests
+  //     return await this.processApplicationRequest(
+  //       message,
+  //       messageHeaders,
+  //       context,
+  //     );
+  //   } else {
+  //     this.logger.warn(`Unknown message type: ${messageType}`);
+  //     return { messageStatus: 'error', errorMessage: 'Unknown message type' };
   //   }
   // }
-
-  // @UseInterceptors(KafkaResponseInterceptor)
   @MessagePattern('budyos-ob1-applicationService')
   async handleSystemMessages(
-    @Payload() message: OB1MessageValue,
+    @Payload() message: OB1AgentService.MessageIncomingValueV2,
     @Ctx() context: KafkaContext,
   ) {
     const messageKey = context.getMessage().key?.toString();
-    // Cast headers from IHeaders to OB1MessageHeader by using 'unknown' first
     const messageHeaders = context.getMessage()
-      .headers as unknown as OB1MessageHeader;
-    const userEmail = messageHeaders.userEmail;
+      .headers as unknown as OB1Global.MessageHeaderV2;
     const SERVICE_NAME = process.env.SERVICE_NAME;
     const messageType = message.messageType;
 
-    this.logger.debug(
-      `Received message with key: ${messageKey} for user ${userEmail}`,
-    );
+    this.logger.debug(`Received message with key: ${messageKey}`);
     this.logger.debug(`Headers: ${JSON.stringify(messageHeaders)}`);
     this.logger.debug(`Payload: ${JSON.stringify(message)}`);
 
-    // Validate message schema; logs errors if necessary
+    // Validate message schema
     try {
-      validateMessageFields(context);
+      validateIncomingKafkaMessageFields(context);
     } catch (error) {
-      this.logger.error(
-        `Message schema validation failed: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`Message schema validation failed: ${error.message}`);
       return {
         messageStatus: 'error',
         errorMessage: `Invalid message schema: ${error.message}`,
@@ -106,18 +130,17 @@ export class KafkaOb1Controller implements OnModuleInit {
       this.logger.log(
         `Message not intended for this service (${SERVICE_NAME}) but instead for ${messageHeaders.destinationService}. Ignoring.`,
       );
-      return null; // Explicitly return `null` to prevent any response
+      return null;
     }
 
     // Process message if intended for this service
     this.logger.log(`Processing message intended for ${SERVICE_NAME}`);
 
-    // Route based on messageType
     if (messageType === 'BROADCAST') {
-      // Handle BROADCAST messages as content generation
+      // Handle BROADCAST messages
       await this.handleBroadcastContent(message, messageHeaders, context);
     } else if (messageType === 'REQUEST') {
-      // Handle REQUEST messages as application requests
+      // Route specific REQUEST message types
       return await this.processApplicationRequest(
         message,
         messageHeaders,
@@ -128,28 +151,80 @@ export class KafkaOb1Controller implements OnModuleInit {
       return { messageStatus: 'error', errorMessage: 'Unknown message type' };
     }
   }
+
   // Process application requests that expect a response
+  // private async processApplicationRequest(
+  //   message: OB1MessageValue,
+  //   headers: OB1MessageHeader,
+  //   context: KafkaContext,
+  // ) {
+  //   try {
+  //     const result: { messageContent?: string; [key: string]: any } =
+  //       await this.kafkaOb1ProcessingService.processRequest(message, context);
+
+  //     const responseHeaders: OB1MessageHeader = {
+  //       instanceName: headers.instanceName,
+  //       userEmail: headers.userEmail,
+  //       schemaVersion: CURRENT_SCHEMA_VERSION,
+  //       sourceService: process.env.SERVICE_NAME,
+  //       destinationService: headers.sourceService,
+  //       sourceType: 'service',
+  //       requestId: headers.requestId || `Not-Sent-${Date.now()}`,
+  //       responseId: `RE-${process.env.SERVICE_NAME}-${Date.now()}`,
+  //     };
+
+  //     const responseValue: OB1MessageValue = {
+  //       ...result,
+  //       messageType: 'RESPONSE',
+  //       conversationId: message.conversationId || null,
+  //       projectId: message.projectId || null,
+  //       assetId: message.assetId || null,
+  //       messageContent:
+  //         typeof result.messageContent === 'object'
+  //           ? result.messageContent
+  //           : {},
+  //     };
+
+  //     this.logger.debug(
+  //       `Returning response with headers: ${JSON.stringify(responseHeaders)}`,
+  //     );
+  //     return {
+  //       key: '',
+  //       value: responseValue,
+  //       headers: responseHeaders,
+  //     };
+  //   } catch (error) {
+  //     this.logger.error(
+  //       `Error processing request: ${error.message}`,
+  //       error.stack,
+  //     );
+  //     return {
+  //       messageStatus: 'error',
+  //       errorMessage: `Failed to process request`,
+  //     };
+  //   }
+  // }
   private async processApplicationRequest(
-    message: OB1MessageValue,
-    headers: OB1MessageHeader,
+    message: OB1AgentService.MessageIncomingValueV2,
+    headers: OB1Global.MessageHeaderV2,
     context: KafkaContext,
   ) {
     try {
       const result: { messageContent?: string; [key: string]: any } =
         await this.kafkaOb1ProcessingService.processRequest(message, context);
 
-      const responseHeaders: OB1MessageHeader = {
-        instanceName: headers.instanceName,
-        userEmail: headers.userEmail,
+      const responseHeaders: OB1Global.MessageHeaderV2 = {
         schemaVersion: CURRENT_SCHEMA_VERSION,
         sourceService: process.env.SERVICE_NAME,
         destinationService: headers.sourceService,
         sourceType: 'service',
         requestId: headers.requestId || `Not-Sent-${Date.now()}`,
         responseId: `RE-${process.env.SERVICE_NAME}-${Date.now()}`,
+        personId: headers.personId || 'Unknown personId',
+        userOrgId: headers.userOrgId || 'Unknown userOrgId',
       };
 
-      const responseValue: OB1MessageValue = {
+      const responseValue: OB1Global.MessageResponseValueV2 = {
         ...result,
         messageType: 'RESPONSE',
         conversationId: message.conversationId || null,
@@ -159,6 +234,7 @@ export class KafkaOb1Controller implements OnModuleInit {
           typeof result.messageContent === 'object'
             ? result.messageContent
             : {},
+        error: false,
       };
 
       this.logger.debug(
@@ -182,9 +258,21 @@ export class KafkaOb1Controller implements OnModuleInit {
   }
 
   // Process broadcast content messages without expecting a response
+  // private async handleBroadcastContent(
+  //   message: OB1MessageValue,
+  //   headers: OB1MessageHeader,
+  //   context: KafkaContext,
+  // ) {
+  //   this.logger.log(`Handling content emission: ${JSON.stringify(message)}`);
+  //   await this.kafkaOb1BroadcastService.processBroadcast(
+  //     message,
+  //     headers,
+  //     context,
+  //   );
+  // }
   private async handleBroadcastContent(
-    message: OB1MessageValue,
-    headers: OB1MessageHeader,
+    message: OB1AgentService.MessageIncomingValueV2,
+    headers: OB1Global.MessageHeaderV2,
     context: KafkaContext,
   ) {
     this.logger.log(`Handling content emission: ${JSON.stringify(message)}`);
@@ -193,93 +281,6 @@ export class KafkaOb1Controller implements OnModuleInit {
       headers,
       context,
     );
-
-    // if (message.messageContent.functionName === 'process-comment') {
-    //   this.logger.log('Processing comment...');
-    //   // Process comment content
-    //   return { commentProcessed: true };
-    // } else if (message.messageContent.functionName === 'generate-assets') {
-    //   this.logger.log('Generating assets...');
-    //   // Generate assets
-    //   return { assetsGenerated: true };
-    // }
-    // try {
-    //   const { pageName, projectName } = message.messageContent;
-    //   const instanceName = headers.instanceName;
-    //   const userEmail = headers.userEmail;
-    //   if (!projectName || !pageName) {
-    //     throw new Error(
-    //       "Required fields 'projectName' or 'pageName' are missing in messageContent.",
-    //     );
-    //   }
-    //   // Define content generation rules for different page names
-    //   const contentGenerationRules = {
-    //     'OB1-pages-filterPage1': ['SOW', 'Email'],
-    //     'OB1-pages-inputPage2': ['Email'],
-    //     // Add other pageNames and content types as needed
-    //   };
-    //   const contentTypesToGenerate = contentGenerationRules[pageName] || [];
-    //   // Iterate over content types for this page and generate each
-    //   for (const contentType of contentTypesToGenerate) {
-    //     try {
-    //       const documentId = await this.contentService.generateContent(
-    //         projectName,
-    //         instanceName,
-    //         { sowData: message.messageContent, pageName },
-    //         userEmail,
-    //         contentType,
-    //       );
-    //       this.logger.log(
-    //         `Successfully generated ${contentType} content with document ID: ${documentId}`,
-    //       );
-    //       this.googleDocMonitoringService
-    //         .startMonitoring(documentId, projectName, instanceName, userEmail)
-    //         .then(() => {
-    //           this.logger.log(
-    //             `Started monitoring for document ID: ${documentId}`,
-    //           );
-    //         })
-    //         .catch((error) => {
-    //           this.logger.error(`Failed to start monitoring: ${error.message}`);
-    //         });
-    //     } catch (error) {
-    //       this.logger.error(
-    //         `Error generating ${contentType} for page ${pageName}: ${error.message}`,
-    //       );
-    //     }
-    //   }
-    //   // SAME FOR CONTENT UPDATES
-    //   const contentUpdateRules = {
-    //     'OB1-pages-filterPage1': [],
-    //     'OB1-pages-inputPage2': ['SOW'],
-    //     // Add other pageNames and content types as needed
-    //   };
-    //   const contentTypesToUpdate = contentUpdateRules[pageName] || [];
-    //   // Iterate over content types for this page and generate each
-    //   for (const contentType of contentTypesToUpdate) {
-    //     try {
-    //       const documentId = await this.contentService.updateContent(
-    //         projectName,
-    //         instanceName,
-    //         { sowData: message.messageContent, pageName },
-    //         userEmail,
-    //         contentType,
-    //       );
-    //       this.logger.log(
-    //         `Successfully updated ${contentType} content with document ID: ${documentId}`,
-    //       );
-    //     } catch (error) {
-    //       this.logger.error(
-    //         `Error updating ${contentType} for page ${pageName}: ${error.message}`,
-    //       );
-    //     }
-    //   }
-    // } catch (error) {
-    //   this.logger.error(
-    //     `Error processing broadcast content: ${error.message}`,
-    //     error.stack,
-    //   );
-    // }
   }
 }
 

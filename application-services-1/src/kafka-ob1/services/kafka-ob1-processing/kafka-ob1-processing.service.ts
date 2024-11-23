@@ -34,6 +34,8 @@ export class KafkaOb1ProcessingService {
     const messageHeaders = context.getMessage().headers;
     const userEmail = messageHeaders['userEmail'] as string;
     const instanceName = messageHeaders['instanceName'] as string;
+    const personId = messageHeaders['personId'] as string;
+    const userOrgId = messageHeaders['userOrgId'] as string;
 
     try {
       const functionName = message.messageContent.functionName;
@@ -181,6 +183,7 @@ export class KafkaOb1ProcessingService {
             queryToolId,
             patchToolId,
             createToolId,
+            promptId,
             ndays,
             limit,
             makeSnapshots,
@@ -209,10 +212,11 @@ export class KafkaOb1ProcessingService {
               patchToolId,
               createToolId,
               criteriaRecordId,
+              promptId,
               rateLeads,
               makeSnapshots,
-              instanceName,
-              userEmail,
+              personId,
+              userOrgId,
               ndays,
               limit,
             )
