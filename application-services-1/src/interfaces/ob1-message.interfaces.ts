@@ -28,7 +28,7 @@ const disallowedValues = [null, undefined, ''];
 const logger = new Logger('OB1KafkaMessageValidator');
 
 // Namespace for Agent Service
-export namespace OB1AgentService {
+export namespace OB1ApplicationService {
   export class MessageContentV1 {
     @IsNotEmpty()
     @IsString()
@@ -41,7 +41,7 @@ export namespace OB1AgentService {
   export class MessageIncomingValueV2 {
     @IsNotEmpty()
     @IsObject()
-    messageContent: OB1AgentService.MessageContentV1;
+    messageContent: OB1ApplicationService.MessageContentV1;
 
     @IsNotEmpty()
     @IsString()
@@ -199,16 +199,17 @@ export async function validateIncomingKafkaMessageFields(
 
   // Extract headers and value from the Kafka message
   const headers = message.headers as unknown as OB1Global.MessageHeaderV2;
-  let messageValue: OB1AgentService.MessageIncomingValueV2;
+  let messageValue: OB1ApplicationService.MessageIncomingValueV2;
 
   try {
     // Parse message value
     if (Buffer.isBuffer(message.value)) {
       messageValue = JSON.parse(
         message.value.toString(),
-      ) as OB1AgentService.MessageIncomingValueV2;
+      ) as OB1ApplicationService.MessageIncomingValueV2;
     } else {
-      messageValue = message.value as OB1AgentService.MessageIncomingValueV2;
+      messageValue =
+        message.value as OB1ApplicationService.MessageIncomingValueV2;
     }
 
     // Validate schema version
@@ -229,7 +230,7 @@ export async function validateIncomingKafkaMessageFields(
     await validateOrReject(headerInstance);
 
     const valueInstance = plainToInstance(
-      OB1AgentService.MessageIncomingValueV2,
+      OB1ApplicationService.MessageIncomingValueV2,
       messageValue,
     );
     await validateOrReject(valueInstance);

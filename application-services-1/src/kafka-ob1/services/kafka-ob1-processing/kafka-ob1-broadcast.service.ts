@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
   OB1Global,
-  MessageValueV2,
-  MessageHeaderV2,
+  OB1ApplicationService,
 } from 'src/interfaces/ob1-message.interfaces';
 // import { ClientKafka } from '@nestjs/microservices';
 import { KafkaContext } from '@nestjs/microservices';
@@ -20,8 +19,8 @@ export class KafkaOb1BroadcastService {
   ) {} // @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
 
   async processBroadcast(
-    message: MessageValueV2,
-    headers: MessageHeaderV2,
+    message: OB1ApplicationService.MessageIncomingValueV2,
+    headers: OB1Global.MessageHeaderV2,
     context: KafkaContext,
   ) {
     // const messageHeaders = context.getMessage().headers;

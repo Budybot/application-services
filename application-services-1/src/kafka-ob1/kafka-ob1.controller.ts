@@ -17,7 +17,7 @@ import {
 } from '@nestjs/microservices';
 import {
   OB1Global,
-  OB1AgentService,
+  OB1ApplicationService,
   validateIncomingKafkaMessageFields,
   validateOutgoingMessageHeader,
   CURRENT_SCHEMA_VERSION,
@@ -101,7 +101,7 @@ export class KafkaOb1Controller implements OnModuleInit {
   // }
   @MessagePattern('budyos-ob1-applicationService')
   async handleSystemMessages(
-    @Payload() message: OB1AgentService.MessageIncomingValueV2,
+    @Payload() message: OB1ApplicationService.MessageIncomingValueV2,
     @Ctx() context: KafkaContext,
   ) {
     const messageKey = context.getMessage().key?.toString();
@@ -205,7 +205,7 @@ export class KafkaOb1Controller implements OnModuleInit {
   //   }
   // }
   private async processApplicationRequest(
-    message: OB1AgentService.MessageIncomingValueV2,
+    message: OB1ApplicationService.MessageIncomingValueV2,
     headers: OB1Global.MessageHeaderV2,
     context: KafkaContext,
   ) {
@@ -271,7 +271,7 @@ export class KafkaOb1Controller implements OnModuleInit {
   //   );
   // }
   private async handleBroadcastContent(
-    message: OB1AgentService.MessageIncomingValueV2,
+    message: OB1ApplicationService.MessageIncomingValueV2,
     headers: OB1Global.MessageHeaderV2,
     context: KafkaContext,
   ) {

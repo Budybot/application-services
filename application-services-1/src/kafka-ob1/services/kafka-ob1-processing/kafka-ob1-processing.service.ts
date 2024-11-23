@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
   OB1Global,
+  OB1ApplicationService,
   //   OB1MessageHeader,
 } from 'src/interfaces/ob1-message.interfaces';
 // import { ClientKafka } from '@nestjs/microservices';
@@ -31,7 +32,7 @@ export class KafkaOb1ProcessingService {
   ) {}
 
   async processRequest(
-    message: OB1Global.MessageResponseValueV2,
+    message: OB1ApplicationService.MessageIncomingValueV2,
     context: KafkaContext,
   ) {
     const messageHeaders = context.getMessage().headers;
