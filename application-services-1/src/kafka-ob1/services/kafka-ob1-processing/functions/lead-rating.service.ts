@@ -29,7 +29,8 @@ export class LeadRatingService {
     );
     const fields =
       JSON.parse(describeResult.toolresult.body)?.result.fieldNames || [];
-    return fields;
+    // Remove fields starting with "Budy_"
+    return fields.filter((field) => !field.startsWith('Budy_'));
   }
 
   private chunkArray(array: any[], chunkSize: number): any[][] {
@@ -115,7 +116,7 @@ export class LeadRatingService {
     return activityData;
   }
 
-  private async processLeadBatch(
+  async processLeadBatch(
     serverUrl: string,
     queryToolId: string,
     promptId: string,
@@ -157,35 +158,60 @@ export class LeadRatingService {
         tasks: [],
       };
 
-      // Prepare LLM prompt
-      const userPrompt = `Lead Data: ${JSON.stringify(
-        leadData,
-      )}\nActivity Results: ${JSON.stringify(leadActivities)}`;
-      const config = {
-        provider: 'openai',
-        model: 'gpt-4o-mini',
-        temperature: 0.7,
-        maxTokens: 4096,
-        frequencyPenalty: 0,
-        presencePenalty: 0,
-      };
-      // Call LLM
-      const llmResponse =
-        await this.agentServiceRequest.sendPromptExecutionRequest(
-          personId,
-          userOrgId,
-          promptId,
-          userPrompt,
-          config,
-          { criteriaQuestions: criteriaQuestions },
-        );
-      // Process LLM response
-      const content = llmResponse?.messageContent?.content;
-      if (!content || typeof content !== 'object') {
-        this.logger.error('LLM response content is missing or invalid');
-        continue;
+      // Filter out null fields from lead and activity data
+      const filteredLeadData = this.filterNullFields(leadData);
+      const filteredEvents = leadActivities.events.map(this.filterNullFields);
+      const filteredTasks = leadActivities.tasks.map(this.filterNullFields);
+
+      // Check if there is no activity data
+      const noActivityData =
+        filteredEvents.length === 0 && filteredTasks.length === 0;
+
+      let evaluation;
+      if (noActivityData) {
+        // Skip LLM call and assign default evaluation
+        evaluation = criteriaQuestions.map(() => ({
+          outcome: 'NA',
+          justification:
+            'There is no activity data. Budy is not even going to check this lead.',
+        }));
+      } else {
+        // Prepare LLM prompt
+        const userPrompt = `Lead Data: ${JSON.stringify(
+          filteredLeadData,
+        )}\nActivity Results: ${JSON.stringify({
+          events: filteredEvents,
+          tasks: filteredTasks,
+        })}`;
+        const config = {
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          temperature: 0.7,
+          maxTokens: 4096,
+          frequencyPenalty: 0,
+          presencePenalty: 0,
+        };
+
+        // Call LLM
+        const llmResponse =
+          await this.agentServiceRequest.sendPromptExecutionRequest(
+            personId,
+            userOrgId,
+            promptId,
+            userPrompt,
+            config,
+            { criteriaQuestions: criteriaQuestions },
+          );
+        apiCount++;
+
+        // Process LLM response
+        const content = llmResponse?.messageContent?.content;
+        if (!content || typeof content !== 'object') {
+          this.logger.error('LLM response content is missing or invalid');
+          continue;
+        }
+        evaluation = content.evaluation;
       }
-      const evaluation = content.evaluation;
 
       // Prepare data for patching
       const leadUpdateData: Record<string, any> = { id: recordId };
@@ -195,6 +221,7 @@ export class LeadRatingService {
         leadUpdateData[criteriaKey] = entry.outcome;
         leadUpdateData[justificationKey] = entry.justification;
       });
+
       // Compute lead score and bucket
       const leadScore = this.computeLeadScore(evaluation);
       function getLeadScoreColor(leadScore: number) {
@@ -211,6 +238,11 @@ export class LeadRatingService {
     }
 
     return { tableData, apiCount };
+  }
+  private filterNullFields(record: any): any {
+    return Object.fromEntries(
+      Object.entries(record).filter(([, value]) => value !== null),
+    );
   }
 
   async rateLeads(
