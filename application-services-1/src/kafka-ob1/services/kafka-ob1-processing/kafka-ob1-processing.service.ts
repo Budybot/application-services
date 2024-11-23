@@ -36,8 +36,10 @@ export class KafkaOb1ProcessingService {
     context: KafkaContext,
   ) {
     const messageHeaders = context.getMessage().headers;
-    const personId = messageHeaders['personId'] as string;
-    const userOrgId = messageHeaders['userOrgId'] as string;
+    const personId =
+      (messageHeaders['personId'] as string) || 'default-person-id';
+    const userOrgId =
+      (messageHeaders['userOrgId'] as string) || 'default-org-id';
 
     try {
       const functionName = message.messageContent.functionName;
