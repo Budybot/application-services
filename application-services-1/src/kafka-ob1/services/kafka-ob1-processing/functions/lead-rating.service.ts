@@ -368,6 +368,16 @@ export class LeadRatingService {
         this.logger.debug(
           `Lead rating process completed successfully. Total API calls: ${apiCount}`,
         );
+        const messageInput = {
+          content: `Lead rating process completed successfully. Total API calls: ${apiCount}`,
+        };
+        this.emitMessage(
+          messageInput,
+          'budyos-ob1-applicationService',
+          false,
+          personId,
+          userOrgId,
+        );
         return apiCount;
       }
       //  Step 6.1: Get status data for each SDR
@@ -555,11 +565,11 @@ export class LeadRatingService {
         apiCount++;
       }
 
-      const messageInput = {
+      const messageInput2 = {
         content: `Lead rating process completed successfully. Total API calls: ${apiCount}`,
       };
       this.emitMessage(
-        messageInput,
+        messageInput2,
         'budyos-ob1-applicationService',
         false,
         personId,
