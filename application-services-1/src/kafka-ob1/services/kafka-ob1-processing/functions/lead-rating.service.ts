@@ -1,15 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ToolTestingService } from '../tool-tester.service';
 import { AgentServiceRequest } from '../agent-service-request.service';
-import { randomInt } from 'crypto';
-// import { GoogleSheetService } from '../../google/google-sheet.service';
-
+import { ClientKafka } from '@nestjs/microservices';
+import {
+  OB1MessageValue,
+  OB1MessageHeader,
+  CURRENT_SCHEMA_VERSION,
+} from 'src/interfaces/ob1-message.interfaces';
 @Injectable()
 export class LeadRatingService {
   private readonly logger = new Logger(LeadRatingService.name);
   constructor(
     private readonly toolTestingService: ToolTestingService,
     private readonly agentServiceRequest: AgentServiceRequest,
+    @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka,
     // private readonly googleSheetService: GoogleSheetService,
   ) {}
 
@@ -460,12 +464,6 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
               Bucket_4_Leads__c: 0,
             };
           }
-          // TEMPORARILY ADJUST BUCKET NUMBER
-          if (bucketNumber === 1) {
-            bucketNumber = 4;
-          } else {
-            bucketNumber = bucketNumber - 1;
-          }
 
           // Increment bucket count
           if (bucketNumber >= 1 && bucketNumber <= 4) {
@@ -513,11 +511,6 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
             Bucket_4_Leads__c: 0,
           };
 
-          let margin = 0;
-          if (leadData['Open Leads'] > 0) {
-            margin = Math.floor(leadData['Open Leads'] / randomInt(1, 5));
-          }
-
           records.push({
             SDR_Id__c: ownerId,
             Name: leadData['Name'],
@@ -525,12 +518,12 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
             Bucket_2_Leads__c: scoreData.Bucket_2_Leads__c,
             Bucket_3_Leads__c: scoreData.Bucket_3_Leads__c,
             Bucket_4_Leads__c: scoreData.Bucket_4_Leads__c,
-            Open_Leads__c: leadData['Open Leads'] - margin, // TEMPORARY ADJUSTMENT
-            Dropped_Leads__c: leadData['Dropped Leads'] + margin, // TEMPORARY ADJUSTMENT
+            Open_Leads__c: leadData['Open Leads'],
+            Dropped_Leads__c: leadData['Dropped Leads'],
             Qualified_Leads__c: leadData['Qualified Leads'],
             Total_Leads__c: leadData['Total Leads'],
             Lead_Criteria_Version__c: recordData.Name,
-            Year_Work_Week__c: '2024_Week_48', //currentYearWeek,
+            Year_Work_Week__c: currentYearWeek,
           });
         });
 
@@ -560,10 +553,57 @@ Ensure that justifications reference the provided data and that outcomes of 'NA'
       this.logger.debug(
         `Lead rating process completed successfully. Total API calls: ${apiCount}`,
       );
+      const messageInput = {
+        content: `Lead rating process completed successfully. Total API calls: ${apiCount}`,
+      };
+      const messageValue: OB1MessageValue = {
+        messageContent: messageInput,
+        messageType: 'NOTIFICATION',
+      };
+      const messageHeaders: OB1MessageHeader = {
+        sourceService: process.env.SERVICE_NAME || 'unknown-service',
+        schemaVersion: CURRENT_SCHEMA_VERSION,
+      };
+      this.emitMessage(
+        messageValue,
+        messageHeaders,
+        'budyos-ob1-notifications',
+      );
 
       return tableData;
     } catch (error) {
       throw new Error(`Error in rateLeads: ${error.message}`);
+    }
+  }
+  emitMessage(
+    messageValue: OB1MessageValue,
+    messageHeaders: OB1MessageHeader,
+    topic: string,
+  ): void {
+    try {
+      this.logger.log(
+        `Emitting message to topic: ${topic}, with content: ${JSON.stringify(messageValue)}`,
+      );
+      // Emit the message to Kafka topic without awaiting a response
+      this.kafkaClient
+        .emit(topic, {
+          value: messageValue,
+          headers: messageHeaders,
+        })
+        .subscribe({
+          error: (err) =>
+            this.logger.error(
+              `Failed to emit Kafka message: ${err.message}`,
+              err.stack,
+            ),
+        });
+
+      this.logger.log('Kafka message emitted successfully');
+    } catch (error) {
+      this.logger.error(
+        `Failed to emit Kafka message: ${error.message}`,
+        error.stack,
+      );
     }
   }
   // write a function to compute lead score from the evaluation (percentage of yes out of four questions)
