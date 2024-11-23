@@ -2,8 +2,7 @@ import { Injectable, Logger, Inject } from '@nestjs/common';
 import { CrudOperationsService } from '../crud-operations.service';
 import { ClientKafka } from '@nestjs/microservices';
 import {
-  OB1MessageValue,
-  OB1MessageHeader,
+  OB1Global,
   CURRENT_SCHEMA_VERSION,
 } from 'src/interfaces/ob1-message.interfaces';
 import { FormJsonService } from '../content/form-json.service';
@@ -21,8 +20,8 @@ export class PageSubmittedService {
 
   async handlePageSubmitted(
     functionInput: any,
-    userEmail: string,
-    instanceName: string,
+    personId: string,
+    userOrgId: string,
   ) {
     const { tableEntity, projectName, transcript } = functionInput;
 
@@ -34,8 +33,8 @@ export class PageSubmittedService {
       const fetchDataResponse = await this.crudOperationsService.fetchData(
         tableEntity,
         projectName,
-        instanceName,
-        userEmail,
+        userOrgId,
+        personId,
       );
 
       // Ensure fetchDataResponse is valid and contains data
@@ -64,7 +63,7 @@ export class PageSubmittedService {
             JSON.stringify(pageData.userRoles),
             pageData.user_org_description,
             pageData.action_items,
-            userEmail,
+            personId,
             projectName,
           );
         // Post the generated form JSON to the next page
@@ -75,8 +74,8 @@ export class PageSubmittedService {
           'OB1-pages-filterPage1',
           projectName,
           generatedFormJson,
-          instanceName,
-          userEmail,
+          userOrgId,
+          personId,
         );
       } else if (tableEntity === 'OB1-pages-filterPage1') {
         // Emit Kafka message with the form content from input
@@ -87,16 +86,17 @@ export class PageSubmittedService {
           functionName: 'generate-assets',
           functionInput: pageData,
         };
-        const messageValue: OB1MessageValue = {
+        const messageValue: OB1Global.MessageResponseValueV2 = {
           messageContent: messageInput,
           messageType: 'BROADCAST',
           projectId: projectName,
           assetId: null,
           conversationId: null,
+          error: false,
         };
-        const messageHeaders: OB1MessageHeader = {
-          instanceName: instanceName,
-          userEmail: userEmail,
+        const messageHeaders: OB1Global.MessageHeaderV2 = {
+          userOrgId: userOrgId,
+          personId: personId,
           sourceService: process.env.SERVICE_NAME || 'unknown-service',
           schemaVersion: CURRENT_SCHEMA_VERSION,
           destinationService: 'application-service',
@@ -117,16 +117,17 @@ export class PageSubmittedService {
             pageData: pageData,
           },
         };
-        const messageValue: OB1MessageValue = {
+        const messageValue: OB1Global.MessageResponseValueV2 = {
           messageContent: messageInput,
           messageType: 'BROADCAST',
           projectId: projectName,
           assetId: null,
           conversationId: null,
+          error: false,
         };
-        const messageHeaders: OB1MessageHeader = {
-          instanceName: instanceName,
-          userEmail: userEmail,
+        const messageHeaders: OB1Global.MessageHeaderV2 = {
+          userOrgId: userOrgId,
+          personId: personId,
           sourceService: process.env.SERVICE_NAME || 'unknown-service',
           schemaVersion: CURRENT_SCHEMA_VERSION,
           destinationService: 'application-service',
@@ -152,8 +153,8 @@ export class PageSubmittedService {
 
 // Broadcasting function for Kafka message with proper headers and value
   emitMessage(
-    messageValue: OB1MessageValue,
-    messageHeaders: OB1MessageHeader,
+    messageValue: OB1Global.MessageResponseValueV2,
+    messageHeaders: OB1Global.MessageHeaderV2,
   ): void {
     const topic = 'budyos-ob1-applicationService';
 

@@ -93,6 +93,26 @@ export class AgentServiceRequest {
 
   constructor(private readonly kafkaOb1Service: KafkaOb1Service) {}
 
+  async sendAgentRequest(
+    systemPrompt: string,
+    userPrompt: string,
+    config: {
+      provider: string;
+      model: string;
+      temperature: number;
+      maxTokens: number;
+      frequencyPenalty: number;
+      presencePenalty: number;
+    },
+    instanceName: string,
+    messageKey: string,
+  ): Promise<any> {
+    this.logger.debug(
+      'Sending agent request function currently not implemented',
+    );
+    return null;
+  }
+
   async sendPromptExecutionRequest(
     personId: string,
     userOrgId: string,

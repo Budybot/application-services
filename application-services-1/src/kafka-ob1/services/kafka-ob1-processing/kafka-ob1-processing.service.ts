@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
-  OB1MessageValue,
+  OB1Global,
   //   OB1MessageHeader,
 } from 'src/interfaces/ob1-message.interfaces';
 // import { ClientKafka } from '@nestjs/microservices';
@@ -30,10 +30,11 @@ export class KafkaOb1ProcessingService {
     // @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
   ) {}
 
-  async processRequest(message: OB1MessageValue, context: KafkaContext) {
+  async processRequest(
+    message: OB1Global.MessageResponseValueV2,
+    context: KafkaContext,
+  ) {
     const messageHeaders = context.getMessage().headers;
-    const userEmail = messageHeaders['userEmail'] as string;
-    const instanceName = messageHeaders['instanceName'] as string;
     const personId = messageHeaders['personId'] as string;
     const userOrgId = messageHeaders['userOrgId'] as string;
 
@@ -49,8 +50,8 @@ export class KafkaOb1ProcessingService {
           const participants =
             await this.getParticipantsService.extractParticipants(
               transcriptForParticipants,
-              instanceName,
-              userEmail,
+              userOrgId,
+              personId,
             );
           response = { messageContent: { participants: participants } };
           break;
@@ -59,8 +60,8 @@ export class KafkaOb1ProcessingService {
           const cleanedTranscript =
             await this.cleanTranscriptService.cleanTranscript(
               transcriptToClean,
-              instanceName,
-              userEmail,
+              userOrgId,
+              personId,
             );
           response = {
             messageContent: { cleanedTranscript: cleanedTranscript },
@@ -71,8 +72,8 @@ export class KafkaOb1ProcessingService {
           // this.logger.debug(`Function input: ${JSON.stringify(functionInput)}`);
           response = await this.pageSubmittedService.handlePageSubmitted(
             functionInput,
-            userEmail,
-            instanceName,
+            userOrgId,
+            personId,
           );
           break;
         case 'create-project-plan':
@@ -81,8 +82,8 @@ export class KafkaOb1ProcessingService {
           const projectPlanId =
             await this.createProjectPlanService.createProjectPlan(
               projectName,
-              instanceName,
-              userEmail,
+              userOrgId,
+              personId,
             );
           response = {
             messageContent: { projectPlanId: projectPlanId },
@@ -92,8 +93,8 @@ export class KafkaOb1ProcessingService {
           const { transcript } = functionInput;
           const completedActionItems =
             await this.completedActionItemsService.extractCompletedActionItems(
-              instanceName,
-              userEmail,
+              userOrgId,
+              personId,
               transcript,
             );
           response = {
@@ -106,8 +107,8 @@ export class KafkaOb1ProcessingService {
             syncTo,
             syncFrom,
             functionInput.projectName,
-            instanceName,
-            userEmail,
+            userOrgId,
+            personId,
           );
           response = {
             messageContent: { syncResult: syncResult },
@@ -238,7 +239,7 @@ export class KafkaOb1ProcessingService {
       return response;
     } catch (error) {
       this.logger.error(
-        `Error processing message for user with email ${userEmail}: ${error.message}`,
+        `Error processing message for user with email ${personId}: ${error.message}`,
         error.stack,
       );
       throw new Error('Failed to process request');

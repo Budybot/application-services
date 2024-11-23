@@ -2,8 +2,7 @@ import { Injectable, Logger, Inject } from '@nestjs/common';
 import { google } from 'googleapis';
 import { ClientKafka } from '@nestjs/microservices';
 import {
-  OB1MessageValue,
-  OB1MessageHeader,
+  OB1Global,
   CURRENT_SCHEMA_VERSION,
 } from 'src/interfaces/ob1-message.interfaces';
 @Injectable()
@@ -56,8 +55,8 @@ export class GoogleDocMonitoringService {
   async startMonitoring(
     documentId: string,
     projectName: string,
-    instanceName: string,
-    userId: string,
+    userOrgId: string,
+    personId: string,
     pollingIntervalSeconds: number = 60,
   ) {
     this.logger.log(`Starting to monitor Google Doc with ID: ${documentId}`);
@@ -73,8 +72,8 @@ export class GoogleDocMonitoringService {
           this.checkForNewComments(
             documentId,
             projectName,
-            instanceName,
-            userId,
+            userOrgId,
+            personId,
           ),
         pollingIntervalSeconds * 1000,
       ),
@@ -92,8 +91,8 @@ export class GoogleDocMonitoringService {
   private async checkForNewComments(
     documentId: string,
     projectName: string,
-    instanceName: string,
-    userId: string,
+    userOrgId: string,
+    personId: string,
   ) {
     try {
       await this.refreshAccessTokenIfNeeded();
@@ -119,7 +118,7 @@ export class GoogleDocMonitoringService {
             );
             processedCommentIds.add(comment.id!);
             const topic = 'budyos-ob1-applicationService';
-            const messageValue: OB1MessageValue = {
+            const messageValue: OB1Global.MessageResponseValueV2 = {
               messageContent: {
                 functionName: 'process-comment',
                 commentContent: comment.content,
@@ -129,10 +128,11 @@ export class GoogleDocMonitoringService {
               projectId: projectName,
               assetId: null,
               conversationId: null,
+              error: false,
             };
-            const messageHeaders: OB1MessageHeader = {
-              instanceName: instanceName,
-              userEmail: userId,
+            const messageHeaders: OB1Global.MessageHeaderV2 = {
+              userOrgId: userOrgId,
+              personId: personId,
               sourceService: process.env.SERVICE_NAME || 'unknown-service',
               schemaVersion: CURRENT_SCHEMA_VERSION,
               destinationService: 'application-service',
@@ -175,8 +175,8 @@ export class GoogleDocMonitoringService {
     }
   }
   emitMessage(
-    messageValue: OB1MessageValue,
-    messageHeaders: OB1MessageHeader,
+    messageValue: OB1Global.MessageResponseValueV2,
+    messageHeaders: OB1Global.MessageHeaderV2,
     topic: string,
   ): void {
     try {

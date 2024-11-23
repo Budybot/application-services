@@ -1,7 +1,8 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
-  OB1MessageValue,
-  OB1MessageHeader,
+  OB1Global,
+  MessageValueV2,
+  MessageHeaderV2,
 } from 'src/interfaces/ob1-message.interfaces';
 // import { ClientKafka } from '@nestjs/microservices';
 import { KafkaContext } from '@nestjs/microservices';
@@ -19,8 +20,8 @@ export class KafkaOb1BroadcastService {
   ) {} // @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
 
   async processBroadcast(
-    message: OB1MessageValue,
-    headers: OB1MessageHeader,
+    message: MessageValueV2,
+    headers: MessageHeaderV2,
     context: KafkaContext,
   ) {
     // const messageHeaders = context.getMessage().headers;
@@ -36,16 +37,16 @@ export class KafkaOb1BroadcastService {
           this.logger.log('Processing comment...');
           const { commentData } = functionInput;
           const budyReply = this.sowCommentProcessingService.generateBudyReply(
-            headers.instanceName,
-            headers.userId,
+            headers.userOrgId,
+            headers.personId,
             commentData,
           );
           this.logger.log(`Generated Budy reply: ${budyReply}`);
           break;
         case 'generate-assets':
           const { pageName, projectName } = functionInput;
-          const instanceName = headers.instanceName;
-          const userEmail = headers.userEmail;
+          const userOrgId = headers.userOrgId;
+          const personId = headers.personId;
           if (!projectName || !pageName) {
             throw new Error(
               "Required fields 'projectName' or 'pageName' are missing in messageContent.",
@@ -63,21 +64,16 @@ export class KafkaOb1BroadcastService {
             try {
               const documentId = await this.contentService.generateContent(
                 projectName,
-                instanceName,
+                userOrgId,
                 { sowData: functionInput, pageName },
-                userEmail,
+                personId,
                 contentType,
               );
               this.logger.log(
                 `Successfully generated ${contentType} content with document ID: ${documentId}`,
               );
               this.googleDocMonitoringService
-                .startMonitoring(
-                  documentId,
-                  projectName,
-                  instanceName,
-                  userEmail,
-                )
+                .startMonitoring(documentId, projectName, userOrgId, personId)
                 .then(() => {
                   this.logger.log(
                     `Started monitoring for document ID: ${documentId}`,
@@ -106,9 +102,9 @@ export class KafkaOb1BroadcastService {
             try {
               const documentId = await this.contentService.updateContent(
                 projectName,
-                instanceName,
+                userOrgId,
                 { sowData: functionInput, pageName },
-                userEmail,
+                personId,
                 contentType,
               );
               this.logger.log(

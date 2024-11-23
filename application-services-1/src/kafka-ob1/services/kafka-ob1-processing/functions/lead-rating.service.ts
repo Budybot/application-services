@@ -568,26 +568,47 @@ export class LeadRatingService {
       const messageInput = {
         content: `Lead rating process completed successfully. Total API calls: ${apiCount}`,
       };
-      this.emitMessage(messageInput, 'budyos-ob1-notifications');
+      this.emitMessage(
+        messageInput,
+        'budyos-ob1-notifications',
+        false,
+        personId,
+        userOrgId,
+      );
 
       return tableData;
     } catch (error) {
       const errorMessageInput = {
         content: `Error in rateLeads: ${error.message}. Stack: ${error.stack}.`,
       };
-      this.emitMessage(errorMessageInput, 'budyos-ob1-notifications');
+      this.emitMessage(
+        errorMessageInput,
+        'budyos-ob1-notifications',
+        true,
+        personId,
+        userOrgId,
+      );
       throw new Error(`Error in rateLeads: ${error.message}`);
     }
   }
-  emitMessage(messageInput: any, topic: string): void {
+  emitMessage(
+    messageInput: any,
+    topic: string,
+    error: boolean,
+    personId: string,
+    userOrgId: string,
+  ): void {
     try {
-      const messageValue: OB1MessageValue = {
+      const messageValue: OB1Global.MessageResponseValueV2 = {
         messageContent: messageInput,
         messageType: 'NOTIFICATION',
+        error: error,
       };
-      const messageHeaders: OB1MessageHeader = {
+      const messageHeaders: OB1Global.MessageHeaderV2 = {
         sourceService: process.env.SERVICE_NAME || 'unknown-service',
         schemaVersion: CURRENT_SCHEMA_VERSION,
+        personId: personId,
+        userOrgId: userOrgId,
       };
       this.logger.log(
         `Emitting message to topic: ${topic}, with content: ${JSON.stringify(messageValue)}`,
