@@ -127,8 +127,9 @@ export class LeadRatingService {
     leadIds: string[],
     personId: string,
     userOrgId: string,
-  ): Promise<{ tableData: any[]; apiCount: number }> {
+  ): Promise<{ tableData: any[]; apiCount: number; llmCount: number }> {
     let apiCount = 0;
+    let llmCount = 0;
     const tableData = [];
 
     // Fetch lead data in batch
@@ -203,6 +204,7 @@ export class LeadRatingService {
             { criteriaQuestions: criteriaQuestions },
           );
         apiCount++;
+        llmCount++;
 
         // Process LLM response
         const content = llmResponse?.messageContent?.content;
@@ -237,7 +239,7 @@ export class LeadRatingService {
       tableData.push(leadUpdateData);
     }
 
-    return { tableData, apiCount };
+    return { tableData, apiCount, llmCount };
   }
   private filterNullFields(record: any): any {
     return Object.fromEntries(
@@ -259,9 +261,10 @@ export class LeadRatingService {
     userOrgId: string,
     NDays: number = 14,
     limit?: number,
-  ): Promise<number> {
+  ): Promise<{ apiCount: number; llmCount: number }> {
     try {
       let apiCount = 0;
+      let llmCount = 0;
 
       // Step 1: Get the lead records
       let leadRecordQuery = `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays}`;
@@ -325,20 +328,24 @@ export class LeadRatingService {
           `Processing batch ${batchCounter}/${recordIdChunks.length}`,
         );
 
-        const { tableData: batchTableData, apiCount: batchApiCount } =
-          await this.processLeadBatch(
-            serverUrl,
-            queryToolId,
-            promptId,
-            leadFields,
-            eventFields,
-            taskFields,
-            criteriaQuestions,
-            leadIdsBatch,
-            personId,
-            userOrgId,
-          );
+        const {
+          tableData: batchTableData,
+          apiCount: batchApiCount,
+          llmCount: batchLlmCount,
+        } = await this.processLeadBatch(
+          serverUrl,
+          queryToolId,
+          promptId,
+          leadFields,
+          eventFields,
+          taskFields,
+          criteriaQuestions,
+          leadIdsBatch,
+          personId,
+          userOrgId,
+        );
         apiCount += batchApiCount;
+        llmCount += batchLlmCount;
 
         // Step 5: Update lead records in batch
         await this.toolTestingService.runTest(serverUrl, patchToolId, {
@@ -370,11 +377,8 @@ export class LeadRatingService {
         // ...
       }
 
-      this.logger.debug(
-        `Lead rating process completed successfully. Total API calls: ${apiCount}`,
-      );
       const messageInput = {
-        content: `Lead rating process completed successfully. Total API calls: ${apiCount}`,
+        content: `Lead rating process completed successfully. Total API calls: ${apiCount}. Total LLM calls: ${llmCount}.`,
       };
       this.emitMessage(
         messageInput,
@@ -383,7 +387,7 @@ export class LeadRatingService {
         personId,
         userOrgId,
       );
-      return apiCount;
+      return { apiCount, llmCount };
     } catch (error) {
       const errorMessageInput = {
         content: `Error in rateLeads: ${error.message}. Stack: ${error.stack}.`,

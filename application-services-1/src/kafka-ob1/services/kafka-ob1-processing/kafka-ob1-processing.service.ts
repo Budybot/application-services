@@ -177,7 +177,7 @@ export class KafkaOb1ProcessingService {
             )
             .then((result) => {
               this.logger.log(
-                `Lead rating process completed: Total API Count is ${result}`,
+                `Lead rating process completed: Total Count is ${result}`,
               );
             })
             .catch((error) => {

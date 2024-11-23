@@ -206,9 +206,9 @@ export class AgentServiceRequest {
     // Adjust config for long prompts
     if (userPrompt.length > tokenThreshold) {
       this.logger.warn(
-        `User prompt exceeds token limit of ${tokenThreshold} tokens. Switching model to gpt-4o.`,
+        `User prompt exceeds token limit of ${tokenThreshold} tokens. Increase max token.`,
       );
-      config.model = 'gpt-4o';
+      // config.model = 'gpt-4o';
       config.maxTokens = 12000;
     }
 
