@@ -162,7 +162,7 @@ export class KafkaOb1ProcessingService {
           // Step 2: Trigger the rating process asynchronously
           this.rateLead
             .rateLeads(
-              '35.161.118.26',
+              'agent-services-1.orangebox-uswest-2.local',
               recordToolId,
               describeToolId,
               queryToolId,

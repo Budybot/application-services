@@ -558,39 +558,26 @@ export class LeadRatingService {
       const messageInput = {
         content: `Lead rating process completed successfully. Total API calls: ${apiCount}`,
       };
-      this.kafkaClient.emit('budyos-ob1-notifications', {
-        value: {
-          messageContent: messageInput,
-          messageType: 'NOTIFICATION',
-          error: false,
-        },
-        headers: {
-          sourceService: process.env.SERVICE_NAME || 'unknown-service',
-          schemaVersion: CURRENT_SCHEMA_VERSION,
-          personId: personId,
-          userOrgId: userOrgId,
-        },
-      });
-    //   this.emitMessage(
-    //     messageInput,
-    //     'budyos-ob1-notifications',
-    //     false,
-    //     personId,
-    //     userOrgId,
-    //   );
+      this.emitMessage(
+        messageInput,
+        'budyos-ob1-applicationService',
+        false,
+        personId,
+        userOrgId,
+      );
 
       return apiCount;
     } catch (error) {
-    //   const errorMessageInput = {
-    //     content: `Error in rateLeads: ${error.message}. Stack: ${error.stack}.`,
-    //   };
-    //   this.emitMessage(
-    //     errorMessageInput,
-    //     'budyos-ob1-notifications',
-    //     true,
-    //     personId,
-    //     userOrgId,
-    //   );
+      const errorMessageInput = {
+        content: `Error in rateLeads: ${error.message}. Stack: ${error.stack}.`,
+      };
+      this.emitMessage(
+        errorMessageInput,
+        'budyos-ob1-applicationService',
+        true,
+        personId,
+        userOrgId,
+      );
       throw new Error(`Error in rateLeads: ${error.message}`);
     }
   }
