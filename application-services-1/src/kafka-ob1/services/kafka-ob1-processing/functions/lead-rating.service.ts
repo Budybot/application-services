@@ -188,7 +188,7 @@ export class LeadRatingService {
         const config = {
           provider: 'openai',
           model: 'gpt-4o-mini',
-          temperature: 0.7,
+          temperature: 0.2,
           maxTokens: 4096,
           frequencyPenalty: 0,
           presencePenalty: 0,
