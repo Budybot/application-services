@@ -203,7 +203,6 @@ export class LeadRatingService {
             config,
             { criteriaQuestions: criteriaQuestions },
           );
-        apiCount++;
         llmCount++;
 
         // Process LLM response
