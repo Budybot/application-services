@@ -125,6 +125,7 @@ export class LeadRatingService {
     taskFields: string[],
     criteriaQuestions: string[],
     leadIds: string[],
+    currentTime: string,
     personId: string,
     userOrgId: string,
   ): Promise<{ tableData: any[]; apiCount: number; llmCount: number }> {
@@ -174,11 +175,11 @@ export class LeadRatingService {
         evaluation = criteriaQuestions.map(() => ({
           outcome: 'NA',
           justification:
-            'There is no activity data. Budy is not even going to check this lead.',
+            'There is no activity data for Budy to comment on this lead.',
         }));
       } else {
         // Prepare LLM prompt
-        const userPrompt = `Lead Data: ${JSON.stringify(
+        const userPrompt = `Time at the start of analysis: ${currentTime}.\nLead Data: ${JSON.stringify(
           filteredLeadData,
         )}\nActivity Results: ${JSON.stringify({
           events: filteredEvents,
@@ -316,6 +317,7 @@ export class LeadRatingService {
       ];
 
       // Step 4: Process leads in batches
+      const currentTime = new Date().toISOString();
       const chunkSize = 20;
       const recordIdChunks = this.chunkArray(recordIds, chunkSize);
       const tableData: any[] = [];
@@ -340,6 +342,7 @@ export class LeadRatingService {
           taskFields,
           criteriaQuestions,
           leadIdsBatch,
+          currentTime,
           personId,
           userOrgId,
         );
