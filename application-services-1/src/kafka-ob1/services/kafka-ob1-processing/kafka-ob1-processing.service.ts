@@ -14,6 +14,7 @@ import { CompletedActionItemsService } from './functions/completed-action-items.
 import { SyncAssetsService } from './functions/sync-assets.service';
 import { ToolTestingService } from './tool-tester.service';
 import { LeadRatingService } from './functions/lead-rating.service';
+import { AgentServiceRequest } from './agent-service-request.service';
 
 @Injectable()
 export class KafkaOb1ProcessingService {
@@ -28,6 +29,7 @@ export class KafkaOb1ProcessingService {
     private readonly syncAssetsService: SyncAssetsService,
     private readonly testTool: ToolTestingService,
     private readonly rateLead: LeadRatingService,
+    private readonly agentServiceRequest: AgentServiceRequest,
     // @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
   ) {}
 
@@ -121,17 +123,25 @@ export class KafkaOb1ProcessingService {
           response = { messageContent: { commentProcessed: true } };
           break;
         case 'test-tool':
-          const { toolId, toolInput } = functionInput;
-          this.logger.log(
-            `Testing tool with ID ${toolId} and input: ${toolInput}`,
+          const toolResponse = await this.agentServiceRequest.sendToolRequest(
+            personId,
+            userOrgId,
+            functionInput.toolId,
+            functionInput.toolInput,
           );
-          const toolTestResult = await this.testTool.runTest(
-            '35.161.118.26',
-            toolId,
-            toolInput,
-          );
-          response = { messageContent: { toolTestResult: toolTestResult } };
+          response = { messageContent: { toolResponse: toolResponse } };
           break;
+          // const { toolId, toolInput } = functionInput;
+          // this.logger.log(
+          //   `Testing tool with ID ${toolId} and input: ${toolInput}`,
+          // );
+          // const toolTestResult = await this.testTool.runTest(
+          //   '35.161.118.26',
+          //   toolId,
+          //   toolInput,
+          // );
+          // response = { messageContent: { toolTestResult: toolTestResult } };
+          // break;
         case 'rate-leads':
           const {
             criteriaRecordId,
