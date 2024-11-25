@@ -139,7 +139,7 @@ export class AgentServiceRequest {
     // Construct the functionInput for CRUDRoutes
     const functionInput = {
       CRUDOperationName: 'POST',
-      CRUDRoute: 'tools/:toolId/execute',
+      CRUDRoute: 'tools/:toolId/test',
       CRUDBody: toolInput,
       routeParams: {
         toolId,
