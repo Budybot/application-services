@@ -159,7 +159,7 @@ export class AgentServiceRequest {
     // Prepare the Kafka message payload
     const messageInput = {
       messageContent: {
-        functionName: 'CRUDToolRoutes',
+        functionName: 'toolCRUD-V1',
         functionInput,
       },
       messageType: 'REQUEST',
