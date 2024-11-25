@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-namespace */
-import { plainToInstance } from 'class-transformer';
+import { plainToInstance, Type } from 'class-transformer';
 import {
   IsNotEmpty,
   IsOptional,
@@ -142,6 +142,7 @@ export namespace OB1Global {
 
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     kafka_replyPartition?: number;
 
     @IsOptional()
