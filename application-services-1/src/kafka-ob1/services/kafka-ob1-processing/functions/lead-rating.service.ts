@@ -569,11 +569,13 @@ export class LeadRatingService {
                          GROUP BY OwnerId, Owner.Name, Status
                          ORDER BY OwnerId`;
 
-    // const statusResults = await this.toolTestingService.runTest(
-    //   serverUrl,
-    //   queryToolId,
-    //   { query: statusQuery },
-    // );
+    const scoreQuery = `
+                             SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
+                             FROM Lead
+                             WHERE Id IN (${recordIdsQuoted.join(',')})
+                             GROUP BY OwnerId, Budy_Lead_Score_Bucket__c
+                             ORDER BY OwnerId
+                           `;
     const statusResults = await this.agentServiceRequest.sendToolRequest(
       personId,
       userOrgId,
@@ -581,22 +583,6 @@ export class LeadRatingService {
       { query: statusQuery },
     );
     apiCount++;
-    const statusResponse = statusResults.toolresult?.result;
-    //JSON.parse(statusResults.toolresult.body);
-
-    // Step 2: Query score data
-    const scoreQuery = `
-      SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
-      FROM Lead
-      WHERE Id IN (${recordIdsQuoted.join(',')})
-      GROUP BY OwnerId, Budy_Lead_Score_Bucket__c
-      ORDER BY OwnerId
-    `;
-    // const scoreResults = await this.toolTestingService.runTest(
-    //   serverUrl,
-    //   queryToolId,
-    //   { query: scoreQuery },
-    // );
     const scoreResults = await this.agentServiceRequest.sendToolRequest(
       personId,
       userOrgId,
@@ -604,12 +590,20 @@ export class LeadRatingService {
       { query: scoreQuery },
     );
     apiCount++;
+    const statusResponse = statusResults.toolresult?.result;
     const scoreResponse = scoreResults.toolresult?.result;
-    //JSON.parse(scoreResults.toolresult.body);
+
+    // Log the responses
+    this.logger.debug(`Status Response: ${JSON.stringify(statusResponse)}`);
+    this.logger.debug(`Score Response: ${JSON.stringify(scoreResponse)}`);
 
     // Step 3: Parse SDR and score reports
-    const sdrReport = this.parseSDRReport(statusResponse.result);
-    const scoreReport = this.parseScoreReport(scoreResponse.result);
+    const sdrReport = this.parseSDRReport(statusResponse);
+    const scoreReport = this.parseScoreReport(scoreResponse);
+
+    // Log the parsed reports
+    this.logger.debug(`SDR Report: ${JSON.stringify(sdrReport)}`);
+    this.logger.debug(`Score Report: ${JSON.stringify(scoreReport)}`);
 
     // Step 4: Transform to snapshot records
     const snapshotRecords = this.transformToSnapshotRecords(
@@ -618,15 +612,17 @@ export class LeadRatingService {
       recordData,
     );
 
+    // Log the snapshot records
+    this.logger.debug(`Snapshot Records: ${JSON.stringify(snapshotRecords)}`);
+
     // Step 5: Chunk and create snapshots
     const snapshotRecordChunks = this.chunkArray(snapshotRecords, chunkSize);
 
     for (const chunk of snapshotRecordChunks) {
-      //   await this.toolTestingService.runTest(serverUrl, createToolId, {
-      //     object_name: 'Budy_SDR_Snapshot__c',
-      //     records: chunk,
-      //   });
-      await this.agentServiceRequest.sendToolRequest(
+      // Log the chunk being sent
+      this.logger.debug(`Chunk being sent: ${JSON.stringify(chunk)}`);
+
+      const response = await this.agentServiceRequest.sendToolRequest(
         personId,
         userOrgId,
         createToolId,
@@ -636,10 +632,75 @@ export class LeadRatingService {
         },
       );
       apiCount++;
+
+      if (!response.messageContent?.toolSuccess) {
+        throw new Error(
+          `Failed to create snapshot records: ${response.messageContent?.toolresult?.error || 'Unknown error'}`,
+        );
+      }
     }
 
     return apiCount;
   }
+  //   const statusResponse = statusResults.toolresult?.result;
+  //   //JSON.parse(statusResults.toolresult.body);
+
+  //   // Step 2: Query score data
+  //   const scoreQuery = `
+  //     SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
+  //     FROM Lead
+  //     WHERE Id IN (${recordIdsQuoted.join(',')})
+  //     GROUP BY OwnerId, Budy_Lead_Score_Bucket__c
+  //     ORDER BY OwnerId
+  //   `;
+  //   // const scoreResults = await this.toolTestingService.runTest(
+  //   //   serverUrl,
+  //   //   queryToolId,
+  //   //   { query: scoreQuery },
+  //   // );
+  //   const scoreResults = await this.agentServiceRequest.sendToolRequest(
+  //     personId,
+  //     userOrgId,
+  //     queryToolId,
+  //     { query: scoreQuery },
+  //   );
+  //   apiCount++;
+  //   const scoreResponse = scoreResults.toolresult?.result;
+  //   //JSON.parse(scoreResults.toolresult.body);
+
+  //   // Step 3: Parse SDR and score reports
+  //   const sdrReport = this.parseSDRReport(statusResponse.result);
+  //   const scoreReport = this.parseScoreReport(scoreResponse.result);
+
+  //   // Step 4: Transform to snapshot records
+  //   const snapshotRecords = this.transformToSnapshotRecords(
+  //     sdrReport,
+  //     scoreReport,
+  //     recordData,
+  //   );
+
+  //   // Step 5: Chunk and create snapshots
+  //   const snapshotRecordChunks = this.chunkArray(snapshotRecords, chunkSize);
+
+  //   for (const chunk of snapshotRecordChunks) {
+  //     //   await this.toolTestingService.runTest(serverUrl, createToolId, {
+  //     //     object_name: 'Budy_SDR_Snapshot__c',
+  //     //     records: chunk,
+  //     //   });
+  //     await this.agentServiceRequest.sendToolRequest(
+  //       personId,
+  //       userOrgId,
+  //       createToolId,
+  //       {
+  //         object_name: 'Budy_SDR_Snapshot__c',
+  //         records: chunk,
+  //       },
+  //     );
+  //     apiCount++;
+  //   }
+
+  //   return apiCount;
+  // }
 
   private parseSDRReport(response: any): any {
     const report = {};
