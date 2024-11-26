@@ -49,8 +49,32 @@ export class LeadRatingService {
     return chunks;
   }
 
+  // private async getLeadDataBatch(
+  //   // serverUrl: string,
+  //   queryToolId: string,
+  //   leadFields: string[],
+  //   leadIds: string[],
+  //   personId: string,
+  //   userOrgId: string,
+  // ): Promise<any[]> {
+  //   const leadIdsQuoted = leadIds.map((id) => `'${id}'`).join(',');
+  //   const leadQuery = `SELECT ${leadFields.join(
+  //     ', ',
+  //   )} FROM Lead WHERE Id IN (${leadIdsQuoted})`;
+  //   const leadDataResult = await this.agentServiceRequest.sendToolRequest(
+  //     personId,
+  //     userOrgId,
+  //     queryToolId,
+  //     { query: leadQuery },
+  //   );
+  //   // const leadData =
+  //   //   JSON.parse(leadDataResult.toolresult.body)?.result.records || [];
+  //   const leadData = leadDataResult.toolresult?.result?.records || [];
+
+  //   return leadData;
+  // }
+
   private async getLeadDataBatch(
-    // serverUrl: string,
     queryToolId: string,
     leadFields: string[],
     leadIds: string[],
@@ -61,21 +85,106 @@ export class LeadRatingService {
     const leadQuery = `SELECT ${leadFields.join(
       ', ',
     )} FROM Lead WHERE Id IN (${leadIdsQuoted})`;
+
     const leadDataResult = await this.agentServiceRequest.sendToolRequest(
       personId,
       userOrgId,
       queryToolId,
       { query: leadQuery },
     );
-    // const leadData =
-    //   JSON.parse(leadDataResult.toolresult.body)?.result.records || [];
-    const leadData = leadDataResult.toolresult?.result?.records || [];
+
+    // Check if the tool executed successfully
+    if (
+      !leadDataResult.messageContent?.toolSuccess ||
+      leadDataResult.messageContent.toolstatusCodeReturned !== 200 ||
+      !leadDataResult.messageContent.toolresult?.result
+    ) {
+      throw new Error(
+        `Failed to fetch lead data: ${
+          leadDataResult.messageContent?.toolresult?.error || 'Unknown error'
+        }`,
+      );
+    }
+
+    const leadData =
+      leadDataResult.messageContent.toolresult.result.records || [];
 
     return leadData;
   }
 
+  // private async getActivityDataBatch(
+  //   // serverUrl: string,
+  //   queryToolId: string,
+  //   eventFields: string[],
+  //   taskFields: string[],
+  //   leadIds: string[],
+  //   personId: string,
+  //   userOrgId: string,
+  // ): Promise<{ [leadId: string]: { events: any[]; tasks: any[] } }> {
+  //   const leadIdsQuoted = leadIds.map((id) => `'${id}'`).join(',');
+  //   const eventQuery = `SELECT ${eventFields.join(
+  //     ', ',
+  //   )} FROM Event WHERE WhoId IN (${leadIdsQuoted})`;
+  //   const taskQuery = `SELECT ${taskFields.join(
+  //     ', ',
+  //   )} FROM Task WHERE WhoId IN (${leadIdsQuoted})`;
+
+  //   const [eventDataResult, taskDataResult] = await Promise.all([
+  //     //   this.toolTestingService.runTest(serverUrl, queryToolId, {
+  //     //     query: eventQuery,
+  //     //   }),
+  //     //   this.toolTestingService.runTest(serverUrl, queryToolId, {
+  //     //     query: taskQuery,
+  //     //   }),
+  //     this.agentServiceRequest.sendToolRequest(
+  //       personId,
+  //       userOrgId,
+  //       queryToolId,
+  //       { query: eventQuery },
+  //     ),
+  //     this.agentServiceRequest.sendToolRequest(
+  //       personId,
+  //       userOrgId,
+  //       queryToolId,
+  //       { query: taskQuery },
+  //     ),
+  //   ]);
+
+  //   const eventRecords =
+  //     //   JSON.parse(eventDataResult.toolresult.body)?.result.records || [];
+  //     eventDataResult.toolresult?.result?.records || [];
+
+  //   const taskRecords =
+  //     //   JSON.parse(taskDataResult.toolresult.body)?.result.records || [];
+  //     taskDataResult.toolresult?.result?.records || [];
+
+  //   const activityData = {};
+
+  //   leadIds.forEach((leadId) => {
+  //     activityData[leadId] = {
+  //       events: [],
+  //       tasks: [],
+  //     };
+  //   });
+
+  //   eventRecords.forEach((event) => {
+  //     const whoId = event.WhoId;
+  //     if (activityData[whoId]) {
+  //       activityData[whoId].events.push(event);
+  //     }
+  //   });
+
+  //   taskRecords.forEach((task) => {
+  //     const whoId = task.WhoId;
+  //     if (activityData[whoId]) {
+  //       activityData[whoId].tasks.push(task);
+  //     }
+  //   });
+
+  //   return activityData;
+  // }
+
   private async getActivityDataBatch(
-    // serverUrl: string,
     queryToolId: string,
     eventFields: string[],
     taskFields: string[],
@@ -92,12 +201,6 @@ export class LeadRatingService {
     )} FROM Task WHERE WhoId IN (${leadIdsQuoted})`;
 
     const [eventDataResult, taskDataResult] = await Promise.all([
-      //   this.toolTestingService.runTest(serverUrl, queryToolId, {
-      //     query: eventQuery,
-      //   }),
-      //   this.toolTestingService.runTest(serverUrl, queryToolId, {
-      //     query: taskQuery,
-      //   }),
       this.agentServiceRequest.sendToolRequest(
         personId,
         userOrgId,
@@ -112,13 +215,39 @@ export class LeadRatingService {
       ),
     ]);
 
+    let apiCount = 2; // If you need to track API calls
+
+    // Check if the tool executed successfully for events
+    if (
+      !eventDataResult.messageContent?.toolSuccess ||
+      eventDataResult.messageContent.toolstatusCodeReturned !== 200 ||
+      !eventDataResult.messageContent.toolresult?.result
+    ) {
+      throw new Error(
+        `Failed to fetch event data: ${
+          eventDataResult.messageContent?.toolresult?.error || 'Unknown error'
+        }`,
+      );
+    }
+
+    // Check if the tool executed successfully for tasks
+    if (
+      !taskDataResult.messageContent?.toolSuccess ||
+      taskDataResult.messageContent.toolstatusCodeReturned !== 200 ||
+      !taskDataResult.messageContent.toolresult?.result
+    ) {
+      throw new Error(
+        `Failed to fetch task data: ${
+          taskDataResult.messageContent?.toolresult?.error || 'Unknown error'
+        }`,
+      );
+    }
+
     const eventRecords =
-      //   JSON.parse(eventDataResult.toolresult.body)?.result.records || [];
-      eventDataResult.toolresult?.result?.records || [];
+      eventDataResult.messageContent.toolresult.result.records || [];
 
     const taskRecords =
-      //   JSON.parse(taskDataResult.toolresult.body)?.result.records || [];
-      taskDataResult.toolresult?.result?.records || [];
+      taskDataResult.messageContent.toolresult.result.records || [];
 
     const activityData = {};
 
@@ -281,6 +410,218 @@ export class LeadRatingService {
     );
   }
 
+  // async rateLeads(
+  //   serverUrl: string,
+  //   recordToolId: string,
+  //   describeToolId: string,
+  //   queryToolId: string,
+  //   patchToolId: string,
+  //   createToolId: string,
+  //   criteriaRecordId: string,
+  //   promptId: string,
+  //   makeSnapshot: boolean,
+  //   personId: string,
+  //   userOrgId: string,
+  //   NDays: number = 14,
+  //   limit?: number,
+  // ): Promise<{ apiCount: number; llmCount: number }> {
+  //   try {
+  //     let apiCount = 0;
+  //     let llmCount = 0;
+
+  //     // Step 1: Get the lead records
+  //     let leadRecordQuery = `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays}`;
+  //     if (limit) {
+  //       leadRecordQuery += ` LIMIT ${limit}`;
+  //     }
+  //     //   const leadRecords = await this.toolTestingService.runTest(
+  //     //     serverUrl,
+  //     //     queryToolId,
+  //     //     {
+  //     //       query: leadRecordQuery,
+  //     //     },
+  //     //   );
+  //     const leadRecords = await this.agentServiceRequest.sendToolRequest(
+  //       personId,
+  //       userOrgId,
+  //       queryToolId,
+  //       { query: leadRecordQuery },
+  //     );
+  //     apiCount++;
+  //     //   const responseBody = leadRecords.toolresult?.result; // JSON.parse(leadRecords.toolresult.body);
+  //     //   const recordIds = responseBody.result.records.map(
+  //     //     (record: any) => record.Id,
+  //     //   );
+  //     const responseBody = leadRecords.toolresult?.result || {};
+  //     const recordIds =
+  //       responseBody.records?.map((record: any) => record.Id) || [];
+
+  //     // Step 2B: If makeSnapshot is true, directly run the snapshot creation logic and exit
+  //     if (makeSnapshot) {
+  //       const snapshotApiCount = await this.createSnapshotLeads(
+  //         serverUrl,
+  //         queryToolId,
+  //         createToolId,
+  //         recordIds,
+  //         responseBody.result,
+  //         20,
+  //         personId,
+  //         userOrgId,
+  //       );
+  //       apiCount += snapshotApiCount;
+  //       return { apiCount, llmCount };
+  //     }
+
+  //     // Step 2: Describe Lead, Event, and Task objects
+  //     const [leadFields, eventFields, taskFields] = await Promise.all([
+  //       this.describeObjectFields(describeToolId, 'Lead', personId, userOrgId),
+  //       this.describeObjectFields(describeToolId, 'Event', personId, userOrgId),
+  //       this.describeObjectFields(describeToolId, 'Task', personId, userOrgId),
+  //     ]);
+  //     apiCount += 3;
+
+  //     // Step 3: Get criteria record data
+  //     //   const criteriaRecordData = await this.toolTestingService.runTest(
+  //     //     serverUrl,
+  //     //     recordToolId,
+  //     //     {
+  //     //       recordId: criteriaRecordId,
+  //     //       objectName: 'Budy_Lead_Criteria__c',
+  //     //     },
+  //     //   );
+  //     const criteriaRecordData = await this.agentServiceRequest.sendToolRequest(
+  //       personId,
+  //       userOrgId,
+  //       recordToolId,
+  //       {
+  //         recordId: criteriaRecordId,
+  //         objectName: 'Budy_Lead_Criteria__c',
+  //       },
+  //     );
+  //     apiCount++;
+  //     const criteriaResponseBody = criteriaRecordData.toolresult?.result;
+  //     //   JSON.parse(
+  //     //     criteriaRecordData.toolresult.body,
+  //     //   );
+  //     const recordData = criteriaResponseBody.result?.recordData || {};
+
+  //     // Extract the questions into a list
+  //     const criteriaQuestions = [
+  //       recordData.Question_1__c,
+  //       recordData.Question_2__c,
+  //       recordData.Question_3__c,
+  //       recordData.Question_4__c,
+  //     ];
+
+  //     // Step 4: Process leads in batches
+  //     const currentTime = new Date().toISOString();
+  //     const chunkSize = 20;
+  //     const recordIdChunks = this.chunkArray(recordIds, chunkSize);
+  //     const tableData: any[] = [];
+
+  //     let batchCounter = 0;
+  //     for (const leadIdsBatch of recordIdChunks) {
+  //       batchCounter++;
+  //       this.logger.debug(
+  //         `Processing batch ${batchCounter}/${recordIdChunks.length}`,
+  //       );
+
+  //       const {
+  //         tableData: batchTableData,
+  //         apiCount: batchApiCount,
+  //         llmCount: batchLlmCount,
+  //       } = await this.processLeadBatch(
+  //         serverUrl,
+  //         queryToolId,
+  //         promptId,
+  //         leadFields,
+  //         eventFields,
+  //         taskFields,
+  //         criteriaQuestions,
+  //         leadIdsBatch,
+  //         currentTime,
+  //         personId,
+  //         userOrgId,
+  //       );
+  //       apiCount += batchApiCount;
+  //       llmCount += batchLlmCount;
+
+  //       // Step 5: Update lead records in batch
+  //       // await this.toolTestingService.runTest(serverUrl, patchToolId, {
+  //       //   record_type: 'Lead',
+  //       //   field_names: [
+  //       //     'Budy_Criteria_1__c',
+  //       //     'Budy_Justification_1__c',
+  //       //     'Budy_Criteria_2__c',
+  //       //     'Budy_Justification_2__c',
+  //       //     'Budy_Criteria_3__c',
+  //       //     'Budy_Justification_3__c',
+  //       //     'Budy_Criteria_4__c',
+  //       //     'Budy_Justification_4__c',
+  //       //     'Budy_Lead_Score__c',
+  //       //     'Budy_Lead_Score_Bucket__c',
+  //       //   ],
+  //       //   records: batchTableData,
+  //       // });
+  //       await this.agentServiceRequest.sendToolRequest(
+  //         personId,
+  //         userOrgId,
+  //         patchToolId,
+  //         {
+  //           record_type: 'Lead',
+  //           field_names: [
+  //             'Budy_Criteria_1__c',
+  //             'Budy_Justification_1__c',
+  //             'Budy_Criteria_2__c',
+  //             'Budy_Justification_2__c',
+  //             'Budy_Criteria_3__c',
+  //             'Budy_Justification_3__c',
+  //             'Budy_Criteria_4__c',
+  //             'Budy_Justification_4__c',
+  //             'Budy_Lead_Score__c',
+  //             'Budy_Lead_Score_Bucket__c',
+  //           ],
+  //           records: batchTableData,
+  //         },
+  //       );
+  //       apiCount++;
+
+  //       tableData.push(...batchTableData);
+
+  //       this.logger.debug(`Batch ${batchCounter} processed successfully.`);
+  //     }
+
+  //     // Step 6: Create snapshot records if needed
+  //     if (makeSnapshot) {
+  //       // Snapshot logic can be updated similarly to process in batches
+  //       // ...
+  //     }
+
+  //     const messageInput = {
+  //       content: `Lead rating process completed successfully. Total API calls: ${apiCount}. Total LLM calls: ${llmCount}.`,
+  //     };
+  //     this.emitMessage(
+  //       messageInput,
+  //       'budyos-ob1-applicationService',
+  //       false,
+  //       personId,
+  //       userOrgId,
+  //     );
+  //     return { apiCount, llmCount };
+  //   } catch (error) {
+  //     const errorMessageInput = {
+  //       content: `Error in rateLeads: ${error.message}. Stack: ${error.stack}.`,
+  //     };
+  //     this.emitMessage(
+  //       errorMessageInput,
+  //       'budyos-ob1-applicationService',
+  //       true,
+  //       personId,
+  //       userOrgId,
+  //     );
+  //     throw new Error(`Error in rateLeads: ${error.message}`);
+  //   }
+  // }
   async rateLeads(
     serverUrl: string,
     recordToolId: string,
@@ -305,25 +646,31 @@ export class LeadRatingService {
       if (limit) {
         leadRecordQuery += ` LIMIT ${limit}`;
       }
-      //   const leadRecords = await this.toolTestingService.runTest(
-      //     serverUrl,
-      //     queryToolId,
-      //     {
-      //       query: leadRecordQuery,
-      //     },
-      //   );
-      const leadRecords = await this.agentServiceRequest.sendToolRequest(
-        personId,
-        userOrgId,
-        queryToolId,
-        { query: leadRecordQuery },
-      );
+
+      const leadRecordsResponse =
+        await this.agentServiceRequest.sendToolRequest(
+          personId,
+          userOrgId,
+          queryToolId,
+          { query: leadRecordQuery },
+        );
       apiCount++;
-      //   const responseBody = leadRecords.toolresult?.result; // JSON.parse(leadRecords.toolresult.body);
-      //   const recordIds = responseBody.result.records.map(
-      //     (record: any) => record.Id,
-      //   );
-      const responseBody = leadRecords.toolresult?.result || {};
+
+      // Check if the tool executed successfully
+      if (
+        !leadRecordsResponse.messageContent?.toolSuccess ||
+        leadRecordsResponse.messageContent.toolstatusCodeReturned !== 200 ||
+        !leadRecordsResponse.messageContent.toolresult?.result
+      ) {
+        throw new Error(
+          `Failed to fetch lead records: ${
+            leadRecordsResponse.messageContent?.toolresult?.error ||
+            'Unknown error'
+          }`,
+        );
+      }
+
+      const responseBody = leadRecordsResponse.messageContent.toolresult.result;
       const recordIds =
         responseBody.records?.map((record: any) => record.Id) || [];
 
@@ -334,7 +681,7 @@ export class LeadRatingService {
           queryToolId,
           createToolId,
           recordIds,
-          responseBody.result,
+          responseBody,
           20,
           personId,
           userOrgId,
@@ -352,14 +699,6 @@ export class LeadRatingService {
       apiCount += 3;
 
       // Step 3: Get criteria record data
-      //   const criteriaRecordData = await this.toolTestingService.runTest(
-      //     serverUrl,
-      //     recordToolId,
-      //     {
-      //       recordId: criteriaRecordId,
-      //       objectName: 'Budy_Lead_Criteria__c',
-      //     },
-      //   );
       const criteriaRecordData = await this.agentServiceRequest.sendToolRequest(
         personId,
         userOrgId,
@@ -370,11 +709,24 @@ export class LeadRatingService {
         },
       );
       apiCount++;
-      const criteriaResponseBody = criteriaRecordData.toolresult?.result;
-      //   JSON.parse(
-      //     criteriaRecordData.toolresult.body,
-      //   );
-      const recordData = criteriaResponseBody.result?.recordData || {};
+
+      // Check if the tool executed successfully
+      if (
+        !criteriaRecordData.messageContent?.toolSuccess ||
+        criteriaRecordData.messageContent.toolstatusCodeReturned !== 200 ||
+        !criteriaRecordData.messageContent.toolresult?.result
+      ) {
+        throw new Error(
+          `Failed to fetch criteria record data: ${
+            criteriaRecordData.messageContent?.toolresult?.error ||
+            'Unknown error'
+          }`,
+        );
+      }
+
+      const criteriaResponseBody =
+        criteriaRecordData.messageContent.toolresult.result;
+      const recordData = criteriaResponseBody.recordData || {};
 
       // Extract the questions into a list
       const criteriaQuestions = [
@@ -418,23 +770,7 @@ export class LeadRatingService {
         llmCount += batchLlmCount;
 
         // Step 5: Update lead records in batch
-        // await this.toolTestingService.runTest(serverUrl, patchToolId, {
-        //   record_type: 'Lead',
-        //   field_names: [
-        //     'Budy_Criteria_1__c',
-        //     'Budy_Justification_1__c',
-        //     'Budy_Criteria_2__c',
-        //     'Budy_Justification_2__c',
-        //     'Budy_Criteria_3__c',
-        //     'Budy_Justification_3__c',
-        //     'Budy_Criteria_4__c',
-        //     'Budy_Justification_4__c',
-        //     'Budy_Lead_Score__c',
-        //     'Budy_Lead_Score_Bucket__c',
-        //   ],
-        //   records: batchTableData,
-        // });
-        await this.agentServiceRequest.sendToolRequest(
+        const patchResponse = await this.agentServiceRequest.sendToolRequest(
           personId,
           userOrgId,
           patchToolId,
@@ -456,6 +792,18 @@ export class LeadRatingService {
           },
         );
         apiCount++;
+
+        // Check if the tool executed successfully
+        if (
+          !patchResponse.messageContent?.toolSuccess ||
+          patchResponse.messageContent.toolstatusCodeReturned !== 200
+        ) {
+          throw new Error(
+            `Failed to update lead records: ${
+              patchResponse.messageContent?.toolresult?.error || 'Unknown error'
+            }`,
+          );
+        }
 
         tableData.push(...batchTableData);
 
@@ -569,13 +917,6 @@ export class LeadRatingService {
                          GROUP BY OwnerId, Owner.Name, Status
                          ORDER BY OwnerId`;
 
-    const scoreQuery = `
-                             SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
-                             FROM Lead
-                             WHERE Id IN (${recordIdsQuoted.join(',')})
-                             GROUP BY OwnerId, Budy_Lead_Score_Bucket__c
-                             ORDER BY OwnerId
-                           `;
     const statusResults = await this.agentServiceRequest.sendToolRequest(
       personId,
       userOrgId,
@@ -583,6 +924,31 @@ export class LeadRatingService {
       { query: statusQuery },
     );
     apiCount++;
+
+    // Check if the tool executed successfully
+    if (
+      !statusResults.messageContent?.toolSuccess ||
+      statusResults.messageContent.toolstatusCodeReturned !== 200 ||
+      !statusResults.messageContent.toolresult?.result
+    ) {
+      throw new Error(
+        `Failed to fetch status data: ${
+          statusResults.messageContent?.toolresult?.error || 'Unknown error'
+        }`,
+      );
+    }
+
+    const statusResponse = statusResults.messageContent.toolresult.result;
+
+    // Step 2: Query score data
+    const scoreQuery = `
+      SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
+      FROM Lead
+      WHERE Id IN (${recordIdsQuoted.join(',')})
+      GROUP BY OwnerId, Budy_Lead_Score_Bucket__c
+      ORDER BY OwnerId
+    `;
+
     const scoreResults = await this.agentServiceRequest.sendToolRequest(
       personId,
       userOrgId,
@@ -590,8 +956,21 @@ export class LeadRatingService {
       { query: scoreQuery },
     );
     apiCount++;
-    const statusResponse = statusResults.toolresult?.result;
-    const scoreResponse = scoreResults.toolresult?.result;
+
+    // Check if the tool executed successfully
+    if (
+      !scoreResults.messageContent?.toolSuccess ||
+      scoreResults.messageContent.toolstatusCodeReturned !== 200 ||
+      !scoreResults.messageContent.toolresult?.result
+    ) {
+      throw new Error(
+        `Failed to fetch score data: ${
+          scoreResults.messageContent?.toolresult?.error || 'Unknown error'
+        }`,
+      );
+    }
+
+    const scoreResponse = scoreResults.messageContent.toolresult.result;
 
     // Log the responses
     this.logger.debug(`Status Response: ${JSON.stringify(statusResponse)}`);
@@ -633,15 +1012,22 @@ export class LeadRatingService {
       );
       apiCount++;
 
-      if (!response.messageContent?.toolSuccess) {
+      // Check if the tool executed successfully
+      if (
+        !response.messageContent?.toolSuccess ||
+        response.messageContent.toolstatusCodeReturned !== 200
+      ) {
         throw new Error(
-          `Failed to create snapshot records: ${response.messageContent?.toolresult?.error || 'Unknown error'}`,
+          `Failed to create snapshot records: ${
+            response.messageContent?.toolresult?.error || 'Unknown error'
+          }`,
         );
       }
     }
 
     return apiCount;
   }
+
   //   const statusResponse = statusResults.toolresult?.result;
   //   //JSON.parse(statusResults.toolresult.body);
 
@@ -704,7 +1090,8 @@ export class LeadRatingService {
 
   private parseSDRReport(response: any): any {
     const report = {};
-    response.records.forEach((record) => {
+    const records = response?.records || [];
+    records.forEach((record) => {
       const { OwnerId, Name, Status, LeadCount } = record;
       if (!report[OwnerId]) {
         report[OwnerId] = {
@@ -729,7 +1116,8 @@ export class LeadRatingService {
 
   private parseScoreReport(response: any): any {
     const report = {};
-    response.records.forEach((record) => {
+    const records = response?.records || [];
+    records.forEach((record) => {
       const { OwnerId, Budy_Lead_Score_Bucket__c, LeadCount } = record;
       if (!report[OwnerId]) {
         report[OwnerId] = {
