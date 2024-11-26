@@ -35,8 +35,8 @@ export class LeadRatingService {
       describeToolId,
       { objectName },
     );
-    const fields =
-      JSON.parse(describeResult.toolresult.body)?.result.fieldNames || [];
+    const fields = describeResult.toolresult?.result?.fieldNames || [];
+      //JSON.parse(describeResult.toolresult.body)?.result.fieldNames || [];
     // Remove fields starting with "Budy_"
     return fields.filter((field) => !field.startsWith('Budy_'));
   }
@@ -61,19 +61,16 @@ export class LeadRatingService {
     const leadQuery = `SELECT ${leadFields.join(
       ', ',
     )} FROM Lead WHERE Id IN (${leadIdsQuoted})`;
-    // const leadDataResult = await this.toolTestingService.runTest(
-    //   serverUrl,
-    //   queryToolId,
-    //   { query: leadQuery },
-    // );
     const leadDataResult = await this.agentServiceRequest.sendToolRequest(
       personId,
       userOrgId,
       queryToolId,
       { query: leadQuery },
     );
-    const leadData =
-      JSON.parse(leadDataResult.toolresult.body)?.result.records || [];
+    // const leadData =
+    //   JSON.parse(leadDataResult.toolresult.body)?.result.records || [];
+    const leadData = leadDataResult.toolresult?.result?.records || [];
+
     return leadData;
   }
 
@@ -116,9 +113,12 @@ export class LeadRatingService {
     ]);
 
     const eventRecords =
-      JSON.parse(eventDataResult.toolresult.body)?.result.records || [];
+      //   JSON.parse(eventDataResult.toolresult.body)?.result.records || [];
+      eventDataResult.toolresult?.result?.records || [];
+
     const taskRecords =
-      JSON.parse(taskDataResult.toolresult.body)?.result.records || [];
+      //   JSON.parse(taskDataResult.toolresult.body)?.result.records || [];
+      taskDataResult.toolresult?.result?.records || [];
 
     const activityData = {};
 
@@ -319,8 +319,7 @@ export class LeadRatingService {
         { query: leadRecordQuery },
       );
       apiCount++;
-      const responseBody = JSON.parse(leadRecords.toolresult.body);
-
+      const responseBody = leadRecords.toolresult?.result; // JSON.parse(leadRecords.toolresult.body);
       const recordIds = responseBody.result.records.map(
         (record: any) => record.Id,
       );
@@ -366,9 +365,10 @@ export class LeadRatingService {
         },
       );
       apiCount++;
-      const criteriaResponseBody = JSON.parse(
-        criteriaRecordData.toolresult.body,
-      );
+      const criteriaResponseBody = criteriaRecordData.toolresult?.result;
+    //   JSON.parse(
+    //     criteriaRecordData.toolresult.body,
+    //   );
       const recordData = criteriaResponseBody.result?.recordData || {};
 
       // Extract the questions into a list
@@ -574,7 +574,8 @@ export class LeadRatingService {
       { query: statusQuery },
     );
     apiCount++;
-    const statusResponse = JSON.parse(statusResults.toolresult.body);
+    const statusResponse = statusResults.toolresult?.result;
+     //JSON.parse(statusResults.toolresult.body);
 
     // Step 2: Query score data
     const scoreQuery = `
@@ -596,7 +597,8 @@ export class LeadRatingService {
       { query: scoreQuery },
     );
     apiCount++;
-    const scoreResponse = JSON.parse(scoreResults.toolresult.body);
+    const scoreResponse = scoreResults.toolresult?.result;
+    //JSON.parse(scoreResults.toolresult.body);
 
     // Step 3: Parse SDR and score reports
     const sdrReport = this.parseSDRReport(statusResponse.result);
