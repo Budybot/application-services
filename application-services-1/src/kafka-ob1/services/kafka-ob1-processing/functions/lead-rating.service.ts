@@ -335,7 +335,9 @@ export class LeadRatingService {
           createToolId,
           recordIds,
           responseBody.result,
-          10,
+          20,
+          personId,
+          userOrgId,
         );
         apiCount += snapshotApiCount;
         return { apiCount, llmCount };
@@ -552,6 +554,8 @@ export class LeadRatingService {
     recordIds: string[],
     recordData: any,
     chunkSize: number,
+    personId: string,
+    userOrgId: string,
   ): Promise<number> {
     let apiCount = 0;
 
@@ -571,8 +575,8 @@ export class LeadRatingService {
     //   { query: statusQuery },
     // );
     const statusResults = await this.agentServiceRequest.sendToolRequest(
-      recordData.PersonId,
-      recordData.UserOrgId,
+      personId,
+      userOrgId,
       queryToolId,
       { query: statusQuery },
     );
@@ -594,8 +598,8 @@ export class LeadRatingService {
     //   { query: scoreQuery },
     // );
     const scoreResults = await this.agentServiceRequest.sendToolRequest(
-      recordData.PersonId,
-      recordData.UserOrgId,
+      personId,
+      userOrgId,
       queryToolId,
       { query: scoreQuery },
     );
@@ -623,8 +627,8 @@ export class LeadRatingService {
       //     records: chunk,
       //   });
       await this.agentServiceRequest.sendToolRequest(
-        recordData.PersonId,
-        recordData.UserOrgId,
+        personId,
+        userOrgId,
         createToolId,
         {
           object_name: 'Budy_SDR_Snapshot__c',
