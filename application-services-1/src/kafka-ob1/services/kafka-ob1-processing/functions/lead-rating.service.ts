@@ -697,6 +697,10 @@ export class LeadRatingService {
         this.describeObjectFields(describeToolId, 'Task', personId, userOrgId),
       ]);
       apiCount += 3;
+      this.logger.debug('Described Lead, Event, and Task objects.');
+      this.logger.debug(`Lead fields: ${leadFields}`);
+      this.logger.debug(`Event fields: ${eventFields}`);
+      this.logger.debug(`Task fields: ${taskFields}`);
 
       // Step 3: Get criteria record data
       const criteriaRecordData = await this.agentServiceRequest.sendToolRequest(
