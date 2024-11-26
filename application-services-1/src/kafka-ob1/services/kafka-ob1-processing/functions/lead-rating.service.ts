@@ -1,5 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { ToolTestingService } from '../tool-tester.service';
+// import { ToolTestingService } from '../tool-tester.service';
 import { AgentServiceRequest } from '../agent-service-request.service';
 import { ClientKafka } from '@nestjs/microservices';
 import {
@@ -12,18 +12,26 @@ export class LeadRatingService {
   private readonly logger = new Logger(LeadRatingService.name);
 
   constructor(
-    private readonly toolTestingService: ToolTestingService,
+    // private readonly toolTestingService: ToolTestingService,
     private readonly agentServiceRequest: AgentServiceRequest,
     @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka,
   ) {}
 
   private async describeObjectFields(
-    serverUrl: string,
+    // serverUrl: string,
     describeToolId: string,
     objectName: string,
+    personId: string,
+    userOrdId: string,
   ): Promise<string[]> {
-    const describeResult = await this.toolTestingService.runTest(
-      serverUrl,
+    // const describeResult = await this.toolTestingService.runTest(
+    //   serverUrl,
+    //   describeToolId,
+    //   { objectName },
+    // );
+    const describeResult = await this.agentServiceRequest.sendToolRequest(
+      personId,
+      userOrdId,
       describeToolId,
       { objectName },
     );
@@ -42,17 +50,25 @@ export class LeadRatingService {
   }
 
   private async getLeadDataBatch(
-    serverUrl: string,
+    // serverUrl: string,
     queryToolId: string,
     leadFields: string[],
     leadIds: string[],
+    personId: string,
+    userOrgId: string,
   ): Promise<any[]> {
     const leadIdsQuoted = leadIds.map((id) => `'${id}'`).join(',');
     const leadQuery = `SELECT ${leadFields.join(
       ', ',
     )} FROM Lead WHERE Id IN (${leadIdsQuoted})`;
-    const leadDataResult = await this.toolTestingService.runTest(
-      serverUrl,
+    // const leadDataResult = await this.toolTestingService.runTest(
+    //   serverUrl,
+    //   queryToolId,
+    //   { query: leadQuery },
+    // );
+    const leadDataResult = await this.agentServiceRequest.sendToolRequest(
+      personId,
+      userOrgId,
       queryToolId,
       { query: leadQuery },
     );
@@ -62,11 +78,13 @@ export class LeadRatingService {
   }
 
   private async getActivityDataBatch(
-    serverUrl: string,
+    // serverUrl: string,
     queryToolId: string,
     eventFields: string[],
     taskFields: string[],
     leadIds: string[],
+    personId: string,
+    userOrgId: string,
   ): Promise<{ [leadId: string]: { events: any[]; tasks: any[] } }> {
     const leadIdsQuoted = leadIds.map((id) => `'${id}'`).join(',');
     const eventQuery = `SELECT ${eventFields.join(
@@ -77,12 +95,24 @@ export class LeadRatingService {
     )} FROM Task WHERE WhoId IN (${leadIdsQuoted})`;
 
     const [eventDataResult, taskDataResult] = await Promise.all([
-      this.toolTestingService.runTest(serverUrl, queryToolId, {
-        query: eventQuery,
-      }),
-      this.toolTestingService.runTest(serverUrl, queryToolId, {
-        query: taskQuery,
-      }),
+      //   this.toolTestingService.runTest(serverUrl, queryToolId, {
+      //     query: eventQuery,
+      //   }),
+      //   this.toolTestingService.runTest(serverUrl, queryToolId, {
+      //     query: taskQuery,
+      //   }),
+      this.agentServiceRequest.sendToolRequest(
+        personId,
+        userOrgId,
+        queryToolId,
+        { query: eventQuery },
+      ),
+      this.agentServiceRequest.sendToolRequest(
+        personId,
+        userOrgId,
+        queryToolId,
+        { query: taskQuery },
+      ),
     ]);
 
     const eventRecords =
@@ -135,20 +165,24 @@ export class LeadRatingService {
 
     // Fetch lead data in batch
     const leadDataList = await this.getLeadDataBatch(
-      serverUrl,
+      //   serverUrl,
       queryToolId,
       leadFields,
       leadIds,
+      personId,
+      userOrgId,
     );
     apiCount++;
 
     // Fetch activity data in batch
     const activityData = await this.getActivityDataBatch(
-      serverUrl,
+      //   serverUrl,
       queryToolId,
       eventFields,
       taskFields,
       leadIds,
+      personId,
+      userOrgId,
     );
     apiCount += 2; // Two queries: one for events, one for tasks
 
@@ -271,12 +305,18 @@ export class LeadRatingService {
       if (limit) {
         leadRecordQuery += ` LIMIT ${limit}`;
       }
-      const leadRecords = await this.toolTestingService.runTest(
-        serverUrl,
+      //   const leadRecords = await this.toolTestingService.runTest(
+      //     serverUrl,
+      //     queryToolId,
+      //     {
+      //       query: leadRecordQuery,
+      //     },
+      //   );
+      const leadRecords = await this.agentServiceRequest.sendToolRequest(
+        personId,
+        userOrgId,
         queryToolId,
-        {
-          query: leadRecordQuery,
-        },
+        { query: leadRecordQuery },
       );
       apiCount++;
       const responseBody = JSON.parse(leadRecords.toolresult.body);
@@ -285,17 +325,40 @@ export class LeadRatingService {
         (record: any) => record.Id,
       );
 
+      // Step 2B: If makeSnapshot is true, directly run the snapshot creation logic and exit
+      if (makeSnapshot) {
+        const snapshotApiCount = await this.createSnapshotLeads(
+          serverUrl,
+          queryToolId,
+          createToolId,
+          recordIds,
+          responseBody.result,
+          10,
+        );
+        apiCount += snapshotApiCount;
+        return { apiCount, llmCount };
+      }
+
       // Step 2: Describe Lead, Event, and Task objects
       const [leadFields, eventFields, taskFields] = await Promise.all([
-        this.describeObjectFields(serverUrl, describeToolId, 'Lead'),
-        this.describeObjectFields(serverUrl, describeToolId, 'Event'),
-        this.describeObjectFields(serverUrl, describeToolId, 'Task'),
+        this.describeObjectFields(describeToolId, 'Lead', personId, userOrgId),
+        this.describeObjectFields(describeToolId, 'Event', personId, userOrgId),
+        this.describeObjectFields(describeToolId, 'Task', personId, userOrgId),
       ]);
       apiCount += 3;
 
       // Step 3: Get criteria record data
-      const criteriaRecordData = await this.toolTestingService.runTest(
-        serverUrl,
+      //   const criteriaRecordData = await this.toolTestingService.runTest(
+      //     serverUrl,
+      //     recordToolId,
+      //     {
+      //       recordId: criteriaRecordId,
+      //       objectName: 'Budy_Lead_Criteria__c',
+      //     },
+      //   );
+      const criteriaRecordData = await this.agentServiceRequest.sendToolRequest(
+        personId,
+        userOrgId,
         recordToolId,
         {
           recordId: criteriaRecordId,
@@ -350,22 +413,43 @@ export class LeadRatingService {
         llmCount += batchLlmCount;
 
         // Step 5: Update lead records in batch
-        await this.toolTestingService.runTest(serverUrl, patchToolId, {
-          record_type: 'Lead',
-          field_names: [
-            'Budy_Criteria_1__c',
-            'Budy_Justification_1__c',
-            'Budy_Criteria_2__c',
-            'Budy_Justification_2__c',
-            'Budy_Criteria_3__c',
-            'Budy_Justification_3__c',
-            'Budy_Criteria_4__c',
-            'Budy_Justification_4__c',
-            'Budy_Lead_Score__c',
-            'Budy_Lead_Score_Bucket__c',
-          ],
-          records: batchTableData,
-        });
+        // await this.toolTestingService.runTest(serverUrl, patchToolId, {
+        //   record_type: 'Lead',
+        //   field_names: [
+        //     'Budy_Criteria_1__c',
+        //     'Budy_Justification_1__c',
+        //     'Budy_Criteria_2__c',
+        //     'Budy_Justification_2__c',
+        //     'Budy_Criteria_3__c',
+        //     'Budy_Justification_3__c',
+        //     'Budy_Criteria_4__c',
+        //     'Budy_Justification_4__c',
+        //     'Budy_Lead_Score__c',
+        //     'Budy_Lead_Score_Bucket__c',
+        //   ],
+        //   records: batchTableData,
+        // });
+        await this.agentServiceRequest.sendToolRequest(
+          personId,
+          userOrgId,
+          patchToolId,
+          {
+            record_type: 'Lead',
+            field_names: [
+              'Budy_Criteria_1__c',
+              'Budy_Justification_1__c',
+              'Budy_Criteria_2__c',
+              'Budy_Justification_2__c',
+              'Budy_Criteria_3__c',
+              'Budy_Justification_3__c',
+              'Budy_Criteria_4__c',
+              'Budy_Justification_4__c',
+              'Budy_Lead_Score__c',
+              'Budy_Lead_Score_Bucket__c',
+            ],
+            records: batchTableData,
+          },
+        );
         apiCount++;
 
         tableData.push(...batchTableData);
@@ -457,5 +541,197 @@ export class LeadRatingService {
       (entry: any) => entry.outcome === 'Yes',
     ).length;
     return (yesCount / 4) * 100;
+  }
+  private async createSnapshotLeads(
+    serverUrl: string,
+    queryToolId: string,
+    createToolId: string,
+    recordIds: string[],
+    recordData: any,
+    chunkSize: number,
+  ): Promise<number> {
+    let apiCount = 0;
+
+    // Quote record IDs for use in queries
+    const recordIdsQuoted = recordIds.map((id) => `'${id}'`);
+
+    // Step 1: Query status data
+    const statusQuery = `SELECT OwnerId, Owner.Name, Status, COUNT(Id) LeadCount
+                         FROM Lead
+                         WHERE Id IN (${recordIdsQuoted.join(',')})
+                         GROUP BY OwnerId, Owner.Name, Status
+                         ORDER BY OwnerId`;
+
+    // const statusResults = await this.toolTestingService.runTest(
+    //   serverUrl,
+    //   queryToolId,
+    //   { query: statusQuery },
+    // );
+    const statusResults = await this.agentServiceRequest.sendToolRequest(
+      recordData.PersonId,
+      recordData.UserOrgId,
+      queryToolId,
+      { query: statusQuery },
+    );
+    apiCount++;
+    const statusResponse = JSON.parse(statusResults.toolresult.body);
+
+    // Step 2: Query score data
+    const scoreQuery = `
+      SELECT OwnerId, Budy_Lead_Score_Bucket__c, COUNT(Id) LeadCount
+      FROM Lead
+      WHERE Id IN (${recordIdsQuoted.join(',')})
+      GROUP BY OwnerId, Budy_Lead_Score_Bucket__c
+      ORDER BY OwnerId
+    `;
+    // const scoreResults = await this.toolTestingService.runTest(
+    //   serverUrl,
+    //   queryToolId,
+    //   { query: scoreQuery },
+    // );
+    const scoreResults = await this.agentServiceRequest.sendToolRequest(
+      recordData.PersonId,
+      recordData.UserOrgId,
+      queryToolId,
+      { query: scoreQuery },
+    );
+    apiCount++;
+    const scoreResponse = JSON.parse(scoreResults.toolresult.body);
+
+    // Step 3: Parse SDR and score reports
+    const sdrReport = this.parseSDRReport(statusResponse.result);
+    const scoreReport = this.parseScoreReport(scoreResponse.result);
+
+    // Step 4: Transform to snapshot records
+    const snapshotRecords = this.transformToSnapshotRecords(
+      sdrReport,
+      scoreReport,
+      recordData,
+    );
+
+    // Step 5: Chunk and create snapshots
+    const snapshotRecordChunks = this.chunkArray(snapshotRecords, chunkSize);
+
+    for (const chunk of snapshotRecordChunks) {
+      //   await this.toolTestingService.runTest(serverUrl, createToolId, {
+      //     object_name: 'Budy_SDR_Snapshot__c',
+      //     records: chunk,
+      //   });
+      await this.agentServiceRequest.sendToolRequest(
+        recordData.PersonId,
+        recordData.UserOrgId,
+        createToolId,
+        {
+          object_name: 'Budy_SDR_Snapshot__c',
+          records: chunk,
+        },
+      );
+      apiCount++;
+    }
+
+    return apiCount;
+  }
+
+  private parseSDRReport(response: any): any {
+    const report = {};
+    response.records.forEach((record) => {
+      const { OwnerId, Name, Status, LeadCount } = record;
+      if (!report[OwnerId]) {
+        report[OwnerId] = {
+          Name,
+          'Open Leads': 0,
+          'Dropped Leads': 0,
+          'Qualified Leads': 0,
+          'Total Leads': 0,
+        };
+      }
+      if (['New', 'Working'].includes(Status)) {
+        report[OwnerId]['Open Leads'] += LeadCount;
+      } else if (Status === 'Dropped') {
+        report[OwnerId]['Dropped Leads'] += LeadCount;
+      } else if (Status === 'Qualified') {
+        report[OwnerId]['Qualified Leads'] += LeadCount;
+      }
+      report[OwnerId]['Total Leads'] += LeadCount;
+    });
+    return report;
+  }
+
+  private parseScoreReport(response: any): any {
+    const report = {};
+    response.records.forEach((record) => {
+      const { OwnerId, Budy_Lead_Score_Bucket__c, LeadCount } = record;
+      if (!report[OwnerId]) {
+        report[OwnerId] = {
+          Bucket_1_Leads__c: 0,
+          Bucket_2_Leads__c: 0,
+          Bucket_3_Leads__c: 0,
+          Bucket_4_Leads__c: 0,
+        };
+      }
+      const bucketKey = `Bucket_${this.getBucketNumber(
+        Budy_Lead_Score_Bucket__c,
+      )}_Leads__c`;
+      if (report[OwnerId][bucketKey] !== undefined) {
+        report[OwnerId][bucketKey] += LeadCount;
+      }
+    });
+    return report;
+  }
+
+  private transformToSnapshotRecords(
+    sdrReport: any,
+    scoreReport: any,
+    recordData: any,
+  ): any[] {
+    const records = [];
+    Object.entries(sdrReport).forEach(([ownerId, leadData]) => {
+      const scoreData = scoreReport[ownerId] || {
+        Bucket_1_Leads__c: 0,
+        Bucket_2_Leads__c: 0,
+        Bucket_3_Leads__c: 0,
+        Bucket_4_Leads__c: 0,
+      };
+
+      records.push({
+        SDR_Id__c: ownerId,
+        Name: leadData['Name'],
+        Bucket_1_Leads__c: scoreData.Bucket_1_Leads__c,
+        Bucket_2_Leads__c: scoreData.Bucket_2_Leads__c,
+        Bucket_3_Leads__c: scoreData.Bucket_3_Leads__c,
+        Bucket_4_Leads__c: scoreData.Bucket_4_Leads__c,
+        Open_Leads__c: leadData['Open Leads'],
+        Dropped_Leads__c: leadData['Dropped Leads'],
+        Qualified_Leads__c: leadData['Qualified Leads'],
+        Total_Leads__c: leadData['Total Leads'],
+        Lead_Criteria_Version__c: recordData.Name,
+        Year_Work_Week__c: this.getYearAndWeek(),
+      });
+    });
+
+    return records;
+  }
+
+  private getBucketNumber(bucket: string): number {
+    if (bucket === 'Red') return 1;
+    if (bucket === 'Yellow') return 2;
+    if (bucket === 'Blue') return 3;
+    if (bucket === 'Green') return 4;
+    return 0;
+  }
+
+  private getYearAndWeek(): string {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const dayOfYear = Math.ceil(
+      (now.getTime() -
+        startOfYear.getTime() +
+        (startOfYear.getTimezoneOffset() - now.getTimezoneOffset()) *
+          60 *
+          1000) /
+        (1000 * 60 * 60 * 24),
+    );
+    const weekNumber = Math.ceil(dayOfYear / 7);
+    return `${now.getFullYear()}_Week_${weekNumber}`;
   }
 }
