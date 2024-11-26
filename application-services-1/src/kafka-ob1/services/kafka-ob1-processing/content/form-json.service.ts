@@ -22,13 +22,13 @@ export class FormJsonService {
     userId: string,
     projectName: string,
   ): Promise<any> {
-    if (transcript.length > this.maxTranscriptLength) {
-      transcript = await this.summarizeTranscript(
-        transcript,
-        projectName,
-        userId,
-      );
-    }
+    // if (transcript.length > this.maxTranscriptLength) {
+    //   transcript = await this.summarizeTranscript(
+    //     transcript,
+    //     projectName,
+    //     userId,
+    //   );
+    // }
 
     const formPrompt = `
       You are an AI consultant responsible for documenting and summarizing a recent customer meeting. This summary should be structured in JSON format, using the following exact fields:

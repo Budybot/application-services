@@ -263,14 +263,15 @@ export class ProjectPlannerService {
 
       if (response?.messageContent?.content) {
         const generatedPlan = response.messageContent.content;
+        return generatedPlan;
         // this.logger.debug(`Generated Project Plan from LLM: ${generatedPlan}`);
         // const parsedData = this.parseCsvToArray(generatedPlan);
-        const parsedData = this.parseOutputTo2DArray(generatedPlan);
-        this.logger.debug(
-          `Parsed Project Plan into 2D array format: ${JSON.stringify(parsedData)}`,
-        );
+        // const parsedData = this.parseOutputTo2DArray(generatedPlan);
+        // this.logger.debug(
+        //   `Parsed Project Plan into 2D array format: ${JSON.stringify(parsedData)}`,
+        // );
         // return generatedPlan;
-        return parsedData;
+        // return parsedData;
       } else {
         throw new Error(`Invalid response: ${JSON.stringify(response)}`);
       }
