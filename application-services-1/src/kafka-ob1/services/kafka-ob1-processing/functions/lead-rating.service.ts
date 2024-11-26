@@ -36,7 +36,7 @@ export class LeadRatingService {
       { objectName },
     );
     const fields = describeResult.toolresult?.result?.fieldNames || [];
-      //JSON.parse(describeResult.toolresult.body)?.result.fieldNames || [];
+    //JSON.parse(describeResult.toolresult.body)?.result.fieldNames || [];
     // Remove fields starting with "Budy_"
     return fields.filter((field) => !field.startsWith('Budy_'));
   }
@@ -319,10 +319,13 @@ export class LeadRatingService {
         { query: leadRecordQuery },
       );
       apiCount++;
-      const responseBody = leadRecords.toolresult?.result; // JSON.parse(leadRecords.toolresult.body);
-      const recordIds = responseBody.result.records.map(
-        (record: any) => record.Id,
-      );
+      //   const responseBody = leadRecords.toolresult?.result; // JSON.parse(leadRecords.toolresult.body);
+      //   const recordIds = responseBody.result.records.map(
+      //     (record: any) => record.Id,
+      //   );
+      const responseBody = leadRecords.toolresult?.result || {};
+      const recordIds =
+        responseBody.records?.map((record: any) => record.Id) || [];
 
       // Step 2B: If makeSnapshot is true, directly run the snapshot creation logic and exit
       if (makeSnapshot) {
@@ -366,9 +369,9 @@ export class LeadRatingService {
       );
       apiCount++;
       const criteriaResponseBody = criteriaRecordData.toolresult?.result;
-    //   JSON.parse(
-    //     criteriaRecordData.toolresult.body,
-    //   );
+      //   JSON.parse(
+      //     criteriaRecordData.toolresult.body,
+      //   );
       const recordData = criteriaResponseBody.result?.recordData || {};
 
       // Extract the questions into a list
@@ -575,7 +578,7 @@ export class LeadRatingService {
     );
     apiCount++;
     const statusResponse = statusResults.toolresult?.result;
-     //JSON.parse(statusResults.toolresult.body);
+    //JSON.parse(statusResults.toolresult.body);
 
     // Step 2: Query score data
     const scoreQuery = `
