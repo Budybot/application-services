@@ -5,6 +5,7 @@ import {
   OB1Global,
   CURRENT_SCHEMA_VERSION,
 } from 'src/interfaces/ob1-message.interfaces';
+import { GoogleSheetService } from '../../google/google-sheet.service';
 
 @Injectable()
 export class LeadRatingService {
@@ -12,6 +13,7 @@ export class LeadRatingService {
 
   constructor(
     private readonly agentServiceRequest: AgentServiceRequest,
+    private readonly googleSheetService: GoogleSheetService,
     @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka,
   ) {}
 
@@ -855,6 +857,116 @@ export class LeadRatingService {
     );
     const weekNumber = Math.ceil(dayOfYear / 7);
     return `${now.getFullYear()}_Week_${weekNumber}`;
+  }
+
+  async pushSnapshotToGoogleSheet(
+    queryToolId: string,
+    googleSheetId: string,
+    personId: string,
+    userOrgId: string,
+  ): Promise<void> {
+    try {
+      // Step 1: Fetch snapshot data
+      const snapshotDataResponse =
+        await this.agentServiceRequest.sendToolRequest(
+          personId,
+          userOrgId,
+          queryToolId,
+          {
+            query:
+              'SELECT Id, Name, Bucket_1_Leads__c, Bucket_2_Leads__c, Bucket_3_Leads__c, Bucket_4_Leads__c, Qualified_Leads__c, Open_Leads__c, Dropped_Leads__c, Total_Leads__c, Year_Work_Week__c FROM Budy_SDR_Snapshot__c',
+          },
+        );
+
+      // Check if the tool executed successfully
+      if (
+        !snapshotDataResponse.messageContent?.toolSuccess ||
+        snapshotDataResponse.messageContent.toolstatusCodeReturned !== 200 ||
+        !snapshotDataResponse.messageContent.toolresult?.result
+      ) {
+        throw new Error(
+          `Failed to fetch snapshot data: ${
+            snapshotDataResponse.messageContent?.toolresult?.error ||
+            'Unknown error'
+          }`,
+        );
+      }
+
+      // Corrected this line to access 'records' instead of 'recordData'
+      const snapshotData =
+        snapshotDataResponse.messageContent.toolresult.result.records || [];
+
+      // Step 2: Prepare data for Google Sheets
+      const sheetData = this.transformSnapshotDataForGoogleSheets(snapshotData);
+
+      // Step 3: Push data to Google Sheets
+      await this.googleSheetService.writeToSheet(googleSheetId, sheetData);
+
+      this.emitMessage(
+        { content: 'Snapshot data pushed to Google Sheets successfully.' },
+        'budyos-ob1-applicationService',
+        false,
+        personId,
+        userOrgId,
+      );
+    } catch (error) {
+      const errorMessageInput = {
+        content: `Error in pushSnapshotToGoogleSheet: ${error.message}. Stack: ${error.stack}.`,
+      };
+      this.emitMessage(
+        errorMessageInput,
+        'budyos-ob1-applicationService',
+        true,
+        personId,
+        userOrgId,
+      );
+      throw new Error(`Error in pushSnapshotToGoogleSheet: ${error.message}`);
+    }
+  }
+
+  private transformSnapshotDataForGoogleSheets(snapshotData: any[]): any[][] {
+    // Check if snapshotData is an array
+    if (!Array.isArray(snapshotData)) {
+      throw new Error('snapshotData is not an array');
+    }
+
+    // Define the headers for the Google Sheet
+    const headers = [
+      'Id',
+      'Name',
+      'Bucket 1 Leads',
+      'Bucket 2 Leads',
+      'Bucket 3 Leads',
+      'Bucket 4 Leads',
+      'Qualified Leads',
+      'Open Leads',
+      'Dropped Leads',
+      'Total Leads',
+      'Year Work Week',
+    ];
+
+    // Initialize the sheet data with headers
+    const sheetData = [headers];
+
+    // Iterate over the snapshot data and transform each record into a row
+    snapshotData.forEach((record) => {
+      const row = [
+        record.Id || '',
+        record.Name || '',
+        record.Bucket_1_Leads__c || 0,
+        record.Bucket_2_Leads__c || 0,
+        record.Bucket_3_Leads__c || 0,
+        record.Bucket_4_Leads__c || 0,
+        record.Qualified_Leads__c || 0,
+        record.Open_Leads__c || 0,
+        record.Dropped_Leads__c || 0,
+        record.Total_Leads__c || 0,
+        record.Year_Work_Week__c || '',
+      ];
+      sheetData.push(row);
+    });
+
+    return sheetData;
   }
 }
 

@@ -131,6 +131,15 @@ export class KafkaOb1ProcessingService {
           );
           response = { messageContent: { toolResponse: toolResponse } };
           break;
+        case 'push-snapshots':
+          const { createToolId: createToolId2, googleSheetId } = functionInput;
+          await this.rateLead.pushSnapshotToGoogleSheet(
+            createToolId2,
+            googleSheetId,
+            personId,
+            userOrgId,
+          );
+          response = { messageContent: { snapshotResponse: 'Success' } };
         case 'rate-leads':
           const {
             criteriaRecordId,
