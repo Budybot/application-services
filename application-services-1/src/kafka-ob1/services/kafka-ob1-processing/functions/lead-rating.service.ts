@@ -331,6 +331,7 @@ export class LeadRatingService {
     NDays: number = 14,
     limit?: number,
     customQuery?: string,
+    weekName?: string,
   ): Promise<{ apiCount: number; llmCount: number }> {
     try {
       let apiCount = 0;
@@ -393,6 +394,7 @@ export class LeadRatingService {
           20,
           personId,
           userOrgId,
+          weekName,
         );
         apiCount += snapshotApiCount;
         return { apiCount, llmCount };
@@ -529,6 +531,7 @@ export class LeadRatingService {
           20,
           personId,
           userOrgId,
+          weekName,
         );
         apiCount += snapshotApiCount;
       }
@@ -622,6 +625,7 @@ export class LeadRatingService {
     chunkSize: number,
     personId: string,
     userOrgId: string,
+    weekName?: string,
   ): Promise<number> {
     let apiCount = 0;
 
@@ -707,6 +711,7 @@ export class LeadRatingService {
       sdrReport,
       scoreReport,
       recordData,
+      weekName,
     );
 
     // Log the snapshot records
@@ -799,6 +804,7 @@ export class LeadRatingService {
     sdrReport: any,
     scoreReport: any,
     recordData: any,
+    weekName?: string,
   ): any[] {
     const records = [];
     Object.entries(sdrReport).forEach(([ownerId, leadData]) => {
@@ -821,7 +827,7 @@ export class LeadRatingService {
         Qualified_Leads__c: leadData['Qualified Leads'],
         Total_Leads__c: leadData['Total Leads'],
         Lead_Criteria_Version__c: recordData.Name,
-        Year_Work_Week__c: this.getYearAndWeek(),
+        Year_Work_Week__c: weekName || this.getYearAndWeek(),
       });
     });
 

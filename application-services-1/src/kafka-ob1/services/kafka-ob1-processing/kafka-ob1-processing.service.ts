@@ -144,6 +144,7 @@ export class KafkaOb1ProcessingService {
             limit,
             makeSnapshots,
             customQuery,
+            weekName,
           } = functionInput;
 
           // Step 1: Log that the process has started
@@ -175,6 +176,7 @@ export class KafkaOb1ProcessingService {
               ndays,
               limit,
               customQuery,
+              weekName,
             )
             .then((result) => {
               this.logger.log(
