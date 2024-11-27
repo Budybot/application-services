@@ -328,26 +328,40 @@ export class LeadRatingService {
     userOrgId: string,
     NDays: number = 14,
     limit?: number,
+    customQuery?: string,
   ): Promise<{ apiCount: number; llmCount: number }> {
     try {
       let apiCount = 0;
       let llmCount = 0;
 
-      // Step 1: Get the lead records
-      let leadRecordQuery = `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays}`;
-      if (limit) {
-        leadRecordQuery += ` LIMIT ${limit}`;
-      }
+      let leadRecordsResponse = null;
+      // Step 1B: If custom_lead_query is provided, directly run the query and exit
+      if (customQuery) {
+        if (limit) {
+          customQuery += ` LIMIT ${limit}`;
+        }
+        leadRecordsResponse = await this.agentServiceRequest.sendToolRequest(
+          personId,
+          userOrgId,
+          queryToolId,
+          { query: customQuery },
+        );
+        apiCount++;
+      } else {
+        // Step 1: Get the lead records
+        let leadRecordQuery = `SELECT Id FROM Lead WHERE CreatedDate = LAST_N_DAYS:${NDays}`;
+        if (limit) {
+          leadRecordQuery += ` LIMIT ${limit}`;
+        }
 
-      const leadRecordsResponse =
-        await this.agentServiceRequest.sendToolRequest(
+        leadRecordsResponse = await this.agentServiceRequest.sendToolRequest(
           personId,
           userOrgId,
           queryToolId,
           { query: leadRecordQuery },
         );
-      apiCount++;
-
+        apiCount++;
+      }
       // Check if the tool executed successfully
       if (
         !leadRecordsResponse.messageContent?.toolSuccess ||

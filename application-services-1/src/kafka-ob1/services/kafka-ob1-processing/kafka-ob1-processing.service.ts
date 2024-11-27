@@ -131,17 +131,6 @@ export class KafkaOb1ProcessingService {
           );
           response = { messageContent: { toolResponse: toolResponse } };
           break;
-          // const { toolId, toolInput } = functionInput;
-          // this.logger.log(
-          //   `Testing tool with ID ${toolId} and input: ${toolInput}`,
-          // );
-          // const toolTestResult = await this.testTool.runTest(
-          //   '35.161.118.26',
-          //   toolId,
-          //   toolInput,
-          // );
-          // response = { messageContent: { toolTestResult: toolTestResult } };
-          // break;
         case 'rate-leads':
           const {
             criteriaRecordId,
@@ -154,6 +143,7 @@ export class KafkaOb1ProcessingService {
             ndays,
             limit,
             makeSnapshots,
+            customQuery,
           } = functionInput;
 
           // Step 1: Log that the process has started
@@ -184,6 +174,7 @@ export class KafkaOb1ProcessingService {
               userOrgId,
               ndays,
               limit,
+              customQuery,
             )
             .then((result) => {
               this.logger.log(
