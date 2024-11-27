@@ -141,6 +141,7 @@ export class KafkaOb1ProcessingService {
             userOrgId,
           );
           response = { messageContent: { snapshotResponse: 'Success' } };
+          break;
         case 'rate-leads':
           const {
             criteriaRecordId,
