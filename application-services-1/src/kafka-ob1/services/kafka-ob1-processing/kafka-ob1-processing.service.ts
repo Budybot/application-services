@@ -15,6 +15,7 @@ import { SyncAssetsService } from './functions/sync-assets.service';
 import { ToolTestingService } from './tool-tester.service';
 import { LeadRatingService } from './functions/lead-rating.service';
 import { AgentServiceRequest } from './agent-service-request.service';
+import { query } from 'express';
 
 @Injectable()
 export class KafkaOb1ProcessingService {
@@ -132,9 +133,9 @@ export class KafkaOb1ProcessingService {
           response = { messageContent: { toolResponse: toolResponse } };
           break;
         case 'push-snapshots':
-          const { createToolId: createToolId2, googleSheetId } = functionInput;
+          const { queryToolId: queryToolId2, googleSheetId } = functionInput;
           await this.rateLead.pushSnapshotToGoogleSheet(
-            createToolId2,
+            queryToolId2,
             googleSheetId,
             personId,
             userOrgId,
