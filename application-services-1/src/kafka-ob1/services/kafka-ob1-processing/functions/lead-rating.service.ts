@@ -43,8 +43,10 @@ export class LeadRatingService {
     const fields =
       describeResult.messageContent.toolresult.result.fieldNames || [];
 
-    // Remove fields starting with "Budy_"
-    return fields.filter((field) => !field.startsWith('Budy_'));
+    const fieldsToExclude = ['Description'];
+    return fields.filter(
+      (field) => !field.startsWith('Budy_') && !fieldsToExclude.includes(field),
+    );
   }
 
   private chunkArray(array: any[], chunkSize: number): any[][] {
