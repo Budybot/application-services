@@ -105,10 +105,10 @@ export class LeadRatingService {
     const leadIdsQuoted = leadIds.map((id) => `'${id}'`).join(',');
     const eventQuery = `SELECT ${eventFields.join(
       ', ',
-    )} FROM Event WHERE WhoId IN (${leadIdsQuoted}) LIMIT 30`;
+    )} FROM Event WHERE WhoId IN (${leadIdsQuoted}) LIMIT 20`;
     const taskQuery = `SELECT ${taskFields.join(
       ', ',
-    )} FROM Task WHERE WhoId IN (${leadIdsQuoted}) LIMIT 30`;
+    )} FROM Task WHERE WhoId IN (${leadIdsQuoted}) LIMIT 20`;
 
     const [eventDataResult, taskDataResult] = await Promise.all([
       this.agentServiceRequest.sendToolRequest(
