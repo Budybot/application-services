@@ -33,19 +33,19 @@ export class OpportunityRatingService {
     if (
       !describeResult.messageContent?.toolSuccess ||
       describeResult.messageContent.toolstatusCodeReturned !== 200 ||
-      !describeResult.messageContent.toolresult?.result
+      !describeResult.messageContent.toolResult?.result
     ) {
       throw new Error(
         `Failed to describe object fields: ${
-          describeResult.messageContent?.toolresult?.error || 'Unknown error'
+          describeResult.messageContent?.toolResult?.error || 'Unknown error'
         }`,
       );
     }
 
     const fields =
-      describeResult.messageContent.toolresult.result.fieldNames || [];
+      describeResult.messageContent.toolResult.result.fieldNames || [];
 
-    const fieldsToExclude = ['Description'];
+    const fieldsToExclude = [];
     return fields.filter(
       (field) => !field.startsWith('Budy_') && !fieldsToExclude.includes(field),
     );
@@ -86,10 +86,9 @@ export class OpportunityRatingService {
       if (!queryResponse.messageContent?.toolSuccess) {
         throw new Error('Failed to query opportunities');
       }
-      this.logger.debug('Query response', queryResponse);
 
       opportunityIds =
-        queryResponse.messageContent.toolresult.result.records.map((r) => r.Id);
+        queryResponse.messageContent.toolResult.result.records.map((r) => r.Id);
 
       // Step 2: Describe objects and get fields
       const [opportunityFields, eventFields, taskFields] = await Promise.all([
@@ -141,13 +140,13 @@ export class OpportunityRatingService {
         apiCount += 2; // Two activity queries
 
         // Process each opportunity
-        for (const opp of oppResponse.messageContent.toolresult.result
+        for (const opp of oppResponse.messageContent.toolResult.result
           .records) {
           const activities = [
-            ...eventResponse.messageContent.toolresult.result.records.filter(
+            ...eventResponse.messageContent.toolResult.result.records.filter(
               (e) => e.WhatId === opp.Id,
             ),
-            ...taskResponse.messageContent.toolresult.result.records.filter(
+            ...taskResponse.messageContent.toolResult.result.records.filter(
               (t) => t.WhatId === opp.Id,
             ),
           ];
