@@ -211,7 +211,7 @@ Objective: Identify Opportunities at risk of delay due to legal complexities, en
               { criteriaQuestions: criteriaQuestions },
             );
 
-          // Step 5: Calculate score from LLM response
+          // Step 5: Calculate score from LLM response and store evaluation
           const score = this.calculateScore(llmResponse.messageContent.content);
           const bucket = this.getScoreBucket(score);
           allScores.push({
@@ -221,6 +221,7 @@ Objective: Identify Opportunities at risk of delay due to legal complexities, en
             opportunityName: opp.Name,
             amount: opp.Amount,
             stage: opp.StageName,
+            evaluation: llmResponse.messageContent.content.evaluation,
           });
         }
       }
