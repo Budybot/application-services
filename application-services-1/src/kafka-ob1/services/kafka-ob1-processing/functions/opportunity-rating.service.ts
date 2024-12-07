@@ -30,6 +30,8 @@ export class OpportunityRatingService {
       { objectName },
     );
 
+    console.log('describeResult:', JSON.stringify(describeResult, null, 2));
+
     if (
       !describeResult.messageContent?.toolSuccess ||
       describeResult.messageContent.toolstatusCodeReturned !== 200
