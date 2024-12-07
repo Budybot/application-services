@@ -86,6 +86,7 @@ export class OpportunityRatingService {
       if (!queryResponse.messageContent?.toolSuccess) {
         throw new Error('Failed to query opportunities');
       }
+      this.logger.debug('Query response', queryResponse);
 
       opportunityIds =
         queryResponse.messageContent.toolresult.result.records.map((r) => r.Id);
