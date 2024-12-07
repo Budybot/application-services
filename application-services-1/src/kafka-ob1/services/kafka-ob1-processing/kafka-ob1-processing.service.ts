@@ -209,6 +209,7 @@ export class KafkaOb1ProcessingService {
             promptId: oppPromptId,
             customQuery: oppCustomQuery,
             limit: oppLimit,
+            batchSize,
           } = functionInput;
 
           // Log start of opportunity rating process
@@ -234,6 +235,7 @@ export class KafkaOb1ProcessingService {
                 promptId: oppPromptId,
                 customQuery: oppCustomQuery,
                 limit: oppLimit,
+                batchSize,
               },
             })
             .then(() => {

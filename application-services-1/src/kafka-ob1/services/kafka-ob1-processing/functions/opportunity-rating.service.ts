@@ -66,6 +66,7 @@ export class OpportunityRatingService {
         promptId,
         customQuery,
         limit,
+        batchSize,
       } = message.messageContent;
 
       // Step 1: Query opportunity IDs
@@ -104,7 +105,7 @@ export class OpportunityRatingService {
       apiCount += 3; // Three describe requests
 
       // Step 3: Process opportunities in batches
-      const batchSize = 20;
+
       const batches = this.chunkArray(opportunityIds, batchSize);
       const allScores = [];
 
