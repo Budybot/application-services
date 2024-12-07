@@ -143,14 +143,13 @@ export class OpportunityRatingService {
         // Process each opportunity
         for (const opp of oppResponse.messageContent.toolResult.result
           .records) {
-          const activities = [
-            ...eventResponse.messageContent.toolResult.result.records.filter(
-              (e) => e.WhatId === opp.Id,
-            ),
-            ...taskResponse.messageContent.toolResult.result.records.filter(
-              (t) => t.WhatId === opp.Id,
-            ),
-          ];
+          const events = eventResponse.messageContent.toolResult.result.records
+            .filter((e) => e.WhatId === opp.Id)
+            .slice(0, 10);
+          const tasks = taskResponse.messageContent.toolResult.result.records
+            .filter((t) => t.WhatId === opp.Id)
+            .slice(0, 10);
+          const activities = [...events, ...tasks];
 
           // Step 4: Execute prompt with combined data
 
