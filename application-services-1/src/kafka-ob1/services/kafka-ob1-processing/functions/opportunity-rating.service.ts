@@ -145,10 +145,10 @@ export class OpportunityRatingService {
           .records) {
           const events = eventResponse.messageContent.toolResult.result.records
             .filter((e) => e.WhatId === opp.Id)
-            .slice(0, 10);
+            .slice(0, 5);
           const tasks = taskResponse.messageContent.toolResult.result.records
             .filter((t) => t.WhatId === opp.Id)
-            .slice(0, 10);
+            .slice(0, 5);
           const activities = [...events, ...tasks];
 
           // Step 4: Execute prompt with combined data
