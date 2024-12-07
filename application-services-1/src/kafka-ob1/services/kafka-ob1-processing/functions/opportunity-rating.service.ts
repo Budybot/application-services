@@ -30,21 +30,20 @@ export class OpportunityRatingService {
       { objectName },
     );
 
-    console.log('describeResult:', JSON.stringify(describeResult, null, 2));
-
     if (
       !describeResult.messageContent?.toolSuccess ||
-      describeResult.messageContent.toolstatusCodeReturned !== 200
+      !describeResult.messageContent?.toolResult?.result?.fieldNames
     ) {
       throw new Error(
         `Failed to describe object fields: ${
-          describeResult.messageContent?.toolresult?.error || 'Unknown error'
+          describeResult.messageContent?.toolError?.message ||
+          describeResult.messageContent?.toolResult?.message ||
+          'Unknown error'
         }`,
       );
     }
 
-    const fields =
-      describeResult.messageContent.toolresult.result.fieldNames || [];
+    const fields = describeResult.messageContent.toolResult.result.fieldNames;
 
     const fieldsToExclude = [];
     return fields.filter(
