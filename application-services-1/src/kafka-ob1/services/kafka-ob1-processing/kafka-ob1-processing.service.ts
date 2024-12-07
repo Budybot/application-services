@@ -14,6 +14,7 @@ import { CompletedActionItemsService } from './functions/completed-action-items.
 import { SyncAssetsService } from './functions/sync-assets.service';
 import { ToolTestingService } from './tool-tester.service';
 import { LeadRatingService } from './functions/lead-rating.service';
+import { OpportunityRatingService } from './functions/opportunity-rating.service';
 import { AgentServiceRequest } from './agent-service-request.service';
 import { query } from 'express';
 
@@ -30,6 +31,7 @@ export class KafkaOb1ProcessingService {
     private readonly syncAssetsService: SyncAssetsService,
     private readonly testTool: ToolTestingService,
     private readonly rateLead: LeadRatingService,
+    private readonly rateOpportunity: OpportunityRatingService,
     private readonly agentServiceRequest: AgentServiceRequest,
     // @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
   ) {}
@@ -196,6 +198,53 @@ export class KafkaOb1ProcessingService {
             })
             .catch((error) => {
               this.logger.error(`Lead rating process failed: ${error.message}`);
+            });
+
+          break;
+
+        case 'rate-opportunities':
+          const {
+            queryToolId: oppQueryToolId,
+            describeToolId: oppDescribeToolId,
+            promptId: oppPromptId,
+            customQuery: oppCustomQuery,
+            limit: oppLimit,
+          } = functionInput;
+
+          // Log start of opportunity rating process
+          this.logger.log(
+            'Received rate-opportunities request. Initiating processing...',
+          );
+          response = {
+            messageContent: {
+              status: 'Processing',
+              message:
+                'Opportunity rating process started. You will receive updates shortly.',
+            },
+          };
+
+          // Trigger opportunity rating process asynchronously
+          this.rateOpportunity
+            .processOpportunityRating({
+              messageContent: {
+                personId,
+                userOrgId,
+                queryToolId: oppQueryToolId,
+                describeToolId: oppDescribeToolId,
+                promptId: oppPromptId,
+                customQuery: oppCustomQuery,
+                limit: oppLimit,
+              },
+            })
+            .then(() => {
+              this.logger.log(
+                'Opportunity rating process completed successfully',
+              );
+            })
+            .catch((error) => {
+              this.logger.error(
+                `Opportunity rating process failed: ${error.message}`,
+              );
             });
 
           break;
