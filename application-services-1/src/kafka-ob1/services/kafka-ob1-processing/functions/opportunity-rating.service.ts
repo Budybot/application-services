@@ -32,18 +32,17 @@ export class OpportunityRatingService {
 
     if (
       !describeResult.messageContent?.toolSuccess ||
-      describeResult.messageContent.toolstatusCodeReturned !== 200 ||
-      !describeResult.messageContent.toolResult?.result
+      describeResult.messageContent.toolstatusCodeReturned !== 200
     ) {
       throw new Error(
         `Failed to describe object fields: ${
-          describeResult.messageContent?.toolResult?.error || 'Unknown error'
+          describeResult.messageContent?.toolresult?.error || 'Unknown error'
         }`,
       );
     }
 
     const fields =
-      describeResult.messageContent.toolResult.result.fieldNames || [];
+      describeResult.messageContent.toolresult.result.fieldNames || [];
 
     const fieldsToExclude = [];
     return fields.filter(
