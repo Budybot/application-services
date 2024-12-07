@@ -29,6 +29,7 @@ import { GoogleDocMonitoringService } from './services/google/google-monitoring.
 import { SowCommentProcessingService } from './services/kafka-ob1-processing/content/sow-comment-processing.service';
 import { ToolTestingService } from './services/kafka-ob1-processing/tool-tester.service';
 import { LeadRatingService } from './services/kafka-ob1-processing/functions/lead-rating.service';
+import { OpportunityRatingService } from './services/kafka-ob1-processing/functions/opportunity-rating.service';
 @Module({
   imports: [
     HttpModule,
@@ -81,6 +82,7 @@ import { LeadRatingService } from './services/kafka-ob1-processing/functions/lea
     SowCommentProcessingService,
     ToolTestingService,
     LeadRatingService,
+    OpportunityRatingService,
   ],
   controllers: [KafkaOb1Controller],
 })
