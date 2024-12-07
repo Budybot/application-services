@@ -121,8 +121,8 @@ export class OpportunityRatingService {
         apiCount++;
 
         // Query activities (events and tasks)
-        const eventQuery = `SELECT ${eventFields.join(',')} FROM Event WHERE WhatId IN ('${batch.join("','")}')`;
-        const taskQuery = `SELECT ${taskFields.join(',')} FROM Task WHERE WhatId IN ('${batch.join("','")}')`;
+        const eventQuery = `SELECT ${eventFields.join(',')} FROM Event WHERE WhatId IN ('${batch.join("','")}') LIMIT 10`;
+        const taskQuery = `SELECT ${taskFields.join(',')} FROM Task WHERE WhatId IN ('${batch.join("','")}') LIMIT 10`;
 
         const [eventResponse, taskResponse] = await Promise.all([
           this.agentServiceRequest.sendToolRequest(
@@ -143,12 +143,14 @@ export class OpportunityRatingService {
         // Process each opportunity
         for (const opp of oppResponse.messageContent.toolResult.result
           .records) {
-          const events = eventResponse.messageContent.toolResult.result.records
-            .filter((e) => e.WhatId === opp.Id)
-            .slice(0, 5);
-          const tasks = taskResponse.messageContent.toolResult.result.records
-            .filter((t) => t.WhatId === opp.Id)
-            .slice(0, 5);
+          const events =
+            eventResponse.messageContent.toolResult.result.records.filter(
+              (e) => e.WhatId === opp.Id,
+            );
+          const tasks =
+            taskResponse.messageContent.toolResult.result.records.filter(
+              (t) => t.WhatId === opp.Id,
+            );
           const activities = [...events, ...tasks];
 
           // Step 4: Execute prompt with combined data
