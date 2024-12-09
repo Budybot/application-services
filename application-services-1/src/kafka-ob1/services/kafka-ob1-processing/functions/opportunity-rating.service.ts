@@ -142,8 +142,8 @@ export class OpportunityRatingService {
         apiCount++;
 
         // Query activities (events and tasks)
-        const eventQuery = `SELECT ${eventFields.join(',')} FROM Event WHERE WhatId IN ('${batch.join("','")}') LIMIT 5`;
-        const taskQuery = `SELECT ${taskFields.join(',')} FROM Task WHERE WhatId IN ('${batch.join("','")}') LIMIT 5`;
+        const eventQuery = `SELECT ${eventFields.join(',')} FROM Event WHERE WhatId IN ('${batch.join("','")}') LIMIT 3`;
+        const taskQuery = `SELECT ${taskFields.join(',')} FROM Task WHERE WhatId IN ('${batch.join("','")}') LIMIT 3`;
 
         const [eventResponse, taskResponse] = await Promise.all([
           this.agentServiceRequest.sendToolRequest(
