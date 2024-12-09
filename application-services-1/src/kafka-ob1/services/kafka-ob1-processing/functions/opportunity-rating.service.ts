@@ -261,8 +261,12 @@ Objective: Identify Opportunities at risk of delay due to legal complexities, en
 
       // Create a new Google Sheet for the results
       const sheetTitle = `Opportunity Ratings - ${new Date().toISOString().split('T')[0]}`;
-      const sheetId =
-        await this.googleSheetService.createGoogleSheet(sheetTitle);
+      const sheetId = await this.googleSheetService.createGoogleSheet(
+        sheetTitle,
+        undefined,
+        'theo@budy.bot',
+        'writer',
+      );
       this.logger.log(
         `Created Google Sheet for opportunity ratings: ${sheetId}`,
       );
