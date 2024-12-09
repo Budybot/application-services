@@ -199,14 +199,14 @@ export class OpportunityRatingService {
           };
 
           const criteriaQuestions = [
-            `Deal Risks: Budget Availability and Access to Decision Maker Risk
+            `1) Deal Risks: Budget Availability and Access to Decision Maker Risk
 Definition: Does the Opportunity exhibit potential deal risks related to budget availability or access to decision-makers that could delay or prevent closure?
 Key Metrics:
 - Budget Availability Risk: Activity descriptions reference buyer concerns such as "budget freezes," "price concerns," or "budget constraints." No explicit mention of budget approval or readiness in meeting or demo outcomes.
 - Access to Decision Maker Risk: Activities lack the presence of key decision-makers (e.g., Director, VP, or C-level) in meeting participants or communication threads. No verbal or written confirmation of decision-making readiness is logged in the Opportunity's activities.
 Objective: Identify and flag Opportunities at risk due to budget issues or insufficient access to decision-makers. This allows the sales team to focus on resolving these blockers and improving deal confidence.`,
 
-            `Timing Risks
+            `2) Timing Risks
 Definition: Does the Opportunity exhibit risks related to timing that could delay its closure or impact its forecasted Close Date?
 Key Metrics:
 - Historical Slippage: The Opportunity's CloseDate has been changed more than once in the last 30 days. Frequent updates or unrealistic Close Dates (e.g., unusually early compared to historical trends).
@@ -215,7 +215,7 @@ Key Metrics:
 - Proximity to Deadlines: The CloseDate is within 30 days of the quarter-end but Opportunity stage or progress does not align with expected timelines.
 Objective: Identify Opportunities with high timing risks to prioritize follow-up and recalibrate forecasts. Highlight deals with inconsistent timing patterns, slippage trends, or misaligned Close Dates that could disrupt sales predictability.`,
 
-            `Product Fit Risks
+            `3) Product Fit Risks
 Definition: Does the Opportunity exhibit risks related to product fit, where the customer's needs, use cases, or objections indicate potential misalignment with the offered solution?
 Key Metrics:
 - Demo Call Feedback: Gong demo call notes or Activity descriptions highlight concerns such as unmet requirements, feature gaps, or lack of clarity on product fit. No clear alignment between the customer's expressed use cases and the product's capabilities.
@@ -223,7 +223,7 @@ Key Metrics:
 - Stage-Appropriate Fit Assessment: For Opportunities in SQL or Due Diligence stages, there is no record of product fit validation (e.g., objections raised but not addressed, or no next steps logged).
 Objective: Identify Opportunities where product fit risks could derail progress, ensuring timely resolution of concerns and alignment between the customer's needs and the solution offered.`,
 
-            `Legal Risks
+            `4) Legal Risks
 Definition: Does the Opportunity exhibit legal or due diligence risks that could delay closure or complicate the agreement process?
 Key Metrics:
 - Opportunity Amount Threshold: Only Opportunities with an Amount greater than $80,000 are evaluated for legal risks.
