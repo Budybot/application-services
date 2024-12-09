@@ -258,6 +258,43 @@ Objective: Identify Opportunities at risk of delay due to legal complexities, en
       }
 
       this.logger.debug('All scores', { scores: allScores, apiCount });
+
+      // Create a new Google Sheet for the results
+      const sheetTitle = `Opportunity Ratings - ${new Date().toISOString().split('T')[0]}`;
+      const sheetId =
+        await this.googleSheetService.createGoogleSheet(sheetTitle);
+      this.logger.log(
+        `Created Google Sheet for opportunity ratings: ${sheetId}`,
+      );
+
+      // Prepare data for the sheet
+      const headers = [
+        'Opportunity ID',
+        'Opportunity Name',
+        'Amount',
+        'Stage',
+        'Risk Score',
+        'Risk Bucket',
+        'Evaluation Details',
+      ];
+
+      const rows = allScores.map((score) => [
+        score.opportunityId,
+        score.opportunityName,
+        score.amount?.toString() || 'N/A',
+        score.stage,
+        score.score.toString(),
+        score.bucket,
+        score.evaluation
+          .map((e: any) => `${e.question}: ${e.outcome}`)
+          .join('\n'),
+      ]);
+
+      // Write data to the sheet
+      await this.googleSheetService.writeToSheet(sheetId, [headers, ...rows]);
+      this.logger.log(
+        `Written ${rows.length} opportunities to sheet ${sheetId}`,
+      );
     } catch (error) {
       this.logger.error('Error processing opportunity ratings', {
         error: error.message,
