@@ -10,6 +10,12 @@ import { GoogleSheetService } from '../../google/google-sheet.service';
 @Injectable()
 export class OpportunityRatingService {
   private readonly logger = new Logger(OpportunityRatingService.name);
+  private readonly defaultToolEnvVars = {
+    sf_instance_url:
+      process.env.SALESFORCE_INSTANCE_URL ||
+      'https://my-salesforce-instance.salesforce.com',
+    sf_access_token: process.env.SALESFORCE_TOKEN || 'default-sf-access-token',
+  };
 
   constructor(
     private readonly agentServiceRequest: AgentServiceRequest,
@@ -27,7 +33,12 @@ export class OpportunityRatingService {
       personId,
       userOrgId,
       describeToolId,
-      { objectName },
+      {
+        toolInputVariables: {
+          objectName,
+        },
+        toolInputENVVariables: this.defaultToolEnvVars,
+      },
     );
 
     if (
@@ -80,7 +91,12 @@ export class OpportunityRatingService {
         personId,
         userOrgId,
         queryToolId,
-        { query: finalQuery },
+        {
+          toolInputVariables: {
+            query: finalQuery,
+          },
+          toolInputENVVariables: this.defaultToolEnvVars,
+        },
       );
       apiCount++;
 
@@ -116,7 +132,12 @@ export class OpportunityRatingService {
           personId,
           userOrgId,
           queryToolId,
-          { query: oppQuery },
+          {
+            toolInputVariables: {
+              query: oppQuery,
+            },
+            toolInputENVVariables: this.defaultToolEnvVars,
+          },
         );
         apiCount++;
 
@@ -129,13 +150,23 @@ export class OpportunityRatingService {
             personId,
             userOrgId,
             queryToolId,
-            { query: eventQuery },
+            {
+              toolInputVariables: {
+                query: eventQuery,
+              },
+              toolInputENVVariables: this.defaultToolEnvVars,
+            },
           ),
           this.agentServiceRequest.sendToolRequest(
             personId,
             userOrgId,
             queryToolId,
-            { query: taskQuery },
+            {
+              toolInputVariables: {
+                query: taskQuery,
+              },
+              toolInputENVVariables: this.defaultToolEnvVars,
+            },
           ),
         ]);
         apiCount += 2; // Two activity queries
