@@ -279,20 +279,44 @@ Objective: Identify Opportunities at risk of delay due to legal complexities, en
         'Stage',
         'Risk Score',
         'Risk Bucket',
-        'Evaluation Details',
+        'Deal Risks Outcome',
+        'Deal Risks Justification',
+        'Timing Risks Outcome',
+        'Timing Risks Justification',
+        'Product Fit Risks Outcome',
+        'Product Fit Risks Justification',
+        'Legal Risks Outcome',
+        'Legal Risks Justification',
       ];
 
-      const rows = allScores.map((score) => [
-        score.opportunityId,
-        score.opportunityName,
-        score.amount?.toString() || 'N/A',
-        score.stage,
-        score.score.toString(),
-        score.bucket,
-        score.evaluation
-          .map((e: any) => `${e.question}: ${e.outcome}`)
-          .join('\n'),
-      ]);
+      const rows = allScores.map((score) => {
+        const evaluationMap = score.evaluation.reduce((acc: any, e: any) => {
+          // Extract the risk type from the question (e.g., "Deal Risks", "Timing Risks", etc.)
+          const riskType = e.question.split(':')[0].trim();
+          acc[riskType] = {
+            outcome: e.outcome,
+            justification: e.justification || 'No justification provided',
+          };
+          return acc;
+        }, {});
+
+        return [
+          score.opportunityId,
+          score.opportunityName,
+          score.amount?.toString() || 'N/A',
+          score.stage,
+          score.score.toString(),
+          score.bucket,
+          evaluationMap['Deal Risks']?.outcome || 'N/A',
+          evaluationMap['Deal Risks']?.justification || 'N/A',
+          evaluationMap['Timing Risks']?.outcome || 'N/A',
+          evaluationMap['Timing Risks']?.justification || 'N/A',
+          evaluationMap['Product Fit Risks']?.outcome || 'N/A',
+          evaluationMap['Product Fit Risks']?.justification || 'N/A',
+          evaluationMap['Legal Risks']?.outcome || 'N/A',
+          evaluationMap['Legal Risks']?.justification || 'N/A',
+        ];
+      });
 
       // Write data to the sheet
       await this.googleSheetService.writeToSheet(sheetId, [headers, ...rows]);
