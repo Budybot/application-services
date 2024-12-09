@@ -291,12 +291,28 @@ Objective: Identify Opportunities at risk of delay due to legal complexities, en
 
       const rows = allScores.map((score) => {
         const evaluationMap = score.evaluation.reduce((acc: any, e: any) => {
-          // Extract the risk type from the question (e.g., "Deal Risks", "Timing Risks", etc.)
-          const riskType = e.question.split(':')[0].trim();
-          acc[riskType] = {
-            outcome: e.outcome,
-            justification: e.justification || 'No justification provided',
-          };
+          // Map the questions to their respective risk types
+          let riskType;
+          if (
+            e.question.includes(
+              'budget availability or access to decision-makers',
+            )
+          ) {
+            riskType = 'Deal Risks';
+          } else if (e.question.includes('risks related to timing')) {
+            riskType = 'Timing Risks';
+          } else if (e.question.includes('risks related to product fit')) {
+            riskType = 'Product Fit Risks';
+          } else if (e.question.includes('legal or due diligence risks')) {
+            riskType = 'Legal Risks';
+          }
+
+          if (riskType) {
+            acc[riskType] = {
+              outcome: e.outcome,
+              justification: e.justification,
+            };
+          }
           return acc;
         }, {});
 
