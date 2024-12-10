@@ -211,6 +211,7 @@ export class KafkaOb1ProcessingService {
             limit: oppLimit,
             batchSize,
             criteriaRecordId: oppCriteriaRecordId,
+            patchToolId: oppPatchToolId,
           } = functionInput;
 
           // Log start of opportunity rating process
@@ -238,6 +239,7 @@ export class KafkaOb1ProcessingService {
                 limit: oppLimit,
                 batchSize,
                 criteriaRecordId: oppCriteriaRecordId,
+                patchToolId: oppPatchToolId,
               },
             })
             .then(() => {

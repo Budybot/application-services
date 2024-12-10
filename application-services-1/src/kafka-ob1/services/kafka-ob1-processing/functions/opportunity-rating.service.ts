@@ -79,6 +79,7 @@ export class OpportunityRatingService {
         limit,
         batchSize,
         criteriaRecordId,
+        patchToolId,
       } = message.messageContent;
 
       // Fetch criteria from Salesforce
@@ -260,6 +261,66 @@ export class OpportunityRatingService {
       }
 
       this.logger.debug('All scores', { scores: allScores, apiCount });
+
+      // Prepare records for patching
+      const recordsToUpdate = allScores.map((score) => {
+        const evaluationMap = score.evaluation.reduce(
+          (acc: any, e: any, index: number) => {
+            const criteriaKey = `Budy_Criteria_Outcome_${index + 1}__c`;
+            const justificationKey = `Budy_Criteria_Justification_${index + 1}__c`;
+            acc[criteriaKey] = e.outcome;
+            acc[justificationKey] = e.justification;
+            return acc;
+          },
+          {},
+        );
+
+        return {
+          id: score.opportunityId,
+          ...evaluationMap,
+          Budy_Opportunity_Score__c: score.score,
+          Budy_Opportunity_Score_Bucket__c: score.bucket,
+        };
+      });
+
+      // Patch the opportunities with their evaluations
+      const patchResponse = await this.agentServiceRequest.sendToolRequest(
+        personId,
+        userOrgId,
+        patchToolId,
+        {
+          toolInputVariables: {
+            record_type: 'Opportunity',
+            field_names: [
+              'Budy_Criteria_Outcome_1__c',
+              'Budy_Criteria_Justification_1__c',
+              'Budy_Criteria_Outcome_2__c',
+              'Budy_Criteria_Justification_2__c',
+              'Budy_Criteria_Outcome_3__c',
+              'Budy_Criteria_Justification_3__c',
+              'Budy_Criteria_Outcome_4__c',
+              'Budy_Criteria_Justification_4__c',
+              'Budy_Opportunity_Score__c',
+              'Budy_Opportunity_Score_Bucket__c',
+            ],
+            records: recordsToUpdate,
+          },
+          toolInputENVVariables: this.defaultToolEnvVars,
+        },
+      );
+      apiCount++;
+
+      if (!patchResponse.messageContent?.toolSuccess) {
+        throw new Error(
+          `Failed to update opportunities: ${
+            patchResponse.messageContent?.toolError?.message || 'Unknown error'
+          }`,
+        );
+      }
+
+      this.logger.log(
+        `Successfully updated ${recordsToUpdate.length} opportunities`,
+      );
 
       // Create a new Google Sheet for the results
       const sheetTitle = `Opportunity Ratings - ${criteriaRecord.Name} - ${new Date().toISOString().split('T')[0]}`;
