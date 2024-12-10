@@ -12,9 +12,9 @@ export class OpportunityRatingService {
   private readonly logger = new Logger(OpportunityRatingService.name);
   private readonly defaultToolEnvVars = {
     sf_instance_url:
-      process.env.SALESFORCE_INSTANCE_URL ||
+      process.env.SF_SANDBOX_INSTANCE_URL ||
       'https://my-salesforce-instance.salesforce.com',
-    sf_access_token: process.env.SALESFORCE_TOKEN || 'default-sf-access-token',
+    sf_access_token: process.env.SF_SANDBOX_TOKEN || 'default-sf-access-token',
   };
 
   constructor(
@@ -78,7 +78,43 @@ export class OpportunityRatingService {
         customQuery,
         limit,
         batchSize,
+        criteriaId,
       } = message.messageContent;
+
+      // Fetch criteria from Salesforce
+      const criteriaQuery = `SELECT Name, Budy_Criteria_1__c, Budy_Criteria_2__c, Budy_Criteria_3__c, Budy_Criteria_4__c FROM Budy_Opportunity_Criteria__c WHERE Id = '${criteriaId}'`;
+      const criteriaResponse = await this.agentServiceRequest.sendToolRequest(
+        personId,
+        userOrgId,
+        queryToolId,
+        {
+          toolInputVariables: {
+            query: criteriaQuery,
+          },
+          toolInputENVVariables: this.defaultToolEnvVars,
+        },
+      );
+      apiCount++;
+
+      if (
+        !criteriaResponse.messageContent?.toolSuccess ||
+        !criteriaResponse.messageContent?.toolResult?.result?.records?.[0]
+      ) {
+        throw new Error('Failed to fetch criteria or criteria not found');
+      }
+
+      const criteriaRecord =
+        criteriaResponse.messageContent.toolResult.result.records[0];
+      const criteriaQuestions = [
+        criteriaRecord.Budy_Criteria_1__c,
+        criteriaRecord.Budy_Criteria_2__c,
+        criteriaRecord.Budy_Criteria_3__c,
+        criteriaRecord.Budy_Criteria_4__c,
+      ].filter(Boolean); // Remove any null/undefined criteria
+
+      if (criteriaQuestions.length === 0) {
+        throw new Error('No criteria questions found in the criteria record');
+      }
 
       // Step 1: Query opportunity IDs
       let opportunityIds: string[] = [];
@@ -198,40 +234,6 @@ export class OpportunityRatingService {
             maxTokens: 4096,
           };
 
-          const criteriaQuestions = [
-            `1) Deal Risks: Budget Availability and Access to Decision Maker Risk
-Definition: Does the Opportunity exhibit potential deal risks related to budget availability or access to decision-makers that could delay or prevent closure?
-Key Metrics:
-- Budget Availability Risk: Activity descriptions reference buyer concerns such as "budget freezes," "price concerns," or "budget constraints." No explicit mention of budget approval or readiness in meeting or demo outcomes.
-- Access to Decision Maker Risk: Activities lack the presence of key decision-makers (e.g., Director, VP, or C-level) in meeting participants or communication threads. No verbal or written confirmation of decision-making readiness is logged in the Opportunity's activities.
-Objective: Identify and flag Opportunities at risk due to budget issues or insufficient access to decision-makers. This allows the sales team to focus on resolving these blockers and improving deal confidence.`,
-
-            `2) Timing Risks
-Definition: Does the Opportunity exhibit risks related to timing that could delay its closure or impact its forecasted Close Date?
-Key Metrics:
-- Historical Slippage: The Opportunity's CloseDate has been changed more than once in the last 30 days. Frequent updates or unrealistic Close Dates (e.g., unusually early compared to historical trends).
-- Opportunity Age: Opportunity Age (Post-Demo Stage) exceeds the median age for Opportunities that closed successfully in the same quarter last year.
-- Time in Current Stage: The number of days in the current stage exceeds the median stage duration for closed Opportunities from the last year.
-- Proximity to Deadlines: The CloseDate is within 30 days of the quarter-end but Opportunity stage or progress does not align with expected timelines.
-Objective: Identify Opportunities with high timing risks to prioritize follow-up and recalibrate forecasts. Highlight deals with inconsistent timing patterns, slippage trends, or misaligned Close Dates that could disrupt sales predictability.`,
-
-            `3) Product Fit Risks
-Definition: Does the Opportunity exhibit risks related to product fit, where the customer's needs, use cases, or objections indicate potential misalignment with the offered solution?
-Key Metrics:
-- Demo Call Feedback: Gong demo call notes or Activity descriptions highlight concerns such as unmet requirements, feature gaps, or lack of clarity on product fit. No clear alignment between the customer's expressed use cases and the product's capabilities.
-- Customer Use Cases: Use_Cases__c field is either empty or does not match standard product solutions provided.
-- Stage-Appropriate Fit Assessment: For Opportunities in SQL or Due Diligence stages, there is no record of product fit validation (e.g., objections raised but not addressed, or no next steps logged).
-Objective: Identify Opportunities where product fit risks could derail progress, ensuring timely resolution of concerns and alignment between the customer's needs and the solution offered.`,
-
-            `4) Legal Risks
-Definition: Does the Opportunity exhibit legal or due diligence risks that could delay closure or complicate the agreement process?
-Key Metrics:
-- Opportunity Amount Threshold: Only Opportunities with an Amount greater than $80,000 are evaluated for legal risks.
-- Contentious Points in Communication: Legal-related Activity descriptions or email transcripts reference significant points of disagreement (e.g., SLA terms, data privacy concerns). Indications of rigidity from the customer's legal team on specific contractual language.
-- Unusual Document Requests: Documents outside the standard pre-order process (e.g., SLA agreements, additional data privacy requirements) are flagged in Activities or email transcripts as under review or requiring extended discussion.
-Objective: Identify Opportunities at risk of delay due to legal complexities, ensuring proper prioritization and mitigation strategies are in place to avoid last-minute disruptions to the sales process.`,
-          ];
-
           const llmResponse =
             await this.agentServiceRequest.sendPromptExecutionRequest(
               personId,
@@ -260,7 +262,7 @@ Objective: Identify Opportunities at risk of delay due to legal complexities, en
       this.logger.debug('All scores', { scores: allScores, apiCount });
 
       // Create a new Google Sheet for the results
-      const sheetTitle = `Opportunity Ratings - ${new Date().toISOString().split('T')[0]}`;
+      const sheetTitle = `Opportunity Ratings - ${criteriaRecord.Name} - ${new Date().toISOString().split('T')[0]}`;
       const sheetId = await this.googleSheetService.createGoogleSheet(
         sheetTitle,
         undefined,
