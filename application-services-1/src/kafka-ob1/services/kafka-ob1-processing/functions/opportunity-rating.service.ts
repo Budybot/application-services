@@ -78,11 +78,11 @@ export class OpportunityRatingService {
         customQuery,
         limit,
         batchSize,
-        criteriaId,
+        criteriaRecordId,
       } = message.messageContent;
 
       // Fetch criteria from Salesforce
-      const criteriaQuery = `SELECT Name, Budy_Criteria_1__c, Budy_Criteria_2__c, Budy_Criteria_3__c, Budy_Criteria_4__c FROM Budy_Opportunity_Criteria__c WHERE Id = '${criteriaId}'`;
+      const criteriaQuery = `SELECT Name, Budy_Criteria_1__c, Budy_Criteria_2__c, Budy_Criteria_3__c, Budy_Criteria_4__c FROM Budy_Opportunity_Criteria__c WHERE Id = '${criteriaRecordId}'`;
       const criteriaResponse = await this.agentServiceRequest.sendToolRequest(
         personId,
         userOrgId,
