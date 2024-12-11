@@ -275,11 +275,44 @@ export class OpportunityRatingService {
               (h) => h.OpportunityId === opp.Id,
             );
 
+          // Filter out null values and format opportunity data
+          const formattedOppData = Object.entries(opp)
+            .filter(([_, value]) => value !== null)
+            .map(([key, value]) => `- ${key}: ${value}`)
+            .join('\n');
+
+          // Format histories and metrics
+          const formattedCloseDateHistory = closeDateHistory
+            .map(
+              (h) =>
+                `- ${h.CreatedDate}: Changed from ${h.OldValue} to ${h.NewValue}`,
+            )
+            .join('\n');
+
+          const formattedStageHistory = stageHistory
+            .map(
+              (h) =>
+                `- ${h.CreatedDate}: Changed from ${h.OldValue} to ${h.NewValue}`,
+            )
+            .join('\n');
+
+          const formattedKeyMetrics = Object.entries(validMetrics)
+            .map(([key, value]) => `- ${key}: ${value}`)
+            .join('\n');
+
           const userPrompt = `Time at the start of analysis: ${currentTime}.
-Opportunity Data: ${JSON.stringify(opp)}
-Close Date History: ${JSON.stringify(closeDateHistory)}
-Stage History: ${JSON.stringify(stageHistory)}
-Key Metrics: ${JSON.stringify(validMetrics)}`;
+
+**Opportunity Data:**
+${formattedOppData}
+
+**Close Date History:**
+${formattedCloseDateHistory}
+
+**Stage History:**
+${formattedStageHistory}
+
+**Key Metrics:**
+${formattedKeyMetrics}`;
 
           const config = {
             provider: 'openai',
