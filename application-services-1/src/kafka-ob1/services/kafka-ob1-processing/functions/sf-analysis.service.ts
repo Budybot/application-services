@@ -11,6 +11,12 @@ export class SalesforceAnalysisService {
       'https://my-salesforce-instance.salesforce.com',
     sf_access_token: process.env.SF_SANDBOX_TOKEN || 'default-sf-access-token',
   };
+  private readonly prodToolEnvVars = {
+    sf_instance_url:
+      process.env.SALESFORCE_INSTANCE_URL ||
+      'https://my-salesforce-instance.salesforce.com',
+    sf_access_token: process.env.SALESFORCE_TOKEN || 'default-sf-access-token',
+  };
 
   constructor(
     private readonly agentServiceRequest: AgentServiceRequest,
@@ -46,7 +52,7 @@ export class SalesforceAnalysisService {
         queryToolId,
         {
           toolInputVariables: { query: closedWonQuery },
-          toolInputENVVariables: this.defaultToolEnvVars,
+          toolInputENVVariables: this.prodToolEnvVars,
         },
       );
       apiCount++;
@@ -58,7 +64,7 @@ export class SalesforceAnalysisService {
         );
       const historicalOppsQuery = `
         SELECT OpportunityId, CreatedDate
-        FROM OpportunityHistory 
+        FROM OpportunityFieldHistory 
         WHERE Field = 'StageName'
         AND NewValue = 'Demo'
         AND OpportunityId IN ('${closedWonIds.join("','")}')
@@ -71,7 +77,7 @@ export class SalesforceAnalysisService {
           queryToolId,
           {
             toolInputVariables: { query: historicalOppsQuery },
-            toolInputENVVariables: this.defaultToolEnvVars,
+            toolInputENVVariables: this.prodToolEnvVars,
           },
         );
       apiCount++;
