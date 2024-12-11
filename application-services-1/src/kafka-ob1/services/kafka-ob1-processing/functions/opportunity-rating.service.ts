@@ -124,6 +124,11 @@ export class OpportunityRatingService {
         throw new Error('No criteria questions found in the criteria record');
       }
 
+      // Format criteria questions for the input variable
+      const formattedCriteriaQuestions = criteriaQuestions
+        .map((question, index) => `${index + 1}) ${question}`)
+        .join('\n');
+
       // Fetch key metrics
       const metricsQuery = `
         SELECT Budy_Key_Metric_1_Name__c, Budy_Key_Metric_1_Value__c,
@@ -328,7 +333,7 @@ ${formattedKeyMetrics}`;
               promptId,
               userPrompt,
               config,
-              { criteriaQuestions: criteriaQuestions },
+              { criteriaQuestions: formattedCriteriaQuestions },
             );
 
           // Step 5: Calculate score from LLM response and store evaluation
