@@ -17,6 +17,13 @@ export class SalesforceAnalysisService {
       'https://my-salesforce-instance.salesforce.com',
     sf_access_token: process.env.SALESFORCE_TOKEN || 'default-sf-access-token',
   };
+  private readonly postDemoStages = [
+    'Proposal/ROI Calculation',
+    'Due Diligence',
+    'Consensus',
+    'Negotiation',
+    'Contract',
+  ];
 
   constructor(
     private readonly agentServiceRequest: AgentServiceRequest,
@@ -63,7 +70,7 @@ export class SalesforceAnalysisService {
           (r) => r.Id,
         );
       const historicalOppsQuery = `
-        SELECT OpportunityId, CreatedDate, NewValue
+        SELECT OpportunityId, CreatedDate, NewValue, OldValue
         FROM OpportunityFieldHistory 
         WHERE Field = 'StageName'
         AND OpportunityId IN ('${closedWonIds.join("','")}')
@@ -81,21 +88,34 @@ export class SalesforceAnalysisService {
         );
       apiCount++;
 
-      // Calculate median age by combining both datasets
+      // Calculate all metrics
       const closedWonOpps =
         closedWonResponse.messageContent.toolResult.result.records;
       const stageHistory =
         historicalOppsResponse.messageContent.toolResult.result.records;
+
       const medianHistoricalAge = this.calculateMedianAge(
         closedWonOpps,
         stageHistory,
       );
+      const stageDurations = this.calculateStageDurations(stageHistory);
 
-      // Create single metric record
+      // Create metrics record with all metrics
       const metricsRecord = {
         Name: `Opportunity Age Analysis - ${currentQuarter}`,
         Budy_Key_Metric_1_Name__c: 'Historical Median Age (Days)',
         Budy_Key_Metric_1_Value__c: medianHistoricalAge,
+        Budy_Key_Metric_2_Name__c: 'Median Proposal/ROI Stage Duration (Days)',
+        Budy_Key_Metric_2_Value__c:
+          stageDurations['Proposal/ROI Calculation'] || 0,
+        Budy_Key_Metric_3_Name__c: 'Median Due Diligence Stage Duration (Days)',
+        Budy_Key_Metric_3_Value__c: stageDurations['Due Diligence'] || 0,
+        Budy_Key_Metric_4_Name__c: 'Median Consensus Stage Duration (Days)',
+        Budy_Key_Metric_4_Value__c: stageDurations['Consensus'] || 0,
+        Budy_Key_Metric_5_Name__c: 'Median Negotiation Stage Duration (Days)',
+        Budy_Key_Metric_5_Value__c: stageDurations['Negotiation'] || 0,
+        Budy_Key_Metric_6_Name__c: 'Median Contract Stage Duration (Days)',
+        Budy_Key_Metric_6_Value__c: stageDurations['Contract'] || 0,
         Budy_Analysis_Quarter__c: currentQuarter,
       };
 
@@ -158,11 +178,70 @@ export class SalesforceAnalysisService {
       .filter((age) => age > 0) // Filter out any negative ages (in case of multiple stage changes)
       .sort((a, b) => a - b);
 
-    if (ages.length === 0) {
-      return 0;
-    }
+    if (ages.length === 0) return 0;
 
     const mid = Math.floor(ages.length / 2);
     return ages.length % 2 === 0 ? (ages[mid - 1] + ages[mid]) / 2 : ages[mid];
+  }
+
+  private calculateStageDurations(stageHistory: any[]): Record<string, number> {
+    // Group history records by opportunity and sort by date
+    const oppStageHistory = stageHistory.reduce((acc, record) => {
+      if (!acc[record.OpportunityId]) {
+        acc[record.OpportunityId] = [];
+      }
+      acc[record.OpportunityId].push(record);
+      return acc;
+    }, {});
+
+    // Calculate durations for each stage
+    const stageDurations: Record<string, number[]> = {};
+    this.postDemoStages.forEach((stage) => {
+      stageDurations[stage] = [];
+    });
+
+    Object.values(oppStageHistory).forEach((history: any[]) => {
+      // Sort history by date
+      const sortedHistory = history.sort(
+        (a, b) =>
+          new Date(a.CreatedDate).getTime() - new Date(b.CreatedDate).getTime(),
+      );
+
+      // Calculate duration for each stage
+      sortedHistory.forEach((record, index) => {
+        if (this.postDemoStages.includes(record.OldValue)) {
+          const stageStartDate = new Date(record.CreatedDate);
+          const stageEndDate =
+            index < sortedHistory.length - 1
+              ? new Date(sortedHistory[index + 1].CreatedDate)
+              : null;
+
+          if (stageEndDate) {
+            const duration = Math.floor(
+              (stageEndDate.getTime() - stageStartDate.getTime()) /
+                (1000 * 60 * 60 * 24),
+            );
+            if (duration > 0) {
+              stageDurations[record.OldValue].push(duration);
+            }
+          }
+        }
+      });
+    });
+
+    // Calculate median for each stage
+    return Object.entries(stageDurations).reduce((acc, [stage, durations]) => {
+      if (durations.length === 0) {
+        acc[stage] = 0;
+      } else {
+        const sorted = durations.sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        acc[stage] =
+          sorted.length % 2 === 0
+            ? (sorted[mid - 1] + sorted[mid]) / 2
+            : sorted[mid];
+      }
+      return acc;
+    }, {});
   }
 }
