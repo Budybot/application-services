@@ -445,19 +445,15 @@ ${formattedKeyMetrics}`;
 
       const rows = allScores.map((score) => {
         const evaluationMap = score.evaluation.reduce((acc: any, e: any) => {
-          // Map the questions to their respective risk types
+          // Simplified mapping based on the start of the question text
           let riskType;
-          if (
-            e.question.includes(
-              'budget availability or access to decision-makers',
-            )
-          ) {
+          if (e.question.startsWith('Deal Risks')) {
             riskType = 'Deal Risks';
-          } else if (e.question.includes('risks related to timing')) {
+          } else if (e.question.startsWith('Timing')) {
             riskType = 'Timing Risks';
-          } else if (e.question.includes('risks related to product fit')) {
+          } else if (e.question.startsWith('Product')) {
             riskType = 'Product Fit Risks';
-          } else if (e.question.includes('legal or due diligence risks')) {
+          } else if (e.question.startsWith('Legal')) {
             riskType = 'Legal Risks';
           }
 
