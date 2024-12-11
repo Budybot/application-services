@@ -433,10 +433,10 @@ ${formattedKeyMetrics}`;
         'Stage',
         'Risk Score',
         'Risk Bucket',
-        'Deal Risks Outcome',
-        'Deal Risks Justification',
         'Timing Risks Outcome',
         'Timing Risks Justification',
+        'Deal Risks Outcome',
+        'Deal Risks Justification',
         'Product Fit Risks Outcome',
         'Product Fit Risks Justification',
         'Legal Risks Outcome',
@@ -444,28 +444,6 @@ ${formattedKeyMetrics}`;
       ];
 
       const rows = allScores.map((score) => {
-        const evaluationMap = score.evaluation.reduce((acc: any, e: any) => {
-          // Simplified mapping based on the start of the question text
-          let riskType;
-          if (e.question.startsWith('Deal Risks')) {
-            riskType = 'Deal Risks';
-          } else if (e.question.startsWith('Timing')) {
-            riskType = 'Timing Risks';
-          } else if (e.question.startsWith('Product')) {
-            riskType = 'Product Fit Risks';
-          } else if (e.question.startsWith('Legal')) {
-            riskType = 'Legal Risks';
-          }
-
-          if (riskType) {
-            acc[riskType] = {
-              outcome: e.outcome,
-              justification: e.justification,
-            };
-          }
-          return acc;
-        }, {});
-
         return [
           score.opportunityId,
           score.opportunityName,
@@ -473,14 +451,14 @@ ${formattedKeyMetrics}`;
           score.stage,
           score.score.toString(),
           score.bucket,
-          evaluationMap['Deal Risks']?.outcome || 'N/A',
-          evaluationMap['Deal Risks']?.justification || 'N/A',
-          evaluationMap['Timing Risks']?.outcome || 'N/A',
-          evaluationMap['Timing Risks']?.justification || 'N/A',
-          evaluationMap['Product Fit Risks']?.outcome || 'N/A',
-          evaluationMap['Product Fit Risks']?.justification || 'N/A',
-          evaluationMap['Legal Risks']?.outcome || 'N/A',
-          evaluationMap['Legal Risks']?.justification || 'N/A',
+          score.evaluation[0]?.outcome || 'N/A',
+          score.evaluation[0]?.justification || 'N/A',
+          score.evaluation[1]?.outcome || 'N/A',
+          score.evaluation[1]?.justification || 'N/A',
+          score.evaluation[2]?.outcome || 'N/A',
+          score.evaluation[2]?.justification || 'N/A',
+          score.evaluation[3]?.outcome || 'N/A',
+          score.evaluation[3]?.justification || 'N/A',
         ];
       });
 
