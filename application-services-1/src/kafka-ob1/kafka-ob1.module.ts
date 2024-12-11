@@ -30,6 +30,7 @@ import { SowCommentProcessingService } from './services/kafka-ob1-processing/con
 import { ToolTestingService } from './services/kafka-ob1-processing/tool-tester.service';
 import { LeadRatingService } from './services/kafka-ob1-processing/functions/lead-rating.service';
 import { OpportunityRatingService } from './services/kafka-ob1-processing/functions/opportunity-rating.service';
+import { SalesforceAnalysisService } from './services/kafka-ob1-processing/functions/sf-analysis.service';
 @Module({
   imports: [
     HttpModule,
@@ -83,6 +84,7 @@ import { OpportunityRatingService } from './services/kafka-ob1-processing/functi
     ToolTestingService,
     LeadRatingService,
     OpportunityRatingService,
+    SalesforceAnalysisService,
   ],
   controllers: [KafkaOb1Controller],
 })

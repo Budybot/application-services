@@ -17,6 +17,7 @@ import { LeadRatingService } from './functions/lead-rating.service';
 import { OpportunityRatingService } from './functions/opportunity-rating.service';
 import { AgentServiceRequest } from './agent-service-request.service';
 import { query } from 'express';
+import { SalesforceAnalysisService } from './functions/sf-analysis.service';
 
 @Injectable()
 export class KafkaOb1ProcessingService {
@@ -33,6 +34,7 @@ export class KafkaOb1ProcessingService {
     private readonly rateLead: LeadRatingService,
     private readonly rateOpportunity: OpportunityRatingService,
     private readonly agentServiceRequest: AgentServiceRequest,
+    private readonly sfAnalysis: SalesforceAnalysisService,
     // @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
   ) {}
 
@@ -250,6 +252,39 @@ export class KafkaOb1ProcessingService {
             .catch((error) => {
               this.logger.error(
                 `Opportunity rating process failed: ${error.message}`,
+              );
+            });
+
+          break;
+
+        case 'sf-analysis':
+          this.logger.log('Starting Salesforce metrics analysis');
+          response = {
+            messageContent: {
+              status: 'Processing',
+              message:
+                'Salesforce metrics analysis started. You will receive updates shortly.',
+            },
+          };
+
+          // Trigger the analysis process asynchronously
+          this.sfAnalysis
+            .processMetricsAnalysis({
+              messageContent: {
+                personId,
+                userOrgId,
+                queryToolId: functionInput.queryToolId,
+                createToolId: functionInput.createToolId,
+              },
+            })
+            .then(() => {
+              this.logger.log(
+                'Salesforce metrics analysis completed successfully',
+              );
+            })
+            .catch((error) => {
+              this.logger.error(
+                `Salesforce metrics analysis failed: ${error.message}`,
               );
             });
 
