@@ -57,16 +57,15 @@ export class SalesforceAnalysisService {
       );
       apiCount++;
 
-      // Then get the demo stage history for those opportunities
+      // Then get all stage history for those opportunities
       const closedWonIds =
         closedWonResponse.messageContent.toolResult.result.records.map(
           (r) => r.Id,
         );
       const historicalOppsQuery = `
-        SELECT OpportunityId, CreatedDate
+        SELECT OpportunityId, CreatedDate, NewValue
         FROM OpportunityFieldHistory 
         WHERE Field = 'StageName'
-        AND NewValue = 'Demo'
         AND OpportunityId IN ('${closedWonIds.join("','")}')
       `;
 
@@ -82,10 +81,15 @@ export class SalesforceAnalysisService {
         );
       apiCount++;
 
-      // Calculate median age
-      const historicalOpps =
+      // Calculate median age by combining both datasets
+      const closedWonOpps =
+        closedWonResponse.messageContent.toolResult.result.records;
+      const stageHistory =
         historicalOppsResponse.messageContent.toolResult.result.records;
-      const medianHistoricalAge = this.calculateMedianAge(historicalOpps);
+      const medianHistoricalAge = this.calculateMedianAge(
+        closedWonOpps,
+        stageHistory,
+      );
 
       // Create single metric record
       const metricsRecord = {
@@ -131,16 +135,32 @@ export class SalesforceAnalysisService {
     }
   }
 
-  private calculateMedianAge(opportunities: any[]): number {
-    const ages = opportunities
-      .map((opp) => {
-        const demoDate = new Date(opp.CreatedDate);
-        const closeDate = new Date(opp.CloseDate);
+  private calculateMedianAge(
+    closedWonOpps: any[],
+    stageHistory: any[],
+  ): number {
+    // Create a map of opportunity IDs to their close dates
+    const closeDateMap = closedWonOpps.reduce((map, opp) => {
+      map[opp.Id] = new Date(opp.CloseDate);
+      return map;
+    }, {});
+
+    // Filter for Demo stages and calculate ages
+    const ages = stageHistory
+      .filter((history) => history.NewValue === 'Demo')
+      .map((history) => {
+        const closeDate = closeDateMap[history.OpportunityId];
+        const demoDate = new Date(history.CreatedDate);
         return Math.floor(
           (closeDate.getTime() - demoDate.getTime()) / (1000 * 60 * 60 * 24),
         ); // Convert to days
       })
+      .filter((age) => age > 0) // Filter out any negative ages (in case of multiple stage changes)
       .sort((a, b) => a - b);
+
+    if (ages.length === 0) {
+      return 0;
+    }
 
     const mid = Math.floor(ages.length / 2);
     return ages.length % 2 === 0 ? (ages[mid - 1] + ages[mid]) / 2 : ages[mid];
