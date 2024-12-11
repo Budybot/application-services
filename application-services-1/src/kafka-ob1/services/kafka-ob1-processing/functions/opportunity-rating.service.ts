@@ -43,7 +43,7 @@ export class OpportunityRatingService {
         toolInputVariables: {
           objectName,
         },
-        toolInputENVVariables: this.defaultToolEnvVars,
+        toolInputENVVariables: this.prodToolEnvVars,
       },
     );
 
