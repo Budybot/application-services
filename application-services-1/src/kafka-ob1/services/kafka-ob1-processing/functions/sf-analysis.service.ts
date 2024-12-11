@@ -105,7 +105,7 @@ export class SalesforceAnalysisService {
         createToolId,
         {
           toolInputVariables: {
-            object_name: 'Budy_Key_Metrics__c',
+            object_name: 'Budy_Opportunity_Key_Metrics__c',
             records: [metricsRecord],
           },
           toolInputENVVariables: this.defaultToolEnvVars,
