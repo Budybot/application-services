@@ -16,6 +16,12 @@ export class OpportunityRatingService {
       'https://my-salesforce-instance.salesforce.com',
     sf_access_token: process.env.SF_SANDBOX_TOKEN || 'default-sf-access-token',
   };
+  private readonly prodToolEnvVars = {
+    sf_instance_url:
+      process.env.SALESFORCE_INSTANCE_URL ||
+      'https://my-salesforce-instance.salesforce.com',
+    sf_access_token: process.env.SALESFORCE_TOKEN || 'default-sf-access-token',
+  };
 
   constructor(
     private readonly agentServiceRequest: AgentServiceRequest,
@@ -80,6 +86,7 @@ export class OpportunityRatingService {
         batchSize,
         criteriaRecordId,
         patchToolId,
+        keyMetricsRecordId,
       } = message.messageContent;
 
       // Fetch criteria from Salesforce
@@ -116,6 +123,47 @@ export class OpportunityRatingService {
       if (criteriaQuestions.length === 0) {
         throw new Error('No criteria questions found in the criteria record');
       }
+
+      // Fetch key metrics
+      const metricsQuery = `
+        SELECT Budy_Key_Metric_1_Name__c, Budy_Key_Metric_1_Value__c,
+               Budy_Key_Metric_2_Name__c, Budy_Key_Metric_2_Value__c,
+               Budy_Key_Metric_3_Name__c, Budy_Key_Metric_3_Value__c,
+               Budy_Key_Metric_4_Name__c, Budy_Key_Metric_4_Value__c,
+               Budy_Key_Metric_5_Name__c, Budy_Key_Metric_5_Value__c,
+               Budy_Key_Metric_6_Name__c, Budy_Key_Metric_6_Value__c
+        FROM Budy_Opportunity_Key_Metrics__c 
+        WHERE Id = '${keyMetricsRecordId}'`;
+
+      const metricsResponse = await this.agentServiceRequest.sendToolRequest(
+        personId,
+        userOrgId,
+        queryToolId,
+        {
+          toolInputVariables: { query: metricsQuery },
+          toolInputENVVariables: this.defaultToolEnvVars,
+        },
+      );
+      apiCount++;
+
+      if (!metricsResponse.messageContent?.toolSuccess) {
+        throw new Error('Failed to fetch key metrics');
+      }
+
+      const metricsRecord =
+        metricsResponse.messageContent.toolResult.result.records[0];
+      const validMetrics = Object.entries(metricsRecord)
+        .filter(
+          ([key, value]) =>
+            key.includes('Metric') &&
+            value !== null &&
+            value !== undefined &&
+            value !== 'N/A',
+        )
+        .reduce((acc, [key, value]) => {
+          acc[key] = value;
+          return acc;
+        }, {});
 
       // Step 1: Query opportunity IDs
       let opportunityIds: string[] = [];
@@ -173,60 +221,18 @@ export class OpportunityRatingService {
             toolInputVariables: {
               query: oppQuery,
             },
-            toolInputENVVariables: this.defaultToolEnvVars,
+            toolInputENVVariables: this.processOpportunityRating,
           },
         );
         apiCount++;
 
-        // Query activities (events and tasks)
-        const eventQuery = `SELECT ${eventFields.join(',')} FROM Event WHERE WhatId IN ('${batch.join("','")}') LIMIT 3`;
-        const taskQuery = `SELECT ${taskFields.join(',')} FROM Task WHERE WhatId IN ('${batch.join("','")}') LIMIT 3`;
-
-        const [eventResponse, taskResponse] = await Promise.all([
-          this.agentServiceRequest.sendToolRequest(
-            personId,
-            userOrgId,
-            queryToolId,
-            {
-              toolInputVariables: {
-                query: eventQuery,
-              },
-              toolInputENVVariables: this.defaultToolEnvVars,
-            },
-          ),
-          this.agentServiceRequest.sendToolRequest(
-            personId,
-            userOrgId,
-            queryToolId,
-            {
-              toolInputVariables: {
-                query: taskQuery,
-              },
-              toolInputENVVariables: this.defaultToolEnvVars,
-            },
-          ),
-        ]);
-        apiCount += 2; // Two activity queries
-
-        // Process each opportunity
+        // Modify the prompt construction
         for (const opp of oppResponse.messageContent.toolResult.result
           .records) {
-          const events =
-            eventResponse.messageContent.toolResult.result.records.filter(
-              (e) => e.WhatId === opp.Id,
-            );
-          const tasks =
-            taskResponse.messageContent.toolResult.result.records.filter(
-              (t) => t.WhatId === opp.Id,
-            );
-          const activities = [...events, ...tasks];
-
-          // Step 4: Execute prompt with combined data
-
           const currentTime = new Date().toISOString();
           const userPrompt = `Time at the start of analysis: ${currentTime}.\nOpportunity Data: ${JSON.stringify(
             opp,
-          )}\nActivity Results: ${JSON.stringify(activities)}`;
+          )}\nKey Metrics: ${JSON.stringify(validMetrics)}`;
 
           const config = {
             provider: 'openai',
