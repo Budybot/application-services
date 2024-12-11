@@ -227,7 +227,8 @@ export class OpportunityRatingService {
         apiCount++;
 
         // Query close date history
-        const closeDateHistoryQuery = `SELECT CreatedById, CreatedDate, OldValue, NewValue, Field FROM OpportunityFieldHistory 
+        const closeDateHistoryQuery = `SELECT OpportunityId, CreatedById, CreatedDate, OldValue, NewValue, Field 
+          FROM OpportunityFieldHistory 
           WHERE Field = 'CloseDate' AND OpportunityId IN ('${batch.join("','")}')`;
         const closeDateHistoryResponse =
           await this.agentServiceRequest.sendToolRequest(
@@ -244,7 +245,8 @@ export class OpportunityRatingService {
         apiCount++;
 
         // Query stage history
-        const stageHistoryQuery = `SELECT CreatedById, CreatedDate, OldValue, NewValue, Field FROM OpportunityFieldHistory 
+        const stageHistoryQuery = `SELECT OpportunityId, CreatedById, CreatedDate, OldValue, NewValue, Field 
+          FROM OpportunityFieldHistory 
           WHERE Field = 'StageName' AND OpportunityId IN ('${batch.join("','")}')`;
         const stageHistoryResponse =
           await this.agentServiceRequest.sendToolRequest(
