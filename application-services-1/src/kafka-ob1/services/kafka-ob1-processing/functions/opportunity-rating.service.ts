@@ -221,7 +221,7 @@ export class OpportunityRatingService {
             toolInputVariables: {
               query: oppQuery,
             },
-            toolInputENVVariables: this.processOpportunityRating,
+            toolInputENVVariables: this.prodToolEnvVars,
           },
         );
         apiCount++;
