@@ -226,13 +226,58 @@ export class OpportunityRatingService {
         );
         apiCount++;
 
+        // Query close date history
+        const closeDateHistoryQuery = `SELECT CreatedById, CreatedDate, OldValue, NewValue, Field FROM OpportunityFieldHistory 
+          WHERE Field = 'CloseDate' AND OpportunityId IN ('${batch.join("','")}')`;
+        const closeDateHistoryResponse =
+          await this.agentServiceRequest.sendToolRequest(
+            personId,
+            userOrgId,
+            queryToolId,
+            {
+              toolInputVariables: {
+                query: closeDateHistoryQuery,
+              },
+              toolInputENVVariables: this.prodToolEnvVars,
+            },
+          );
+        apiCount++;
+
+        // Query stage history
+        const stageHistoryQuery = `SELECT CreatedById, CreatedDate, OldValue, NewValue, Field FROM OpportunityFieldHistory 
+          WHERE Field = 'StageName' AND OpportunityId IN ('${batch.join("','")}')`;
+        const stageHistoryResponse =
+          await this.agentServiceRequest.sendToolRequest(
+            personId,
+            userOrgId,
+            queryToolId,
+            {
+              toolInputVariables: {
+                query: stageHistoryQuery,
+              },
+              toolInputENVVariables: this.prodToolEnvVars,
+            },
+          );
+        apiCount++;
+
         // Modify the prompt construction
         for (const opp of oppResponse.messageContent.toolResult.result
           .records) {
           const currentTime = new Date().toISOString();
-          const userPrompt = `Time at the start of analysis: ${currentTime}.\nOpportunity Data: ${JSON.stringify(
-            opp,
-          )}\nKey Metrics: ${JSON.stringify(validMetrics)}`;
+          const closeDateHistory =
+            closeDateHistoryResponse.messageContent.toolResult.result.records.filter(
+              (h) => h.OpportunityId === opp.Id,
+            );
+          const stageHistory =
+            stageHistoryResponse.messageContent.toolResult.result.records.filter(
+              (h) => h.OpportunityId === opp.Id,
+            );
+
+          const userPrompt = `Time at the start of analysis: ${currentTime}.
+Opportunity Data: ${JSON.stringify(opp)}
+Close Date History: ${JSON.stringify(closeDateHistory)}
+Stage History: ${JSON.stringify(stageHistory)}
+Key Metrics: ${JSON.stringify(validMetrics)}`;
 
           const config = {
             provider: 'openai',
