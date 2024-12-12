@@ -585,17 +585,17 @@ ${oppTasks}`;
 
   private mergeEvaluations(oppEvaluation: any, activityEvaluation: any): any[] {
     console.log('MERGE INPUTS:', {
-      oppEvaluation: oppEvaluation,
-      activityEvaluation: activityEvaluation,
+      oppEvaluation,
+      activityEvaluation,
     });
 
-    // Handle both object and string cases
-    const oppEvals = typeof oppEvaluation === 'string' 
-      ? JSON.parse(oppEvaluation)
+    // Handle both array and response object cases
+    const oppEvals = Array.isArray(oppEvaluation) 
+      ? oppEvaluation 
       : oppEvaluation?.messageContent?.content?.evaluation;
 
-    const activityEvals = typeof activityEvaluation === 'string'
-      ? JSON.parse(activityEvaluation)
+    const activityEvals = Array.isArray(activityEvaluation)
+      ? activityEvaluation
       : activityEvaluation?.messageContent?.content?.evaluation;
 
     console.log('EXTRACTED ARRAYS:', {
