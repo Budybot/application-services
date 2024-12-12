@@ -585,17 +585,22 @@ ${oppTasks}`;
 
   private mergeEvaluations(oppEvaluation: any, activityEvaluation: any): any[] {
     console.log('MERGE INPUTS:', {
-      oppEvaluation: JSON.stringify(oppEvaluation, null, 2),
-      activityEvaluation: JSON.stringify(activityEvaluation, null, 2),
+      oppEvaluation: oppEvaluation,
+      activityEvaluation: activityEvaluation,
     });
 
-    // Ensure we're accessing the evaluation arrays correctly
-    const oppEvals = oppEvaluation?.messageContent?.content?.evaluation || [];
-    const activityEvals = activityEvaluation?.messageContent?.content?.evaluation || [];
+    // Handle both object and string cases
+    const oppEvals = typeof oppEvaluation === 'string' 
+      ? JSON.parse(oppEvaluation)
+      : oppEvaluation?.messageContent?.content?.evaluation;
+
+    const activityEvals = typeof activityEvaluation === 'string'
+      ? JSON.parse(activityEvaluation)
+      : activityEvaluation?.messageContent?.content?.evaluation;
 
     console.log('EXTRACTED ARRAYS:', {
-      oppEvals: JSON.stringify(oppEvals, null, 2),
-      activityEvals: JSON.stringify(activityEvals, null, 2),
+      oppEvals,
+      activityEvals,
     });
 
     // Merge evaluations by combining outcomes
@@ -617,7 +622,7 @@ ${oppTasks}`;
       };
     });
 
-    console.log('MERGE RESULT:', JSON.stringify(result, null, 2));
+    console.log('MERGE RESULT:', result);
     return result;
   }
 
