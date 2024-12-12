@@ -591,8 +591,7 @@ ${oppTasks}`;
 
     // Ensure we're accessing the evaluation arrays correctly
     const oppEvals = oppEvaluation?.messageContent?.content?.evaluation || [];
-    const activityEvals =
-      activityEvaluation?.messageContent?.content?.evaluation || [];
+    const activityEvals = activityEvaluation?.messageContent?.content?.evaluation || [];
 
     console.log('EXTRACTED ARRAYS:', {
       oppEvals: JSON.stringify(oppEvals, null, 2),
