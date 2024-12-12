@@ -403,6 +403,11 @@ ${oppTasks}`;
             ),
           ]);
 
+          console.log('RAW RESPONSES:', {
+            oppEvaluation: oppEvaluation,
+            activityEvaluation: activityEvaluation,
+          });
+
           // Merge evaluations
           const mergedEvaluation = this.mergeEvaluations(
             oppEvaluation.messageContent.content.evaluation,
