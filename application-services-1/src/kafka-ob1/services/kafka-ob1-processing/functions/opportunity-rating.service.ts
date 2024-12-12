@@ -81,6 +81,7 @@ export class OpportunityRatingService {
         queryToolId,
         describeToolId,
         promptId,
+        activityPromptId,
         customQuery,
         limit,
         batchSize,
@@ -267,6 +268,32 @@ export class OpportunityRatingService {
           );
         apiCount++;
 
+        // Add queries for activities
+        const eventsQuery = `SELECT ${eventFields.join(',')} FROM Event WHERE WhatId IN ('${batch.join("','")}') LIMIT 3`;
+        const tasksQuery = `SELECT ${taskFields.join(',')} FROM Task WHERE WhatId IN ('${batch.join("','")}') LIMIT 3`;
+
+        const [eventsResponse, tasksResponse] = await Promise.all([
+          this.agentServiceRequest.sendToolRequest(
+            personId,
+            userOrgId,
+            queryToolId,
+            {
+              toolInputVariables: { query: eventsQuery },
+              toolInputENVVariables: this.prodToolEnvVars,
+            },
+          ),
+          this.agentServiceRequest.sendToolRequest(
+            personId,
+            userOrgId,
+            queryToolId,
+            {
+              toolInputVariables: { query: tasksQuery },
+              toolInputENVVariables: this.prodToolEnvVars,
+            },
+          ),
+        ]);
+        apiCount += 2;
+
         // Modify the prompt construction
         for (const opp of oppResponse.messageContent.toolResult.result
           .records) {
@@ -326,18 +353,64 @@ ${formattedKeyMetrics}`;
             maxTokens: 4096,
           };
 
-          const llmResponse =
-            await this.agentServiceRequest.sendPromptExecutionRequest(
+          // Format activity data
+          const oppEvents =
+            eventsResponse.messageContent.toolResult.result.records
+              .filter((e) => e.WhatId === opp.Id)
+              .map((e) =>
+                Object.entries(e)
+                  .filter(([_, value]) => value !== null)
+                  .map(([key, value]) => `- ${key}: ${value}`)
+                  .join('\n'),
+              )
+              .join('\n');
+
+          const oppTasks =
+            tasksResponse.messageContent.toolResult.result.records
+              .filter((t) => t.WhatId === opp.Id)
+              .map((t) =>
+                Object.entries(t)
+                  .filter(([_, value]) => value !== null)
+                  .map(([key, value]) => `- ${key}: ${value}`)
+                  .join('\n'),
+              )
+              .join('\n');
+
+          const activityPrompt = `
+**Events:**
+${oppEvents}
+
+**Tasks:**
+${oppTasks}`;
+
+          // Make both LLM calls in parallel
+          const [oppEvaluation, activityEvaluation] = await Promise.all([
+            this.agentServiceRequest.sendPromptExecutionRequest(
               personId,
               userOrgId,
               promptId,
               userPrompt,
               config,
               { criteriaQuestions: formattedCriteriaQuestions },
-            );
+            ),
+            this.agentServiceRequest.sendPromptExecutionRequest(
+              personId,
+              userOrgId,
+              activityPromptId,
+              activityPrompt,
+              config,
+              { criteriaQuestions: formattedCriteriaQuestions },
+            ),
+          ]);
 
-          // Step 5: Calculate score from LLM response and store evaluation
-          const score = this.calculateScore(llmResponse.messageContent.content);
+          // Merge evaluations
+          const mergedEvaluation = this.mergeEvaluations(
+            oppEvaluation.messageContent.content.evaluation,
+            activityEvaluation.messageContent.content.evaluation,
+          );
+
+          // Calculate score using merged evaluation
+          const score = this.calculateScore({ evaluation: mergedEvaluation });
           const bucket = this.getScoreBucket(score);
           allScores.push({
             opportunityId: opp.Id,
@@ -346,7 +419,7 @@ ${formattedKeyMetrics}`;
             opportunityName: opp.Name,
             amount: opp.Amount,
             stage: opp.StageName,
-            evaluation: llmResponse.messageContent.content.evaluation,
+            evaluation: mergedEvaluation,
           });
         }
       }
@@ -502,5 +575,43 @@ ${formattedKeyMetrics}`;
     if (score < 50) return 'Yellow';
     if (score < 75) return 'Blue';
     return 'Green';
+  }
+
+  private mergeEvaluations(eval1: any[], eval2: any[]): any[] {
+    return eval1.map((e1, index) => {
+      const e2 = eval2[index];
+
+      // Case 1: Same outcomes
+      if (e1.outcome === e2.outcome) {
+        return {
+          outcome: e1.outcome,
+          justification: `${e1.justification} Additionally, ${e2.justification}`,
+        };
+      }
+
+      // Case 2: One is Yes
+      if (e1.outcome === 'Yes' || e2.outcome === 'Yes') {
+        return {
+          outcome: 'Yes',
+          justification:
+            e1.outcome === 'Yes' ? e1.justification : e2.justification,
+        };
+      }
+
+      // Case 3: No and N/A
+      if (
+        (e1.outcome === 'No' && e2.outcome === 'N/A') ||
+        (e1.outcome === 'N/A' && e2.outcome === 'No')
+      ) {
+        const noEval = e1.outcome === 'No' ? e1 : e2;
+        return {
+          outcome: 'No',
+          justification: noEval.justification,
+        };
+      }
+
+      // Default case
+      return e1;
+    });
   }
 }
