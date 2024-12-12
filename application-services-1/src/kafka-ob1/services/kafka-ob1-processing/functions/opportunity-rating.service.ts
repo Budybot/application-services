@@ -408,6 +408,7 @@ ${oppTasks}`;
             oppEvaluation.messageContent.content.evaluation,
             activityEvaluation.messageContent.content.evaluation,
           );
+          console.log('mergedEvaluation', mergedEvaluation);
 
           // Calculate score using merged evaluation
           const score = this.calculateScore({ evaluation: mergedEvaluation });
