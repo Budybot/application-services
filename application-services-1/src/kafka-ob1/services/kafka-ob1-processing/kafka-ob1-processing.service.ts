@@ -215,6 +215,7 @@ export class KafkaOb1ProcessingService {
             criteriaRecordId: oppCriteriaRecordId,
             patchToolId: oppPatchToolId,
             keyMetricsRecordId,
+            activityPromptId: oppActivityPromptId,
           } = functionInput;
 
           // Log start of opportunity rating process
@@ -244,6 +245,7 @@ export class KafkaOb1ProcessingService {
                 criteriaRecordId: oppCriteriaRecordId,
                 patchToolId: oppPatchToolId,
                 keyMetricsRecordId,
+                activityPromptId: oppActivityPromptId,
               },
             })
             .then(() => {
