@@ -603,56 +603,60 @@ ${oppTasks}`;
       activityEvals,
     });
 
-    // Merge evaluations by combining outcomes
+    // Merge evaluations using the correct logic
     const result = oppEvals.map((oppEval: any, index: number) => {
       const activityEval = activityEvals[index];
-      const outcome = this.combineOutcomes(
-        oppEval.outcome,
-        activityEval?.outcome,
-      );
 
+      // If both outcomes are the same, combine justifications with a period
+      if (oppEval.outcome === activityEval?.outcome) {
+        return {
+          question: oppEval.question,
+          outcome: oppEval.outcome,
+          justification: `${oppEval.justification} ${activityEval.justification}`,
+        };
+      }
+
+      // If either is Yes, use that one with its justification
+      if (oppEval.outcome === 'Yes') {
+        return {
+          question: oppEval.question,
+          outcome: 'Yes',
+          justification: oppEval.justification,
+        };
+      }
+      if (activityEval?.outcome === 'Yes') {
+        return {
+          question: oppEval.question,
+          outcome: 'Yes',
+          justification: activityEval.justification,
+        };
+      }
+
+      // If either is No, use that one with its justification
+      if (oppEval.outcome === 'No') {
+        return {
+          question: oppEval.question,
+          outcome: 'No',
+          justification: oppEval.justification,
+        };
+      }
+      if (activityEval?.outcome === 'No') {
+        return {
+          question: oppEval.question,
+          outcome: 'No',
+          justification: activityEval.justification,
+        };
+      }
+
+      // Default to the first evaluation if both are N/A
       return {
         question: oppEval.question,
-        outcome: outcome,
-        justification: this.combineJustifications(
-          oppEval.justification,
-          activityEval?.justification,
-          outcome,
-        ),
+        outcome: oppEval.outcome,
+        justification: oppEval.justification,
       };
     });
 
     console.log('MERGE RESULT:', result);
     return result;
-  }
-
-  private combineOutcomes(outcome1: string, outcome2: string): string {
-    if (outcome1 === 'No' || outcome2 === 'No') {
-      return 'No';
-    }
-    if (outcome1 === 'Yes' || outcome2 === 'Yes') {
-      return 'Yes';
-    }
-    return 'N/A';
-  }
-
-  private combineJustifications(
-    justification1: string,
-    justification2: string,
-    outcome: string,
-  ): string {
-    if (outcome === 'No') {
-      return '';
-    }
-    if (justification1 && justification2) {
-      return `${justification1} and ${justification2}`;
-    }
-    if (justification1) {
-      return justification1;
-    }
-    if (justification2) {
-      return justification2;
-    }
-    return '';
   }
 }
