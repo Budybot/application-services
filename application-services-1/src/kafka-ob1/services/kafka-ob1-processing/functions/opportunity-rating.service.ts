@@ -579,13 +579,23 @@ ${oppTasks}`;
   }
 
   private mergeEvaluations(oppEvaluation: any, activityEvaluation: any): any[] {
+    console.log('MERGE INPUTS:', {
+      oppEvaluation: JSON.stringify(oppEvaluation, null, 2),
+      activityEvaluation: JSON.stringify(activityEvaluation, null, 2),
+    });
+
     // Ensure we're accessing the evaluation arrays correctly
     const oppEvals = oppEvaluation?.messageContent?.content?.evaluation || [];
     const activityEvals =
       activityEvaluation?.messageContent?.content?.evaluation || [];
 
+    console.log('EXTRACTED ARRAYS:', {
+      oppEvals: JSON.stringify(oppEvals, null, 2),
+      activityEvals: JSON.stringify(activityEvals, null, 2),
+    });
+
     // Merge evaluations by combining outcomes
-    return oppEvals.map((oppEval: any, index: number) => {
+    const result = oppEvals.map((oppEval: any, index: number) => {
       const activityEval = activityEvals[index];
       const outcome = this.combineOutcomes(
         oppEval.outcome,
@@ -602,6 +612,9 @@ ${oppTasks}`;
         ),
       };
     });
+
+    console.log('MERGE RESULT:', JSON.stringify(result, null, 2));
+    return result;
   }
 
   private combineOutcomes(outcome1: string, outcome2: string): string {
