@@ -5,6 +5,7 @@ import { ClientKafka } from '@nestjs/microservices';
 enum AnalysisType {
   SEASONAL = 'seasonal',
   PERFORMANCE = 'performance',
+  OWNER_PERFORMANCE = 'owner_performance',
 }
 
 @Injectable()
@@ -69,6 +70,18 @@ export class SalesforceAnalysisService {
           );
         metrics = seasonalMetrics;
         apiCount = seasonalCount;
+      } else if (analysisType === AnalysisType.OWNER_PERFORMANCE) {
+        const [ownerMetrics, ownerCount] =
+          await this.processOwnerPerformanceAnalysis(
+            personId,
+            userOrgId,
+            queryToolId,
+            now,
+            apiCount,
+            currentQuarter,
+          );
+        metrics = ownerMetrics;
+        apiCount = ownerCount;
       } else {
         const [performanceMetrics, performanceCount] =
           await this.processPerformanceAnalysis(
@@ -242,14 +255,87 @@ export class SalesforceAnalysisService {
     ];
   }
 
+  private async processOwnerPerformanceAnalysis(
+    personId: string,
+    userOrgId: string,
+    queryToolId: string,
+    now: Date,
+    apiCount: number,
+    currentQuarter: string,
+  ): Promise<[Record<string, any>[], number]> {
+    const ownerAnalysisQuery = `
+      SELECT OwnerId, Owner.Name, StageName, Amount
+      FROM Opportunity 
+      WHERE CALENDAR_QUARTER(CreatedDate) = ${Math.floor(now.getMonth() / 3) + 1}
+      AND CALENDAR_YEAR(CreatedDate) = ${now.getFullYear() - 1}
+      AND (StageName = 'Closed Won' OR StageName = 'Closed Lost')
+    `;
+
+    const ownerAnalysisResponse =
+      await this.agentServiceRequest.sendToolRequest(
+        personId,
+        userOrgId,
+        queryToolId,
+        {
+          toolInputVariables: { query: ownerAnalysisQuery },
+          toolInputENVVariables: this.prodToolEnvVars,
+        },
+      );
+    apiCount++;
+
+    // Group opportunities by owner
+    const opportunitiesByOwner =
+      ownerAnalysisResponse.messageContent.toolResult.result.records.reduce(
+        (acc, opp) => {
+          if (!acc[opp.OwnerId]) {
+            acc[opp.OwnerId] = {
+              ownerId: opp.OwnerId,
+              ownerName: opp.Owner.Name,
+              opportunities: [],
+            };
+          }
+          acc[opp.OwnerId].opportunities.push(opp);
+          return acc;
+        },
+        {},
+      );
+
+    // Calculate metrics for each owner
+    const ownerMetrics = Object.values(opportunitiesByOwner).map(
+      (ownerData: any) => {
+        const metrics = this.calculateOwnerMetrics(ownerData.opportunities);
+
+        return {
+          Name: `Owner Performance Analysis - ${ownerData.ownerName} - ${currentQuarter}`,
+          Budy_Key_Metric_1_Name__c: 'Opportunity Win Rate (%)',
+          Budy_Key_Metric_1_Value__c: Math.round(metrics.winRate),
+          Budy_Key_Metric_2_Name__c: 'Opportunity Loss Rate (%)',
+          Budy_Key_Metric_2_Value__c: Math.round(metrics.lossRate),
+          Budy_Key_Metric_3_Name__c: 'Total Opportunity Revenue ($)',
+          Budy_Key_Metric_3_Value__c: Math.round(metrics.totalRevenue),
+          Budy_Key_Metric_4_Name__c: 'Average Opportunity Revenue ($)',
+          Budy_Key_Metric_4_Value__c: Math.round(metrics.avgRevenue),
+          Budy_Analysis_Quarter__c: currentQuarter,
+          User__c: ownerData.ownerId,
+        };
+      },
+    );
+
+    return [ownerMetrics, apiCount];
+  }
+
   private async createMetricsRecord(
     personId: string,
     userOrgId: string,
     createToolId: string,
-    metricsRecord: Record<string, any>,
+    metricsRecord: Record<string, any> | Record<string, any>[],
     currentQuarter: string,
     apiCount: number,
   ): Promise<[void, number]> {
+    const records = Array.isArray(metricsRecord)
+      ? metricsRecord
+      : [metricsRecord];
+
     const createResponse = await this.agentServiceRequest.sendToolRequest(
       personId,
       userOrgId,
@@ -257,7 +343,7 @@ export class SalesforceAnalysisService {
       {
         toolInputVariables: {
           object_name: 'Budy_Opportunity_Key_Metrics__c',
-          records: [metricsRecord],
+          records: records,
         },
         toolInputENVVariables: this.defaultToolEnvVars,
       },
