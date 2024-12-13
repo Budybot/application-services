@@ -356,31 +356,43 @@ export class SalesforceAnalysisService {
     const records = Array.isArray(metricsRecord)
       ? metricsRecord
       : [metricsRecord];
+    const BATCH_SIZE = 10; // Salesforce typically handles 10-15 records well in a single DML
 
-    this.logger.debug(`Attempting to create ${records.length} metrics records`);
-
-    const createResponse = await this.agentServiceRequest.sendToolRequest(
-      personId,
-      userOrgId,
-      createToolId,
-      {
-        toolInputVariables: {
-          object_name: 'Budy_Opportunity_Key_Metrics__c',
-          records: records,
-        },
-        toolInputENVVariables: this.defaultToolEnvVars,
-      },
+    this.logger.debug(
+      `Attempting to create ${records.length} metrics records in batches of ${BATCH_SIZE}`,
     );
-    apiCount++;
 
-    if (!createResponse.messageContent?.toolSuccess) {
-      this.logger.error('Failed to create metrics records', {
-        error: createResponse.messageContent?.toolError,
-        records: records,
-      });
-      throw new Error(
-        `Failed to create metrics record: ${createResponse.messageContent?.toolError?.message || 'Unknown error'}`,
+    // Split records into batches
+    for (let i = 0; i < records.length; i += BATCH_SIZE) {
+      const batch = records.slice(i, i + BATCH_SIZE);
+      this.logger.debug(
+        `Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(records.length / BATCH_SIZE)}`,
       );
+
+      const createResponse = await this.agentServiceRequest.sendToolRequest(
+        personId,
+        userOrgId,
+        createToolId,
+        {
+          toolInputVariables: {
+            object_name: 'Budy_Opportunity_Key_Metrics__c',
+            records: batch,
+          },
+          toolInputENVVariables: this.defaultToolEnvVars,
+        },
+      );
+      apiCount++;
+
+      if (!createResponse.messageContent?.toolSuccess) {
+        this.logger.error('Failed to create metrics records batch', {
+          error: createResponse.messageContent?.toolError,
+          batchSize: batch.length,
+          batchNumber: Math.floor(i / BATCH_SIZE) + 1,
+        });
+        throw new Error(
+          `Failed to create metrics record: ${createResponse.messageContent?.toolError?.message || 'Unknown error'}`,
+        );
+      }
     }
 
     return [undefined, apiCount];
