@@ -269,6 +269,7 @@ export class SalesforceAnalysisService {
       WHERE CALENDAR_QUARTER(CreatedDate) = ${Math.floor(now.getMonth() / 3) + 1}
       AND CALENDAR_YEAR(CreatedDate) = ${now.getFullYear() - 1}
       AND (StageName = 'Closed Won' OR StageName = 'Closed Lost')
+      LIMIT 100
     `;
 
     const ownerAnalysisResponse =
