@@ -216,6 +216,7 @@ export class KafkaOb1ProcessingService {
             patchToolId: oppPatchToolId,
             keyMetricsRecordId,
             activityPromptId: oppActivityPromptId,
+            mergePromptId: oppMergePromptId,
           } = functionInput;
 
           // Log start of opportunity rating process
@@ -239,6 +240,7 @@ export class KafkaOb1ProcessingService {
                 queryToolId: oppQueryToolId,
                 describeToolId: oppDescribeToolId,
                 promptId: oppPromptId,
+                mergePromptId: oppMergePromptId,
                 customQuery: oppCustomQuery,
                 limit: oppLimit,
                 batchSize,

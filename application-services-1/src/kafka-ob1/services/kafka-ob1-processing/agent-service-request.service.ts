@@ -128,6 +128,104 @@ export class AgentServiceRequest {
     }
   }
 
+  async sendPromptExecutionWithoutUserPromptRequest(
+    personId: string,
+    userOrgId: string,
+    promptId: string,
+    // userPrompt: string,
+    config: {
+      provider: string;
+      model: string;
+      temperature?: number;
+      maxTokens?: number;
+    },
+    systemPromptVariables?: { [key: string]: any },
+    userPromptVariables?: { [key: string]: any },
+  ): Promise<any> {
+    const topic = 'budyos-ob1-agentService';
+    // const tokenThreshold = 1000;
+
+    // Adjust config for long prompts
+    // if (userPrompt.length > tokenThreshold) {
+    //   this.logger.warn(
+    //     `User prompt exceeds token limit of ${tokenThreshold} tokens. Increase max token.`,
+    //   );
+    //   // config.model = 'gpt-4o';
+    //   config.maxTokens = 12000;
+    // }
+
+    // Construct the functionInput for CRUDRoutes
+    const functionInput = {
+      CRUDOperationName: 'POST',
+      CRUDRoute: 'prompts/:promptId/executeWithoutUserPrompt',
+      CRUDBody: {
+        promptId,
+        // userPrompt,
+        llmConfig: config,
+        systemPromptVariables,
+        userPromptVariables,
+      },
+      routeParams: {
+        promptId,
+      },
+      queryParams: {},
+      tracing: {
+        traceId: `REQ-sendPromptExecutionWithoutUserPromptRequest-${Date.now()}`,
+      },
+      requestMetadata: {
+        _user: personId,
+        personId,
+        userOrgId,
+        sourceService: process.env.SERVICE_NAME || 'unknown-service',
+      },
+    };
+
+    // Validate the functionInput
+    try {
+      validateExecutePromptRequestBody(functionInput.CRUDBody);
+    } catch (validationError) {
+      this.logger.error(`Validation failed: ${validationError.message}`);
+      throw new Error('Invalid request data; please check your input');
+    }
+
+    // Prepare the Kafka message payload
+    const messageInput = {
+      messageContent: {
+        functionName: 'promptCRUD-V1',
+        functionInput,
+      },
+      messageType: 'REQUEST',
+    };
+
+    // Construct headers
+    const headers: OB1Global.MessageHeaderV2 = {
+      sourceService: process.env.SERVICE_NAME || 'unknown-service',
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      sourceFunction: 'sendPromptExecutionWithoutUserPromptRequest',
+      sourceType: 'service',
+      destinationService: 'agent-services',
+      requestId: `REQ-sendPromptExecutionWithoutUserPromptRequest-${Date.now()}`,
+      personId,
+      userOrgId,
+    };
+
+    try {
+      // Send the message to the Kafka topic
+      const response = await this.kafkaOb1Service.sendRequest(
+        messageInput,
+        headers,
+        topic,
+      );
+      this.logger.debug(`Response: ${JSON.stringify(response)}`);
+      return response;
+    } catch (error) {
+      this.logger.error(
+        `Error sending prompt execution request: ${error.message}`,
+      );
+      throw new Error('Failed to send prompt execution request');
+    }
+  }
+
   async sendToolRequest(
     personId: string,
     userOrgId: string,

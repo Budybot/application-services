@@ -82,6 +82,7 @@ export class OpportunityRatingService {
         describeToolId,
         promptId,
         activityPromptId,
+        mergePromptId,
         customQuery,
         limit,
         batchSize,
@@ -199,7 +200,7 @@ export class OpportunityRatingService {
         queryResponse.messageContent.toolResult.result.records.map((r) => r.Id);
 
       // Step 2: Describe objects and get fields
-      const [opportunityFields, eventFields, taskFields, gongFields] =
+      const [opportunityFields, eventFields, taskFields /* , gongFields */] =
         await Promise.all([
           this.describeObjectFields(
             describeToolId,
@@ -219,14 +220,14 @@ export class OpportunityRatingService {
             personId,
             userOrgId,
           ),
-          this.describeObjectFields(
+          /* this.describeObjectFields(
             describeToolId,
             'Gong__Gong_Call__c',
             personId,
             userOrgId,
-          ),
+          ), */
         ]);
-      apiCount += 4; // Four describe requests
+      apiCount += 3; // Three describe requests
 
       // Step 3: Process opportunities in batches
 
@@ -288,10 +289,10 @@ export class OpportunityRatingService {
         // Add Gong calls query alongside events and tasks queries
         const eventsQuery = `SELECT ${eventFields.join(',')} FROM Event WHERE WhatId IN ('${batch.join("','")}') LIMIT 3`;
         const tasksQuery = `SELECT ${taskFields.join(',')} FROM Task WHERE WhatId IN ('${batch.join("','")}') LIMIT 3`;
-        const gongQuery = `SELECT ${gongFields.join(',')} FROM Gong__Gong_Call__c WHERE Gong__Primary_Opportunity__c IN ('${batch.join("','")}') LIMIT 3`;
+        /* const gongQuery = `SELECT ${gongFields.join(',')} FROM Gong__Gong_Call__c WHERE Gong__Primary_Opportunity__c IN ('${batch.join("','")}') LIMIT 3`; */
 
-        const [eventsResponse, tasksResponse, gongResponse] = await Promise.all(
-          [
+        const [eventsResponse, tasksResponse /* , gongResponse */] =
+          await Promise.all([
             this.agentServiceRequest.sendToolRequest(
               personId,
               userOrgId,
@@ -310,7 +311,7 @@ export class OpportunityRatingService {
                 toolInputENVVariables: this.prodToolEnvVars,
               },
             ),
-            this.agentServiceRequest.sendToolRequest(
+            /* this.agentServiceRequest.sendToolRequest(
               personId,
               userOrgId,
               queryToolId,
@@ -318,10 +319,9 @@ export class OpportunityRatingService {
                 toolInputVariables: { query: gongQuery },
                 toolInputENVVariables: this.prodToolEnvVars,
               },
-            ),
-          ],
-        );
-        apiCount += 3;
+            ), */
+          ]);
+        apiCount += 2;
 
         // Modify the prompt construction
         for (const opp of oppResponse.messageContent.toolResult.result
@@ -413,23 +413,23 @@ ${oppEvents}
 ${oppTasks}`;
 
           // Format Gong calls data
-          const oppGongCalls =
-            gongResponse.messageContent.toolResult.result.records
-              .filter((g) => g.Gong__Primary_Opportunity__c === opp.Id)
-              .map((g) =>
-                Object.entries(g)
-                  .filter(([_, value]) => value !== null)
-                  .map(([key, value]) => `- ${key}: ${value}`)
-                  .join('\n'),
-              )
-              .join('\n');
+          //   const oppGongCalls =
+          //     gongResponse.messageContent.toolResult.result.records
+          //       .filter((g) => g.Gong__Primary_Opportunity__c === opp.Id)
+          //       .map((g) =>
+          //         Object.entries(g)
+          //           .filter(([_, value]) => value !== null)
+          //           .map(([key, value]) => `- ${key}: ${value}`)
+          //           .join('\n'),
+          //       )
+          //       .join('\n');
 
-          const gongPrompt = `
-**Gong Calls:**
-${oppGongCalls}`;
+          //           const gongPrompt = `
+          // **Gong Calls:**
+          // ${oppGongCalls}`;
 
           // Make all LLM calls in parallel
-          const [oppEvaluation, activityEvaluation, gongEvaluation] =
+          const [oppEvaluation, activityEvaluation /* , gongEvaluation */] =
             await Promise.all([
               this.agentServiceRequest.sendPromptExecutionRequest(
                 personId,
@@ -447,27 +447,41 @@ ${oppGongCalls}`;
                 config,
                 { criteriaQuestions: formattedCriteriaQuestions },
               ),
-              this.agentServiceRequest.sendPromptExecutionRequest(
+              /* this.agentServiceRequest.sendPromptExecutionRequest(
                 personId,
                 userOrgId,
                 activityPromptId,
                 gongPrompt,
                 config,
                 { criteriaQuestions: formattedCriteriaQuestions },
-              ),
+              ), */
             ]);
 
-        //   console.log('RAW RESPONSES:', {
-        //     oppEvaluation: oppEvaluation,
-        //     activityEvaluation: activityEvaluation,
-        //   });
+          //   console.log('RAW RESPONSES:', {
+          //     oppEvaluation: oppEvaluation,
+          //     activityEvaluation: activityEvaluation,
+          //   });
 
-          // Merge only opportunity and Gong evaluations
-          const mergedEvaluation = this.mergeEvaluations(
-            oppEvaluation.messageContent.content.evaluation,
-            activityEvaluation.messageContent.content.evaluation,
-            // gongEvaluation.messageContent.content.evaluation,
-          );
+          // Use merge prompt instead of automatic merging
+          const mergeResponse =
+            await this.agentServiceRequest.sendPromptExecutionWithoutUserPromptRequest(
+              personId,
+              userOrgId,
+              mergePromptId,
+              config,
+              { criteriaQuestions },
+              {
+                oppEvaluation: JSON.stringify(
+                  oppEvaluation.messageContent.content.evaluation,
+                ),
+                activityEvaluation: JSON.stringify(
+                  activityEvaluation.messageContent.content.evaluation,
+                ),
+              },
+            );
+
+          const mergedEvaluation =
+            mergeResponse.messageContent.content.evaluation;
           console.log('mergedEvaluation', mergedEvaluation);
 
           // Calculate score using merged evaluation
@@ -638,80 +652,7 @@ ${oppGongCalls}`;
     return 'Green';
   }
 
-  private mergeEvaluations(oppEvaluation: any, activityEvaluation: any): any[] {
-    console.log('MERGE INPUTS:', {
-      oppEvaluation,
-      activityEvaluation,
-    });
-
-    // Handle both array and response object cases
-    const oppEvals = Array.isArray(oppEvaluation)
-      ? oppEvaluation
-      : oppEvaluation?.messageContent?.content?.evaluation;
-
-    const activityEvals = Array.isArray(activityEvaluation)
-      ? activityEvaluation
-      : activityEvaluation?.messageContent?.content?.evaluation;
-
-    console.log('EXTRACTED ARRAYS:', {
-      oppEvals,
-      activityEvals,
-    });
-
-    // Merge evaluations using the correct logic
-    const result = oppEvals.map((oppEval: any, index: number) => {
-      const activityEval = activityEvals[index];
-
-      // If both outcomes are the same, combine justifications with a period
-      if (oppEval.outcome === activityEval?.outcome) {
-        return {
-          question: oppEval.question,
-          outcome: oppEval.outcome,
-          justification: `${oppEval.justification} ${activityEval.justification}`,
-        };
-      }
-
-      // If either is Yes, use that one with its justification
-      if (oppEval.outcome === 'Yes') {
-        return {
-          question: oppEval.question,
-          outcome: 'Yes',
-          justification: oppEval.justification,
-        };
-      }
-      if (activityEval?.outcome === 'Yes') {
-        return {
-          question: oppEval.question,
-          outcome: 'Yes',
-          justification: activityEval.justification,
-        };
-      }
-
-      // If either is No, use that one with its justification
-      if (oppEval.outcome === 'No') {
-        return {
-          question: oppEval.question,
-          outcome: 'No',
-          justification: oppEval.justification,
-        };
-      }
-      if (activityEval?.outcome === 'No') {
-        return {
-          question: oppEval.question,
-          outcome: 'No',
-          justification: activityEval.justification,
-        };
-      }
-
-      // Default to the first evaluation if both are N/A
-      return {
-        question: oppEval.question,
-        outcome: oppEval.outcome,
-        justification: oppEval.justification,
-      };
-    });
-
-    console.log('MERGE RESULT:', result);
-    return result;
-  }
+  /* private mergeEvaluations(oppEvaluation: any, activityEvaluation: any): any[] {
+    // ... existing merge function ...
+  } */
 }

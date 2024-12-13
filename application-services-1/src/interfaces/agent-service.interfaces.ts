@@ -76,6 +76,7 @@ export interface ExecutePromptRequestDto {
   promptId: string;
   userPrompt?: string;
   systemPromptVariables?: { [key: string]: any };
+  userPromptVariables?: { [key: string]: any };
   llmConfig?: LLMConfigDto;
 }
 
