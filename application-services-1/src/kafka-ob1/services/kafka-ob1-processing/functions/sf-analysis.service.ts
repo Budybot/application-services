@@ -149,13 +149,13 @@ export class SalesforceAnalysisService {
       const ownerMetricsRecord = {
         Name: `Opportunity Owner Analysis - ${currentQuarter}`,
         Budy_Key_Metric_1_Name__c: 'Opportunity Win Rate (%)',
-        Budy_Key_Metric_1_Value__c: ownerMetrics.winRate,
+        Budy_Key_Metric_1_Value__c: Math.round(ownerMetrics.winRate),
         Budy_Key_Metric_2_Name__c: 'Opportunity Loss Rate (%)',
-        Budy_Key_Metric_2_Value__c: ownerMetrics.lossRate,
-        Budy_Key_Metric_3_Name__c: 'Total Opportunity Revenue',
-        Budy_Key_Metric_3_Value__c: ownerMetrics.totalRevenue,
-        Budy_Key_Metric_4_Name__c: 'Average Opportunity Revenue',
-        Budy_Key_Metric_4_Value__c: ownerMetrics.avgRevenue,
+        Budy_Key_Metric_2_Value__c: Math.round(ownerMetrics.lossRate),
+        Budy_Key_Metric_3_Name__c: 'Total Opportunity Revenue ($)',
+        Budy_Key_Metric_3_Value__c: Math.round(ownerMetrics.totalRevenue),
+        Budy_Key_Metric_4_Name__c: 'Average Opportunity Revenue ($)',
+        Budy_Key_Metric_4_Value__c: Math.round(ownerMetrics.avgRevenue),
         Budy_Analysis_Quarter__c: currentQuarter,
       };
 
