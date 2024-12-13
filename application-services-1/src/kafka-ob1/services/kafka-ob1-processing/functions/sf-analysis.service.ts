@@ -217,8 +217,7 @@ export class SalesforceAnalysisService {
     const ownerAnalysisQuery = `
       SELECT OwnerId, StageName, Amount
       FROM Opportunity 
-      WHERE CALENDAR_QUARTER(CreatedDate) = ${Math.floor(now.getMonth() / 3) + 1}
-      AND CALENDAR_YEAR(CreatedDate) = ${now.getFullYear() - 1}
+      WHERE CreatedDate = LAST_N_DAYS:365
       AND (StageName = 'Closed Won' OR StageName = 'Closed Lost')
     `;
 
@@ -266,40 +265,52 @@ export class SalesforceAnalysisService {
     const ownerAnalysisQuery = `
       SELECT OwnerId, Owner.Name, StageName, Amount
       FROM Opportunity 
-      WHERE CALENDAR_QUARTER(CreatedDate) = ${Math.floor(now.getMonth() / 3) + 1}
-      AND CALENDAR_YEAR(CreatedDate) = ${now.getFullYear() - 1}
+      WHERE CreatedDate = LAST_N_DAYS:365
       AND (StageName = 'Closed Won' OR StageName = 'Closed Lost')
-      LIMIT 100
+      ORDER BY CreatedDate DESC
+      OFFSET {0} LIMIT 100
     `;
 
-    const ownerAnalysisResponse =
-      await this.agentServiceRequest.sendToolRequest(
+    let allRecords = [];
+    let hasMore = true;
+    let offset = 0;
+
+    while (hasMore) {
+      const batchQuery = ownerAnalysisQuery.replace('{0}', offset.toString());
+      const batchResponse = await this.agentServiceRequest.sendToolRequest(
         personId,
         userOrgId,
         queryToolId,
         {
-          toolInputVariables: { query: ownerAnalysisQuery },
+          toolInputVariables: { query: batchQuery },
           toolInputENVVariables: this.prodToolEnvVars,
         },
       );
-    apiCount++;
+      apiCount++;
 
-    // Group opportunities by owner
-    const opportunitiesByOwner =
-      ownerAnalysisResponse.messageContent.toolResult.result.records.reduce(
-        (acc, opp) => {
-          if (!acc[opp.OwnerId]) {
-            acc[opp.OwnerId] = {
-              ownerId: opp.OwnerId,
-              ownerName: opp.Owner.Name,
-              opportunities: [],
-            };
-          }
-          acc[opp.OwnerId].opportunities.push(opp);
-          return acc;
-        },
-        {},
-      );
+      const batchRecords =
+        batchResponse.messageContent.toolResult.result.records;
+      allRecords = [...allRecords, ...batchRecords];
+
+      if (batchRecords.length < 100) {
+        hasMore = false;
+      } else {
+        offset += 100;
+      }
+    }
+
+    // Group opportunities by owner using all records
+    const opportunitiesByOwner = allRecords.reduce((acc, opp) => {
+      if (!acc[opp.OwnerId]) {
+        acc[opp.OwnerId] = {
+          ownerId: opp.OwnerId,
+          ownerName: opp.Owner.Name,
+          opportunities: [],
+        };
+      }
+      acc[opp.OwnerId].opportunities.push(opp);
+      return acc;
+    }, {});
 
     // Calculate metrics for each owner
     const ownerMetrics = Object.values(opportunitiesByOwner).map(
