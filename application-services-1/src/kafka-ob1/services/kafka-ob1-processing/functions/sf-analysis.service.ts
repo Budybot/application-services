@@ -64,6 +64,27 @@ export class SalesforceAnalysisService {
       );
       apiCount++;
 
+      // Add new query for owner analysis
+      const ownerAnalysisQuery = `
+        SELECT OwnerId, StageName, Amount
+        FROM Opportunity 
+        WHERE CALENDAR_QUARTER(CreatedDate) = ${Math.floor(now.getMonth() / 3) + 1}
+        AND CALENDAR_YEAR(CreatedDate) = ${now.getFullYear() - 1}
+        AND (StageName = 'Closed Won' OR StageName = 'Closed Lost')
+      `;
+
+      const ownerAnalysisResponse =
+        await this.agentServiceRequest.sendToolRequest(
+          personId,
+          userOrgId,
+          queryToolId,
+          {
+            toolInputVariables: { query: ownerAnalysisQuery },
+            toolInputENVVariables: this.prodToolEnvVars,
+          },
+        );
+      apiCount++;
+
       // Then get all stage history for those opportunities
       const closedWonIds =
         closedWonResponse.messageContent.toolResult.result.records.map(
@@ -100,10 +121,15 @@ export class SalesforceAnalysisService {
       );
       const stageDurations = this.calculateStageDurations(stageHistory);
 
+      // Calculate owner metrics
+      const ownerMetrics = this.calculateOwnerMetrics(
+        ownerAnalysisResponse.messageContent.toolResult.result.records,
+      );
+
       // Create metrics record with all metrics
       const metricsRecord = {
-        Name: `Opportunity Age Analysis - ${currentQuarter}`,
-        Budy_Key_Metric_1_Name__c: 'Historical Median Age (Days)',
+        Name: `Seasonal Opportunity Age Analysis - ${currentQuarter}`,
+        Budy_Key_Metric_1_Name__c: 'Seasonal Median Age (Days)',
         Budy_Key_Metric_1_Value__c: medianHistoricalAge,
         Budy_Key_Metric_2_Name__c: 'Median Proposal/ROI Stage Duration (Days)',
         Budy_Key_Metric_2_Value__c:
@@ -118,6 +144,35 @@ export class SalesforceAnalysisService {
         Budy_Key_Metric_6_Value__c: stageDurations['Contract'] || 0,
         Budy_Analysis_Quarter__c: currentQuarter,
       };
+
+      // Create additional metrics record for owner analysis
+      const ownerMetricsRecord = {
+        Name: `Opportunity Owner Analysis - ${currentQuarter}`,
+        Budy_Key_Metric_1_Name__c: 'Opportunity Win Rate (%)',
+        Budy_Key_Metric_1_Value__c: ownerMetrics.winRate,
+        Budy_Key_Metric_2_Name__c: 'Opportunity Loss Rate (%)',
+        Budy_Key_Metric_2_Value__c: ownerMetrics.lossRate,
+        Budy_Key_Metric_3_Name__c: 'Total Opportunity Revenue',
+        Budy_Key_Metric_3_Value__c: ownerMetrics.totalRevenue,
+        Budy_Key_Metric_4_Name__c: 'Average Opportunity Revenue',
+        Budy_Key_Metric_4_Value__c: ownerMetrics.avgRevenue,
+        Budy_Analysis_Quarter__c: currentQuarter,
+      };
+
+      // Create the owner metrics record
+      await this.agentServiceRequest.sendToolRequest(
+        personId,
+        userOrgId,
+        createToolId,
+        {
+          toolInputVariables: {
+            object_name: 'Budy_Opportunity_Key_Metrics__c',
+            records: [ownerMetricsRecord],
+          },
+          toolInputENVVariables: this.defaultToolEnvVars,
+        },
+      );
+      apiCount++;
 
       const createResponse = await this.agentServiceRequest.sendToolRequest(
         personId,
@@ -243,5 +298,29 @@ export class SalesforceAnalysisService {
       }
       return acc;
     }, {});
+  }
+
+  // Add new private method for owner metrics calculation
+  private calculateOwnerMetrics(opportunities: any[]): {
+    winRate: number;
+    lossRate: number;
+    totalRevenue: number;
+    avgRevenue: number;
+  } {
+    const totalOpps = opportunities.length;
+    const wonOpps = opportunities.filter(
+      (opp) => opp.StageName === 'Closed Won',
+    );
+    const totalRevenue = wonOpps.reduce(
+      (sum, opp) => sum + (opp.Amount || 0),
+      0,
+    );
+
+    return {
+      winRate: (wonOpps.length / totalOpps) * 100,
+      lossRate: ((totalOpps - wonOpps.length) / totalOpps) * 100,
+      totalRevenue: totalRevenue,
+      avgRevenue: wonOpps.length > 0 ? totalRevenue / wonOpps.length : 0,
+    };
   }
 }
