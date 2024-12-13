@@ -199,17 +199,34 @@ export class OpportunityRatingService {
         queryResponse.messageContent.toolResult.result.records.map((r) => r.Id);
 
       // Step 2: Describe objects and get fields
-      const [opportunityFields, eventFields, taskFields] = await Promise.all([
-        this.describeObjectFields(
-          describeToolId,
-          'Opportunity',
-          personId,
-          userOrgId,
-        ),
-        this.describeObjectFields(describeToolId, 'Event', personId, userOrgId),
-        this.describeObjectFields(describeToolId, 'Task', personId, userOrgId),
-      ]);
-      apiCount += 3; // Three describe requests
+      const [opportunityFields, eventFields, taskFields, gongFields] =
+        await Promise.all([
+          this.describeObjectFields(
+            describeToolId,
+            'Opportunity',
+            personId,
+            userOrgId,
+          ),
+          this.describeObjectFields(
+            describeToolId,
+            'Event',
+            personId,
+            userOrgId,
+          ),
+          this.describeObjectFields(
+            describeToolId,
+            'Task',
+            personId,
+            userOrgId,
+          ),
+          this.describeObjectFields(
+            describeToolId,
+            'Gong__Gong_Call__c',
+            personId,
+            userOrgId,
+          ),
+        ]);
+      apiCount += 4; // Four describe requests
 
       // Step 3: Process opportunities in batches
 
@@ -268,31 +285,43 @@ export class OpportunityRatingService {
           );
         apiCount++;
 
-        // Add queries for activities
+        // Add Gong calls query alongside events and tasks queries
         const eventsQuery = `SELECT ${eventFields.join(',')} FROM Event WHERE WhatId IN ('${batch.join("','")}') LIMIT 3`;
         const tasksQuery = `SELECT ${taskFields.join(',')} FROM Task WHERE WhatId IN ('${batch.join("','")}') LIMIT 3`;
+        const gongQuery = `SELECT ${gongFields.join(',')} FROM Gong__Gong_Call__c WHERE Gong__Primary_Opportunity__c IN ('${batch.join("','")}') LIMIT 3`;
 
-        const [eventsResponse, tasksResponse] = await Promise.all([
-          this.agentServiceRequest.sendToolRequest(
-            personId,
-            userOrgId,
-            queryToolId,
-            {
-              toolInputVariables: { query: eventsQuery },
-              toolInputENVVariables: this.prodToolEnvVars,
-            },
-          ),
-          this.agentServiceRequest.sendToolRequest(
-            personId,
-            userOrgId,
-            queryToolId,
-            {
-              toolInputVariables: { query: tasksQuery },
-              toolInputENVVariables: this.prodToolEnvVars,
-            },
-          ),
-        ]);
-        apiCount += 2;
+        const [eventsResponse, tasksResponse, gongResponse] = await Promise.all(
+          [
+            this.agentServiceRequest.sendToolRequest(
+              personId,
+              userOrgId,
+              queryToolId,
+              {
+                toolInputVariables: { query: eventsQuery },
+                toolInputENVVariables: this.prodToolEnvVars,
+              },
+            ),
+            this.agentServiceRequest.sendToolRequest(
+              personId,
+              userOrgId,
+              queryToolId,
+              {
+                toolInputVariables: { query: tasksQuery },
+                toolInputENVVariables: this.prodToolEnvVars,
+              },
+            ),
+            this.agentServiceRequest.sendToolRequest(
+              personId,
+              userOrgId,
+              queryToolId,
+              {
+                toolInputVariables: { query: gongQuery },
+                toolInputENVVariables: this.prodToolEnvVars,
+              },
+            ),
+          ],
+        );
+        apiCount += 3;
 
         // Modify the prompt construction
         for (const opp of oppResponse.messageContent.toolResult.result
@@ -383,35 +412,60 @@ ${oppEvents}
 **Tasks:**
 ${oppTasks}`;
 
-          // Make both LLM calls in parallel
-          const [oppEvaluation, activityEvaluation] = await Promise.all([
-            this.agentServiceRequest.sendPromptExecutionRequest(
-              personId,
-              userOrgId,
-              promptId,
-              userPrompt,
-              config,
-              { criteriaQuestions: formattedCriteriaQuestions },
-            ),
-            this.agentServiceRequest.sendPromptExecutionRequest(
-              personId,
-              userOrgId,
-              activityPromptId,
-              activityPrompt,
-              config,
-              { criteriaQuestions: formattedCriteriaQuestions },
-            ),
-          ]);
+          // Format Gong calls data
+          const oppGongCalls =
+            gongResponse.messageContent.toolResult.result.records
+              .filter((g) => g.Gong__Primary_Opportunity__c === opp.Id)
+              .map((g) =>
+                Object.entries(g)
+                  .filter(([_, value]) => value !== null)
+                  .map(([key, value]) => `- ${key}: ${value}`)
+                  .join('\n'),
+              )
+              .join('\n');
 
-          console.log('RAW RESPONSES:', {
-            oppEvaluation: oppEvaluation,
-            activityEvaluation: activityEvaluation,
-          });
+          const gongPrompt = `
+**Gong Calls:**
+${oppGongCalls}`;
 
-          // Merge evaluations
+          // Make all LLM calls in parallel
+          const [oppEvaluation, activityEvaluation, gongEvaluation] =
+            await Promise.all([
+              this.agentServiceRequest.sendPromptExecutionRequest(
+                personId,
+                userOrgId,
+                promptId,
+                userPrompt,
+                config,
+                { criteriaQuestions: formattedCriteriaQuestions },
+              ),
+              this.agentServiceRequest.sendPromptExecutionRequest(
+                personId,
+                userOrgId,
+                activityPromptId,
+                activityPrompt,
+                config,
+                { criteriaQuestions: formattedCriteriaQuestions },
+              ),
+              this.agentServiceRequest.sendPromptExecutionRequest(
+                personId,
+                userOrgId,
+                activityPromptId,
+                gongPrompt,
+                config,
+                { criteriaQuestions: formattedCriteriaQuestions },
+              ),
+            ]);
+
+        //   console.log('RAW RESPONSES:', {
+        //     oppEvaluation: oppEvaluation,
+        //     activityEvaluation: activityEvaluation,
+        //   });
+
+          // Merge only opportunity and Gong evaluations
           const mergedEvaluation = this.mergeEvaluations(
             oppEvaluation.messageContent.content.evaluation,
-            activityEvaluation.messageContent.content.evaluation,
+            gongEvaluation.messageContent.content.evaluation,
           );
           console.log('mergedEvaluation', mergedEvaluation);
 
@@ -590,8 +644,8 @@ ${oppTasks}`;
     });
 
     // Handle both array and response object cases
-    const oppEvals = Array.isArray(oppEvaluation) 
-      ? oppEvaluation 
+    const oppEvals = Array.isArray(oppEvaluation)
+      ? oppEvaluation
       : oppEvaluation?.messageContent?.content?.evaluation;
 
     const activityEvals = Array.isArray(activityEvaluation)
