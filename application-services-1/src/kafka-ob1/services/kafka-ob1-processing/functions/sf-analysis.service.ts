@@ -276,7 +276,16 @@ export class SalesforceAnalysisService {
     let offset = 0;
 
     while (hasMore) {
-      const batchQuery = ownerAnalysisQuery.replace('{0}', offset.toString());
+      const batchQuery = `
+        SELECT OwnerId, Owner.Name, StageName, Amount
+        FROM Opportunity 
+        WHERE CreatedDate = LAST_N_DAYS:365
+        AND (StageName = 'Closed Won' OR StageName = 'Closed Lost')
+        ORDER BY CreatedDate DESC
+        LIMIT 100
+        OFFSET ${offset}
+      `;
+
       const batchResponse = await this.agentServiceRequest.sendToolRequest(
         personId,
         userOrgId,
@@ -289,12 +298,12 @@ export class SalesforceAnalysisService {
       apiCount++;
 
       const batchRecords =
-        batchResponse.messageContent.toolResult.result.records;
-      allRecords = [...allRecords, ...batchRecords];
+        batchResponse.messageContent.toolResult.result.records || [];
 
-      if (batchRecords.length < 100) {
+      if (!batchRecords.length) {
         hasMore = false;
       } else {
+        allRecords = [...allRecords, ...batchRecords];
         offset += 100;
       }
     }
