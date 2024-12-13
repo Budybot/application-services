@@ -357,6 +357,8 @@ export class SalesforceAnalysisService {
       ? metricsRecord
       : [metricsRecord];
 
+    this.logger.debug(`Attempting to create ${records.length} metrics records`);
+
     const createResponse = await this.agentServiceRequest.sendToolRequest(
       personId,
       userOrgId,
@@ -372,6 +374,10 @@ export class SalesforceAnalysisService {
     apiCount++;
 
     if (!createResponse.messageContent?.toolSuccess) {
+      this.logger.error('Failed to create metrics records', {
+        error: createResponse.messageContent?.toolError,
+        records: records,
+      });
       throw new Error(
         `Failed to create metrics record: ${createResponse.messageContent?.toolError?.message || 'Unknown error'}`,
       );
