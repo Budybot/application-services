@@ -281,6 +281,7 @@ export class KafkaOb1ProcessingService {
                 userOrgId,
                 queryToolId: functionInput.queryToolId,
                 createToolId: functionInput.createToolId,
+                analysisType: functionInput.analysisType,
               },
             })
             .then(() => {

@@ -2,6 +2,11 @@ import { Injectable, Logger, Inject } from '@nestjs/common';
 import { AgentServiceRequest } from '../agent-service-request.service';
 import { ClientKafka } from '@nestjs/microservices';
 
+enum AnalysisType {
+  SEASONAL = 'seasonal',
+  PERFORMANCE = 'performance',
+}
+
 @Injectable()
 export class SalesforceAnalysisService {
   private readonly logger = new Logger(SalesforceAnalysisService.name);
@@ -37,97 +42,137 @@ export class SalesforceAnalysisService {
         throw new Error('Invalid message format');
       }
 
-      const { personId, userOrgId, queryToolId, createToolId } =
+      const { personId, userOrgId, queryToolId, createToolId, analysisType } =
         message.messageContent;
 
-      // Calculate current quarter
+      if (
+        !analysisType ||
+        !Object.values(AnalysisType).includes(analysisType)
+      ) {
+        throw new Error('Invalid or missing analysis type');
+      }
+
       const now = new Date();
       const currentQuarter = `Q${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`;
 
-      // First get the closed won opportunities from last year with their close dates
-      const closedWonQuery = `
-        SELECT Id, CloseDate 
-        FROM Opportunity 
-        WHERE StageName = 'Closed Won'
-        AND CALENDAR_QUARTER(CreatedDate) = ${Math.floor(now.getMonth() / 3) + 1}
-        AND CALENDAR_YEAR(CreatedDate) = ${now.getFullYear() - 1}
-      `;
+      let metrics: Record<string, any>;
 
-      const closedWonResponse = await this.agentServiceRequest.sendToolRequest(
+      if (analysisType === AnalysisType.SEASONAL) {
+        const [seasonalMetrics, seasonalCount] =
+          await this.processSeasonalAnalysis(
+            personId,
+            userOrgId,
+            queryToolId,
+            now,
+            apiCount,
+            currentQuarter,
+          );
+        metrics = seasonalMetrics;
+        apiCount = seasonalCount;
+      } else {
+        const [performanceMetrics, performanceCount] =
+          await this.processPerformanceAnalysis(
+            personId,
+            userOrgId,
+            queryToolId,
+            now,
+            apiCount,
+            currentQuarter,
+          );
+        metrics = performanceMetrics;
+        apiCount = performanceCount;
+      }
+
+      const [, finalCount] = await this.createMetricsRecord(
+        personId,
+        userOrgId,
+        createToolId,
+        metrics,
+        currentQuarter,
+        apiCount,
+      );
+      apiCount = finalCount;
+
+      this.logger.log(
+        `Successfully created ${analysisType} metrics record for ${currentQuarter}`,
+        { apiCount },
+      );
+    } catch (error) {
+      this.logger.error('Error processing metrics analysis', {
+        error: error.message,
+        stack: error.stack,
+        apiCount,
+      });
+      throw error;
+    }
+  }
+
+  private async processSeasonalAnalysis(
+    personId: string,
+    userOrgId: string,
+    queryToolId: string,
+    now: Date,
+    apiCount: number,
+    currentQuarter: string,
+  ): Promise<[Record<string, any>, number]> {
+    // Get closed won opportunities
+    const closedWonQuery = `
+      SELECT Id, CloseDate 
+      FROM Opportunity 
+      WHERE StageName = 'Closed Won'
+      AND CALENDAR_QUARTER(CreatedDate) = ${Math.floor(now.getMonth() / 3) + 1}
+      AND CALENDAR_YEAR(CreatedDate) = ${now.getFullYear() - 1}
+    `;
+
+    const closedWonResponse = await this.agentServiceRequest.sendToolRequest(
+      personId,
+      userOrgId,
+      queryToolId,
+      {
+        toolInputVariables: { query: closedWonQuery },
+        toolInputENVVariables: this.prodToolEnvVars,
+      },
+    );
+    apiCount++;
+
+    // Get stage history
+    const closedWonIds =
+      closedWonResponse.messageContent.toolResult.result.records.map(
+        (r) => r.Id,
+      );
+    const historicalOppsQuery = `
+      SELECT OpportunityId, CreatedDate, NewValue, OldValue
+      FROM OpportunityFieldHistory 
+      WHERE Field = 'StageName'
+      AND OpportunityId IN ('${closedWonIds.join("','")}')
+    `;
+
+    const historicalOppsResponse =
+      await this.agentServiceRequest.sendToolRequest(
         personId,
         userOrgId,
         queryToolId,
         {
-          toolInputVariables: { query: closedWonQuery },
+          toolInputVariables: { query: historicalOppsQuery },
           toolInputENVVariables: this.prodToolEnvVars,
         },
       );
-      apiCount++;
+    apiCount++;
 
-      // Add new query for owner analysis
-      const ownerAnalysisQuery = `
-        SELECT OwnerId, StageName, Amount
-        FROM Opportunity 
-        WHERE CALENDAR_QUARTER(CreatedDate) = ${Math.floor(now.getMonth() / 3) + 1}
-        AND CALENDAR_YEAR(CreatedDate) = ${now.getFullYear() - 1}
-        AND (StageName = 'Closed Won' OR StageName = 'Closed Lost')
-      `;
+    // Calculate metrics
+    const closedWonOpps =
+      closedWonResponse.messageContent.toolResult.result.records;
+    const stageHistory =
+      historicalOppsResponse.messageContent.toolResult.result.records;
 
-      const ownerAnalysisResponse =
-        await this.agentServiceRequest.sendToolRequest(
-          personId,
-          userOrgId,
-          queryToolId,
-          {
-            toolInputVariables: { query: ownerAnalysisQuery },
-            toolInputENVVariables: this.prodToolEnvVars,
-          },
-        );
-      apiCount++;
+    const medianHistoricalAge = this.calculateMedianAge(
+      closedWonOpps,
+      stageHistory,
+    );
+    const stageDurations = this.calculateStageDurations(stageHistory);
 
-      // Then get all stage history for those opportunities
-      const closedWonIds =
-        closedWonResponse.messageContent.toolResult.result.records.map(
-          (r) => r.Id,
-        );
-      const historicalOppsQuery = `
-        SELECT OpportunityId, CreatedDate, NewValue, OldValue
-        FROM OpportunityFieldHistory 
-        WHERE Field = 'StageName'
-        AND OpportunityId IN ('${closedWonIds.join("','")}')
-      `;
-
-      const historicalOppsResponse =
-        await this.agentServiceRequest.sendToolRequest(
-          personId,
-          userOrgId,
-          queryToolId,
-          {
-            toolInputVariables: { query: historicalOppsQuery },
-            toolInputENVVariables: this.prodToolEnvVars,
-          },
-        );
-      apiCount++;
-
-      // Calculate all metrics
-      const closedWonOpps =
-        closedWonResponse.messageContent.toolResult.result.records;
-      const stageHistory =
-        historicalOppsResponse.messageContent.toolResult.result.records;
-
-      const medianHistoricalAge = this.calculateMedianAge(
-        closedWonOpps,
-        stageHistory,
-      );
-      const stageDurations = this.calculateStageDurations(stageHistory);
-
-      // Calculate owner metrics
-      const ownerMetrics = this.calculateOwnerMetrics(
-        ownerAnalysisResponse.messageContent.toolResult.result.records,
-      );
-
-      // Create metrics record with all metrics
-      const metricsRecord = {
+    return [
+      {
         Name: `Seasonal Opportunity Age Analysis - ${currentQuarter}`,
         Budy_Key_Metric_1_Name__c: 'Seasonal Median Age (Days)',
         Budy_Key_Metric_1_Value__c: medianHistoricalAge,
@@ -143,11 +188,46 @@ export class SalesforceAnalysisService {
         Budy_Key_Metric_6_Name__c: 'Median Contract Stage Duration (Days)',
         Budy_Key_Metric_6_Value__c: stageDurations['Contract'] || 0,
         Budy_Analysis_Quarter__c: currentQuarter,
-      };
+      },
+      apiCount,
+    ];
+  }
 
-      // Create additional metrics record for owner analysis
-      const ownerMetricsRecord = {
-        Name: `Opportunity Owner Analysis - ${currentQuarter}`,
+  private async processPerformanceAnalysis(
+    personId: string,
+    userOrgId: string,
+    queryToolId: string,
+    now: Date,
+    apiCount: number,
+    currentQuarter: string,
+  ): Promise<[Record<string, any>, number]> {
+    const ownerAnalysisQuery = `
+      SELECT OwnerId, StageName, Amount
+      FROM Opportunity 
+      WHERE CALENDAR_QUARTER(CreatedDate) = ${Math.floor(now.getMonth() / 3) + 1}
+      AND CALENDAR_YEAR(CreatedDate) = ${now.getFullYear() - 1}
+      AND (StageName = 'Closed Won' OR StageName = 'Closed Lost')
+    `;
+
+    const ownerAnalysisResponse =
+      await this.agentServiceRequest.sendToolRequest(
+        personId,
+        userOrgId,
+        queryToolId,
+        {
+          toolInputVariables: { query: ownerAnalysisQuery },
+          toolInputENVVariables: this.prodToolEnvVars,
+        },
+      );
+    apiCount++;
+
+    const ownerMetrics = this.calculateOwnerMetrics(
+      ownerAnalysisResponse.messageContent.toolResult.result.records,
+    );
+
+    return [
+      {
+        Name: `Quarterly Opportunity Performance Analysis - ${currentQuarter}`,
         Budy_Key_Metric_1_Name__c: 'Opportunity Win Rate (%)',
         Budy_Key_Metric_1_Value__c: Math.round(ownerMetrics.winRate),
         Budy_Key_Metric_2_Name__c: 'Opportunity Loss Rate (%)',
@@ -157,57 +237,40 @@ export class SalesforceAnalysisService {
         Budy_Key_Metric_4_Name__c: 'Average Opportunity Revenue ($)',
         Budy_Key_Metric_4_Value__c: Math.round(ownerMetrics.avgRevenue),
         Budy_Analysis_Quarter__c: currentQuarter,
-      };
+      },
+      apiCount,
+    ];
+  }
 
-      // Create the owner metrics record
-      await this.agentServiceRequest.sendToolRequest(
-        personId,
-        userOrgId,
-        createToolId,
-        {
-          toolInputVariables: {
-            object_name: 'Budy_Opportunity_Key_Metrics__c',
-            records: [ownerMetricsRecord],
-          },
-          toolInputENVVariables: this.defaultToolEnvVars,
+  private async createMetricsRecord(
+    personId: string,
+    userOrgId: string,
+    createToolId: string,
+    metricsRecord: Record<string, any>,
+    currentQuarter: string,
+    apiCount: number,
+  ): Promise<[void, number]> {
+    const createResponse = await this.agentServiceRequest.sendToolRequest(
+      personId,
+      userOrgId,
+      createToolId,
+      {
+        toolInputVariables: {
+          object_name: 'Budy_Opportunity_Key_Metrics__c',
+          records: [metricsRecord],
         },
-      );
-      apiCount++;
+        toolInputENVVariables: this.defaultToolEnvVars,
+      },
+    );
+    apiCount++;
 
-      const createResponse = await this.agentServiceRequest.sendToolRequest(
-        personId,
-        userOrgId,
-        createToolId,
-        {
-          toolInputVariables: {
-            object_name: 'Budy_Opportunity_Key_Metrics__c',
-            records: [metricsRecord],
-          },
-          toolInputENVVariables: this.defaultToolEnvVars,
-        },
+    if (!createResponse.messageContent?.toolSuccess) {
+      throw new Error(
+        `Failed to create metrics record: ${createResponse.messageContent?.toolError?.message || 'Unknown error'}`,
       );
-      apiCount++;
-
-      if (!createResponse.messageContent?.toolSuccess) {
-        throw new Error(
-          `Failed to create metrics record: ${createResponse.messageContent?.toolError?.message || 'Unknown error'}`,
-        );
-      }
-
-      this.logger.log(
-        `Successfully created metrics record for ${currentQuarter}`,
-        {
-          apiCount,
-        },
-      );
-    } catch (error) {
-      this.logger.error('Error processing metrics analysis', {
-        error: error.message,
-        stack: error.stack,
-        apiCount,
-      });
-      throw error;
     }
+
+    return [undefined, apiCount];
   }
 
   private calculateMedianAge(
