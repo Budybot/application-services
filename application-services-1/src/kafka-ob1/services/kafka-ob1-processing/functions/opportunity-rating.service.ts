@@ -465,7 +465,8 @@ ${oppGongCalls}`;
           // Merge only opportunity and Gong evaluations
           const mergedEvaluation = this.mergeEvaluations(
             oppEvaluation.messageContent.content.evaluation,
-            gongEvaluation.messageContent.content.evaluation,
+            activityEvaluation.messageContent.content.evaluation,
+            // gongEvaluation.messageContent.content.evaluation,
           );
           console.log('mergedEvaluation', mergedEvaluation);
 
