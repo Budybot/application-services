@@ -725,11 +725,18 @@ ${oppTasks}`;
       return 0;
     }
 
-    const noCount = llmResponse.evaluation.filter(
-      (entry: any) => entry.outcome === 'No',
-    ).length;
+    // Weights for each criteria (must sum to 100)
+    const weights = [35, 30, 20, 15];
 
-    return (noCount / 4) * 100;
+    // Calculate weighted score based on "No" responses
+    const weightedScore = llmResponse.evaluation.reduce(
+      (score: number, entry: any, index: number) => {
+        return score + (entry.outcome === 'No' ? weights[index] : 0);
+      },
+      0,
+    );
+
+    return weightedScore; // Already returns 0-100 since weights sum to 100
   }
 
   private getScoreBucket(score: number): string {
