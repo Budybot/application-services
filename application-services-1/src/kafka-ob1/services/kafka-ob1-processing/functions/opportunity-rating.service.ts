@@ -266,28 +266,42 @@ export class OpportunityRatingService {
       // Calculate baseline metrics from the performance metrics record
       const baselineMetrics = {
         metric1:
-          performanceMetricsResponse.messageContent.toolResult.result.records[0]
-            .Budy_Key_Metric_1_Value__c,
+          Number(
+            performanceMetricsResponse.messageContent.toolResult.result
+              .records[0].Budy_Key_Metric_1_Value__c,
+          ) || 1,
         metric2:
-          performanceMetricsResponse.messageContent.toolResult.result.records[0]
-            .Budy_Key_Metric_2_Value__c,
+          Number(
+            performanceMetricsResponse.messageContent.toolResult.result
+              .records[0].Budy_Key_Metric_2_Value__c,
+          ) || 1,
         metric3:
-          performanceMetricsResponse.messageContent.toolResult.result.records[0]
-            .Budy_Key_Metric_3_Value__c,
+          Number(
+            performanceMetricsResponse.messageContent.toolResult.result
+              .records[0].Budy_Key_Metric_3_Value__c,
+          ) || 1,
         metric4:
-          performanceMetricsResponse.messageContent.toolResult.result.records[0]
-            .Budy_Key_Metric_4_Value__c,
+          Number(
+            performanceMetricsResponse.messageContent.toolResult.result
+              .records[0].Budy_Key_Metric_4_Value__c,
+          ) || 1,
       };
 
       // Create owner scores map
       const ownerScores =
         ownerMetricsResponse.messageContent.toolResult.result.records.reduce(
           (acc, ownerMetric) => {
+            if (!ownerMetric.User__c) return acc; // Skip if no user ID
+
             const normalizedScores = [
-              ownerMetric.Budy_Key_Metric_1_Value__c / baselineMetrics.metric1,
-              ownerMetric.Budy_Key_Metric_2_Value__c / baselineMetrics.metric2,
-              ownerMetric.Budy_Key_Metric_3_Value__c / baselineMetrics.metric3,
-              ownerMetric.Budy_Key_Metric_4_Value__c / baselineMetrics.metric4,
+              Number(ownerMetric.Budy_Key_Metric_1_Value__c || 0) /
+                baselineMetrics.metric1,
+              Number(ownerMetric.Budy_Key_Metric_2_Value__c || 0) /
+                baselineMetrics.metric2,
+              Number(ownerMetric.Budy_Key_Metric_3_Value__c || 0) /
+                baselineMetrics.metric3,
+              Number(ownerMetric.Budy_Key_Metric_4_Value__c || 0) /
+                baselineMetrics.metric4,
             ];
 
             const averageScore =
@@ -295,7 +309,7 @@ export class OpportunityRatingService {
             acc[ownerMetric.User__c] = averageScore;
             return acc;
           },
-          {},
+          {} as Record<string, number>,
         );
 
       console.log('Owner metrics calculation:', {
