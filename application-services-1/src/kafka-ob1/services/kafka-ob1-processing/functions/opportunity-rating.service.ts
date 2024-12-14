@@ -234,6 +234,62 @@ export class OpportunityRatingService {
       const batches = this.chunkArray(opportunityIds, batchSize);
       const allScores = [];
 
+      // Add this new section to get owner metrics
+      const allOwnerIds = new Set(
+        queryResponse.messageContent.toolResult.result.records.map(
+          (opp) => opp.OwnerId,
+        ),
+      );
+      const ownerMetricsQuery = `
+        SELECT User__c,
+               Budy_Key_Metric_1_Value__c,
+               Budy_Key_Metric_2_Value__c,
+               Budy_Key_Metric_3_Value__c,
+               Budy_Key_Metric_4_Value__c
+        FROM Budy_Opportunity_Key_Metrics__c 
+        WHERE User__c IN ('${Array.from(allOwnerIds).join("','")}')`;
+
+      const ownerMetricsResponse =
+        await this.agentServiceRequest.sendToolRequest(
+          personId,
+          userOrgId,
+          queryToolId,
+          {
+            toolInputVariables: { query: ownerMetricsQuery },
+            toolInputENVVariables: this.defaultToolEnvVars,
+          },
+        );
+      apiCount++;
+
+      // Calculate baseline metrics from the original key metrics record
+      const baselineMetrics = {
+        metric1: metricsRecord.Budy_Key_Metric_1_Value__c,
+        metric2: metricsRecord.Budy_Key_Metric_2_Value__c,
+        metric3: metricsRecord.Budy_Key_Metric_3_Value__c,
+        metric4: metricsRecord.Budy_Key_Metric_4_Value__c,
+      };
+
+      // Create owner scores map
+      const ownerScores =
+        ownerMetricsResponse.messageContent.toolResult.result.records.reduce(
+          (acc, ownerMetric) => {
+            const normalizedScores = [
+              ownerMetric.Budy_Key_Metric_1_Value__c / baselineMetrics.metric1,
+              1 -
+                ownerMetric.Budy_Key_Metric_2_Value__c /
+                  baselineMetrics.metric2,
+              ownerMetric.Budy_Key_Metric_3_Value__c / baselineMetrics.metric3,
+              ownerMetric.Budy_Key_Metric_4_Value__c / baselineMetrics.metric4,
+            ];
+
+            const averageScore =
+              normalizedScores.reduce((sum, score) => sum + score, 0) / 4;
+            acc[ownerMetric.User__c] = averageScore;
+            return acc;
+          },
+          {},
+        );
+
       for (const batch of batches) {
         // Query opportunity data
         const oppQuery = `SELECT ${opportunityFields.join(',')} FROM Opportunity WHERE Id IN ('${batch.join("','")}')`;
@@ -495,6 +551,7 @@ ${oppTasks}`;
             amount: opp.Amount,
             stage: opp.StageName,
             evaluation: mergedEvaluation,
+            ownerScore: ownerScores[opp.OwnerId] || 0,
           });
         }
       }
@@ -581,6 +638,7 @@ ${oppTasks}`;
         'Stage',
         'Risk Score',
         'Risk Bucket',
+        'Owner Score',
         'Timing Risks Outcome',
         'Timing Risks Justification',
         'Deal Risks Outcome',
@@ -599,6 +657,7 @@ ${oppTasks}`;
           score.stage,
           score.score.toString(),
           score.bucket,
+          score.ownerScore.toFixed(2),
           score.evaluation[0]?.outcome || 'N/A',
           score.evaluation[0]?.justification || 'N/A',
           score.evaluation[1]?.outcome || 'N/A',
