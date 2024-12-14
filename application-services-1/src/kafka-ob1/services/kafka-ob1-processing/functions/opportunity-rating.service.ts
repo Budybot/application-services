@@ -88,7 +88,8 @@ export class OpportunityRatingService {
         batchSize,
         criteriaRecordId,
         patchToolId,
-        keyMetricsRecordId,
+        seasonalKeyMetricsId,
+        performanceKeyMetricsId,
       } = message.messageContent;
 
       // Fetch criteria from Salesforce
@@ -130,47 +131,6 @@ export class OpportunityRatingService {
       const formattedCriteriaQuestions = criteriaQuestions
         .map((question, index) => `${index + 1}) ${question}`)
         .join('\n');
-
-      // Fetch key metrics
-      const metricsQuery = `
-        SELECT Budy_Key_Metric_1_Name__c, Budy_Key_Metric_1_Value__c,
-               Budy_Key_Metric_2_Name__c, Budy_Key_Metric_2_Value__c,
-               Budy_Key_Metric_3_Name__c, Budy_Key_Metric_3_Value__c,
-               Budy_Key_Metric_4_Name__c, Budy_Key_Metric_4_Value__c,
-               Budy_Key_Metric_5_Name__c, Budy_Key_Metric_5_Value__c,
-               Budy_Key_Metric_6_Name__c, Budy_Key_Metric_6_Value__c
-        FROM Budy_Opportunity_Key_Metrics__c 
-        WHERE Id = '${keyMetricsRecordId}'`;
-
-      const metricsResponse = await this.agentServiceRequest.sendToolRequest(
-        personId,
-        userOrgId,
-        queryToolId,
-        {
-          toolInputVariables: { query: metricsQuery },
-          toolInputENVVariables: this.defaultToolEnvVars,
-        },
-      );
-      apiCount++;
-
-      if (!metricsResponse.messageContent?.toolSuccess) {
-        throw new Error('Failed to fetch key metrics');
-      }
-
-      const metricsRecord =
-        metricsResponse.messageContent.toolResult.result.records[0];
-      const validMetrics = Object.entries(metricsRecord)
-        .filter(
-          ([key, value]) =>
-            key.includes('Metric') &&
-            value !== null &&
-            value !== undefined &&
-            value !== 'N/A',
-        )
-        .reduce((acc, [key, value]) => {
-          acc[key] = value;
-          return acc;
-        }, {});
 
       // Step 1: Query opportunity IDs
       let opportunityIds: string[] = [];
@@ -229,17 +189,60 @@ export class OpportunityRatingService {
         ]);
       apiCount += 3; // Three describe requests
 
-      // Step 3: Process opportunities in batches
-
+      // After querying opportunities but before the batch processing
       const batches = this.chunkArray(opportunityIds, batchSize);
       const allScores = [];
 
-      // Add this new section to get owner metrics
+      // First, add the seasonal metrics query alongside the performance metrics query
+      const [performanceMetricsResponse, seasonalMetricsResponse] =
+        await Promise.all([
+          this.agentServiceRequest.sendToolRequest(
+            personId,
+            userOrgId,
+            queryToolId,
+            {
+              toolInputVariables: {
+                query: `SELECT Budy_Key_Metric_1_Value__c,
+                             Budy_Key_Metric_2_Value__c,
+                             Budy_Key_Metric_3_Value__c,
+                             Budy_Key_Metric_4_Value__c
+                      FROM Budy_Opportunity_Key_Metrics__c 
+                      WHERE Id = '${performanceKeyMetricsId}'`,
+              },
+              toolInputENVVariables: this.defaultToolEnvVars,
+            },
+          ),
+          this.agentServiceRequest.sendToolRequest(
+            personId,
+            userOrgId,
+            queryToolId,
+            {
+              toolInputVariables: {
+                query: `SELECT Budy_Key_Metric_1_Value__c,
+                             Budy_Key_Metric_2_Value__c,
+                             Budy_Key_Metric_3_Value__c,
+                             Budy_Key_Metric_4_Value__c
+                      FROM Budy_Opportunity_Key_Metrics__c 
+                      WHERE Id = '${seasonalKeyMetricsId}'`,
+              },
+              toolInputENVVariables: this.defaultToolEnvVars,
+            },
+          ),
+        ]);
+
+      // After first metrics query
+      console.log(
+        'Performance metrics record:',
+        performanceMetricsResponse.messageContent.toolResult.result.records[0],
+      );
+
+      // Then get owner metrics
       const allOwnerIds = new Set(
         queryResponse.messageContent.toolResult.result.records.map(
           (opp) => opp.OwnerId,
         ),
       );
+
       const ownerMetricsQuery = `
         SELECT User__c,
                Budy_Key_Metric_1_Value__c,
@@ -259,14 +262,21 @@ export class OpportunityRatingService {
             toolInputENVVariables: this.defaultToolEnvVars,
           },
         );
-      apiCount++;
 
-      // Calculate baseline metrics from the original key metrics record
+      // Calculate baseline metrics from the performance metrics record
       const baselineMetrics = {
-        metric1: metricsRecord.Budy_Key_Metric_1_Value__c,
-        metric2: metricsRecord.Budy_Key_Metric_2_Value__c,
-        metric3: metricsRecord.Budy_Key_Metric_3_Value__c,
-        metric4: metricsRecord.Budy_Key_Metric_4_Value__c,
+        metric1:
+          performanceMetricsResponse.messageContent.toolResult.result.records[0]
+            .Budy_Key_Metric_1_Value__c,
+        metric2:
+          performanceMetricsResponse.messageContent.toolResult.result.records[0]
+            .Budy_Key_Metric_2_Value__c,
+        metric3:
+          performanceMetricsResponse.messageContent.toolResult.result.records[0]
+            .Budy_Key_Metric_3_Value__c,
+        metric4:
+          performanceMetricsResponse.messageContent.toolResult.result.records[0]
+            .Budy_Key_Metric_4_Value__c,
       };
 
       // Create owner scores map
@@ -275,9 +285,7 @@ export class OpportunityRatingService {
           (acc, ownerMetric) => {
             const normalizedScores = [
               ownerMetric.Budy_Key_Metric_1_Value__c / baselineMetrics.metric1,
-              1 -
-                ownerMetric.Budy_Key_Metric_2_Value__c /
-                  baselineMetrics.metric2,
+              ownerMetric.Budy_Key_Metric_2_Value__c / baselineMetrics.metric2,
               ownerMetric.Budy_Key_Metric_3_Value__c / baselineMetrics.metric3,
               ownerMetric.Budy_Key_Metric_4_Value__c / baselineMetrics.metric4,
             ];
@@ -289,6 +297,15 @@ export class OpportunityRatingService {
           },
           {},
         );
+
+      console.log('Owner metrics calculation:', {
+        baselineMetrics,
+        ownerMetricsCount:
+          ownerMetricsResponse.messageContent.toolResult.result.records.length,
+        ownerScores,
+      });
+
+      // Step 3: Process opportunities in batches
 
       for (const batch of batches) {
         // Query opportunity data
@@ -413,10 +430,6 @@ export class OpportunityRatingService {
             )
             .join('\n');
 
-          const formattedKeyMetrics = Object.entries(validMetrics)
-            .map(([key, value]) => `- ${key}: ${value}`)
-            .join('\n');
-
           const userPrompt = `Time at the start of analysis: ${currentTime}.
 
 **Opportunity Data:**
@@ -428,8 +441,23 @@ ${formattedCloseDateHistory}
 **Stage History:**
 ${formattedStageHistory}
 
-**Key Metrics:**
-${formattedKeyMetrics}`;
+**Seasonal Metrics:**
+${Object.entries({
+  'Metric 1':
+    seasonalMetricsResponse.messageContent.toolResult.result.records[0]
+      .Budy_Key_Metric_1_Value__c,
+  'Metric 2':
+    seasonalMetricsResponse.messageContent.toolResult.result.records[0]
+      .Budy_Key_Metric_2_Value__c,
+  'Metric 3':
+    seasonalMetricsResponse.messageContent.toolResult.result.records[0]
+      .Budy_Key_Metric_3_Value__c,
+  'Metric 4':
+    seasonalMetricsResponse.messageContent.toolResult.result.records[0]
+      .Budy_Key_Metric_4_Value__c,
+})
+  .map(([key, value]) => `- ${key}: ${value}`)
+  .join('\n')}`;
 
           const config = {
             provider: 'openai',
