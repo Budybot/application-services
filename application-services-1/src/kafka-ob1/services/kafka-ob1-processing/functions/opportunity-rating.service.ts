@@ -230,11 +230,35 @@ export class OpportunityRatingService {
           ),
         ]);
 
-      // After first metrics query
+      // Calculate baseline metrics from the performance metrics record
+      const baselineMetrics = {
+        metric1:
+          Number(
+            performanceMetricsResponse.messageContent.toolResult.result
+              .records[0].Budy_Key_Metric_1_Value__c,
+          ) || 1,
+        metric2:
+          Number(
+            performanceMetricsResponse.messageContent.toolResult.result
+              .records[0].Budy_Key_Metric_2_Value__c,
+          ) || 1,
+        metric3:
+          Number(
+            performanceMetricsResponse.messageContent.toolResult.result
+              .records[0].Budy_Key_Metric_3_Value__c,
+          ) || 1,
+        metric4:
+          Number(
+            performanceMetricsResponse.messageContent.toolResult.result
+              .records[0].Budy_Key_Metric_4_Value__c,
+          ) || 1,
+      };
+
       console.log(
         'Performance metrics record:',
         performanceMetricsResponse.messageContent.toolResult.result.records[0],
       );
+      console.log('Baseline metrics after conversion:', baselineMetrics);
 
       // Then get owner metrics
       const allOwnerIds = new Set(
@@ -262,30 +286,6 @@ export class OpportunityRatingService {
             toolInputENVVariables: this.defaultToolEnvVars,
           },
         );
-
-      // Calculate baseline metrics from the performance metrics record
-      const baselineMetrics = {
-        metric1:
-          Number(
-            performanceMetricsResponse.messageContent.toolResult.result
-              .records[0].Budy_Key_Metric_1_Value__c,
-          ) || 1,
-        metric2:
-          Number(
-            performanceMetricsResponse.messageContent.toolResult.result
-              .records[0].Budy_Key_Metric_2_Value__c,
-          ) || 1,
-        metric3:
-          Number(
-            performanceMetricsResponse.messageContent.toolResult.result
-              .records[0].Budy_Key_Metric_3_Value__c,
-          ) || 1,
-        metric4:
-          Number(
-            performanceMetricsResponse.messageContent.toolResult.result
-              .records[0].Budy_Key_Metric_4_Value__c,
-          ) || 1,
-      };
 
       // Create owner scores map
       const ownerScores =
