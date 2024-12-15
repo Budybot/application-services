@@ -1,0 +1,1 @@
+export const INTERNAL_JWT_EXPIRATION = 3600; // 1 hour
