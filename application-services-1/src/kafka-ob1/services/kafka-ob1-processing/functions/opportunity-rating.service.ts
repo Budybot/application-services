@@ -43,7 +43,7 @@ export class OpportunityRatingService {
         toolInputVariables: {
           objectName,
         },
-        toolInputENVVariables: this.prodToolEnvVars,
+        toolENVInputVariables: this.prodToolEnvVars,
       },
     );
 
@@ -102,7 +102,7 @@ export class OpportunityRatingService {
           toolInputVariables: {
             query: criteriaQuery,
           },
-          toolInputENVVariables: this.defaultToolEnvVars,
+          toolENVInputVariables: this.defaultToolEnvVars,
         },
       );
       apiCount++;
@@ -147,7 +147,7 @@ export class OpportunityRatingService {
           toolInputVariables: {
             query: finalQuery,
           },
-          toolInputENVVariables: this.defaultToolEnvVars,
+          toolENVInputVariables: this.defaultToolEnvVars,
         },
       );
       apiCount++;
@@ -209,7 +209,7 @@ export class OpportunityRatingService {
                       FROM Budy_Opportunity_Key_Metrics__c 
                       WHERE Id = '${performanceKeyMetricsId}'`,
               },
-              toolInputENVVariables: this.defaultToolEnvVars,
+              toolENVInputVariables: this.defaultToolEnvVars,
             },
           ),
           this.agentServiceRequest.sendToolRequest(
@@ -225,7 +225,7 @@ export class OpportunityRatingService {
                       FROM Budy_Opportunity_Key_Metrics__c 
                       WHERE Id = '${seasonalKeyMetricsId}'`,
               },
-              toolInputENVVariables: this.defaultToolEnvVars,
+              toolENVInputVariables: this.defaultToolEnvVars,
             },
           ),
         ]);
@@ -283,7 +283,7 @@ export class OpportunityRatingService {
           queryToolId,
           {
             toolInputVariables: { query: ownerMetricsQuery },
-            toolInputENVVariables: this.defaultToolEnvVars,
+            toolENVInputVariables: this.defaultToolEnvVars,
           },
         );
 
@@ -332,7 +332,7 @@ export class OpportunityRatingService {
             toolInputVariables: {
               query: oppQuery,
             },
-            toolInputENVVariables: this.prodToolEnvVars,
+            toolENVInputVariables: this.prodToolEnvVars,
           },
         );
         apiCount++;
@@ -350,7 +350,7 @@ export class OpportunityRatingService {
               toolInputVariables: {
                 query: closeDateHistoryQuery,
               },
-              toolInputENVVariables: this.prodToolEnvVars,
+              toolENVInputVariables: this.prodToolEnvVars,
             },
           );
         apiCount++;
@@ -368,7 +368,7 @@ export class OpportunityRatingService {
               toolInputVariables: {
                 query: stageHistoryQuery,
               },
-              toolInputENVVariables: this.prodToolEnvVars,
+              toolENVInputVariables: this.prodToolEnvVars,
             },
           );
         apiCount++;
@@ -386,7 +386,7 @@ export class OpportunityRatingService {
               queryToolId,
               {
                 toolInputVariables: { query: eventsQuery },
-                toolInputENVVariables: this.prodToolEnvVars,
+                toolENVInputVariables: this.prodToolEnvVars,
               },
             ),
             this.agentServiceRequest.sendToolRequest(
@@ -395,7 +395,7 @@ export class OpportunityRatingService {
               queryToolId,
               {
                 toolInputVariables: { query: tasksQuery },
-                toolInputENVVariables: this.prodToolEnvVars,
+                toolENVInputVariables: this.prodToolEnvVars,
               },
             ),
             /* this.agentServiceRequest.sendToolRequest(
@@ -404,7 +404,7 @@ export class OpportunityRatingService {
               queryToolId,
               {
                 toolInputVariables: { query: gongQuery },
-                toolInputENVVariables: this.prodToolEnvVars,
+                toolENVInputVariables: this.prodToolEnvVars,
               },
             ), */
           ]);
@@ -643,7 +643,7 @@ ${oppTasks}`;
             ],
             records: recordsToUpdate,
           },
-          toolInputENVVariables: this.defaultToolEnvVars,
+          toolENVInputVariables: this.defaultToolEnvVars,
         },
       );
       apiCount++;
