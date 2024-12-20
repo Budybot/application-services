@@ -43,7 +43,11 @@ export class KafkaOb1BroadcastService {
           this.logger.log(`Generated Budy reply: ${budyReply}`);
           break;
         case 'generate-assets':
-          const { pageName, projectName } = functionInput;
+          // const { pageName, projectName } = functionInput;
+          const pageName =
+            functionInput.pageName || functionInput.pageData.pageName;
+          const projectName =
+            functionInput.projectName || functionInput.pageData.projectName;
           const userOrgId = headers.userOrgId;
           const personId = headers.personId;
           if (!projectName || !pageName) {

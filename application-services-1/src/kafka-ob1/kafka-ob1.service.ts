@@ -47,7 +47,7 @@ export class KafkaOb1Service implements OnModuleInit {
     // Send the message and apply filters to the observable stream
     const response$ = this.kafkaClient
       .send(topic, {
-        key: null, // Optional: Define key as needed, or leave null
+        key: messageHeaders.personId,
         value: messageInput,
         headers: messageHeaders,
       })

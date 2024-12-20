@@ -22,13 +22,13 @@ export class FormJsonService {
     userId: string,
     projectName: string,
   ): Promise<any> {
-    if (transcript.length > this.maxTranscriptLength) {
-      transcript = await this.summarizeTranscript(
-        transcript,
-        projectName,
-        userId,
-      );
-    }
+    // if (transcript.length > this.maxTranscriptLength) {
+    //   transcript = await this.summarizeTranscript(
+    //     transcript,
+    //     projectName,
+    //     userId,
+    //   );
+    // }
 
     const formPrompt = `
       You are an AI consultant responsible for documenting and summarizing a recent customer meeting. This summary should be structured in JSON format, using the following exact fields:
@@ -94,61 +94,6 @@ export class FormJsonService {
     }
   }
 
-  // async generateActionItems(
-  //   transcript: string,
-  //   actionItems: string,
-  //   userId: string,
-  //   projectName: string,
-  // ): Promise<any> {
-  //   const actionPrompt = `
-  //     Based on the customer meeting transcript, generate JSON-formatted action items that align with the project goals.
-
-  //     Output must be a JSON object with an "action_items" array containing strings of action items.
-
-  //     Input Details:
-  //     Clean Transcript: ${transcript},
-  //     Cosultant Recorded Action Items: ${actionItems}
-  //   `;
-
-  //   const config = {
-  //     provider: 'openai',
-  //     model: 'gpt-4o-mini',
-  //     temperature: 0.25,
-  //     maxTokens: 4096,
-  //     frequencyPenalty: 0,
-  //     presencePenalty: 0,
-  //   };
-
-  //   try {
-  //     // this.logger.log('Requesting action items JSON generation from LLM...');
-  //     const actionLlmOutput = await this.agentServiceRequest.sendAgentRequest(
-  //       actionPrompt,
-  //       'Ensure the output of this call is only JSON.',
-  //       config,
-  //       projectName,
-  //       userId,
-  //     );
-
-  //     if (actionLlmOutput?.messageContent?.content) {
-  //       const actionResultJson = this.cleanAndParseJson(
-  //         actionLlmOutput.messageContent.content,
-  //       );
-  //       validateActionItemsJson(actionResultJson);
-  //       // this.logger.debug(
-  //       //   `Generated action items JSON: ${JSON.stringify(actionResultJson)}`,
-  //       // );
-  //       return actionResultJson;
-  //     } else {
-  //       throw new Error(`Invalid response: ${JSON.stringify(actionLlmOutput)}`);
-  //     }
-  //   } catch (error) {
-  //     this.logger.error(
-  //       `Error generating action items JSON: ${error.message}`,
-  //       error.stack,
-  //     );
-  //     throw new Error('Failed to generate action items JSON');
-  //   }
-  // }
   async generateActionItems(
     transcript: string,
     actionItems: string,
@@ -218,11 +163,6 @@ export class FormJsonService {
     userEmail: string,
     projectName: string,
   ): Promise<any> {
-    // this.logger.debug(`Action Items: ${JSON.stringify(actionItems)}`);
-    // this.logger.debug(`Transcript: ${transcript}`);
-    // this.logger.debug(`Consultant Input: ${consultantInput}`);
-    // this.logger.debug(`Project Description: ${projectDescription}`);
-    // this.logger.debug(`User Email: ${userEmail}`);
     try {
       // Call your LLM function here
       const llmOutput = await this.generateFormJson(

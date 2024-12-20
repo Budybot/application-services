@@ -82,8 +82,8 @@ export class KafkaOb1ProcessingService {
           // this.logger.debug(`Function input: ${JSON.stringify(functionInput)}`);
           response = await this.pageSubmittedService.handlePageSubmitted(
             functionInput,
-            userOrgId,
             personId,
+            userOrgId,
           );
           break;
         case 'create-project-plan':

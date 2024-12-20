@@ -9,8 +9,8 @@ export class CleanTranscriptService {
 
   async cleanTranscript(
     transcript: string,
-    instanceName: string,
-    userId: string,
+    userOrgId: string,
+    personId: string,
   ): Promise<string> {
     const transcriptWithoutTimestamps = this.removeTimestamps(transcript);
 
@@ -45,8 +45,8 @@ export class CleanTranscriptService {
         systemPrompt,
         transcriptWithoutTimestamps,
         config,
-        instanceName,
-        userId,
+        userOrgId,
+        personId,
       );
 
       const cleanedTranscript = response.messageContent.content;

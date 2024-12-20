@@ -45,7 +45,7 @@ export class ContentService {
         const documentId = await this.googleDocService.createGoogleDoc(
           `SOW for ${projectName}`,
           folderId,
-          userEmail,
+          'raj@budy.bot',
         );
 
         // await this.googleDocService.writeToDocument(documentId, sowContent);
@@ -80,7 +80,7 @@ export class ContentService {
         const documentId = await this.googleDocService.createGoogleDoc(
           `Follow-up Email for ${projectName}`,
           folderId,
-          userEmail,
+          'raj@budy.bot',
         );
 
         const description =
@@ -118,7 +118,7 @@ export class ContentService {
         const sheetId = await this.googleSheetService.createGoogleSheet(
           `Project Planner for ${projectName}`,
           folderId,
-          userEmail,
+          'raj@budy.bot',
         );
 
         // Write the CSV formatted content into the Google Sheet
