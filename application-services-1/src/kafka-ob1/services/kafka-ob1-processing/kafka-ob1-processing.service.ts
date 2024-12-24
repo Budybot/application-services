@@ -14,6 +14,10 @@ import { CompletedActionItemsService } from './functions/completed-action-items.
 import { SyncAssetsService } from './functions/sync-assets.service';
 import { ToolTestingService } from './tool-tester.service';
 import { LeadRatingService } from './functions/lead-rating.service';
+import { OpportunityRatingService } from './functions/opportunity-rating.service';
+import { AgentServiceRequest } from './agent-service-request.service';
+import { query } from 'express';
+import { SalesforceAnalysisService } from './functions/sf-analysis.service';
 
 @Injectable()
 export class KafkaOb1ProcessingService {
@@ -28,6 +32,9 @@ export class KafkaOb1ProcessingService {
     private readonly syncAssetsService: SyncAssetsService,
     private readonly testTool: ToolTestingService,
     private readonly rateLead: LeadRatingService,
+    private readonly rateOpportunity: OpportunityRatingService,
+    private readonly agentServiceRequest: AgentServiceRequest,
+    private readonly sfAnalysis: SalesforceAnalysisService,
     // @Inject('KAFKA_OB1_CLIENT') private readonly kafkaClient: ClientKafka, // Inject Kafka client
   ) {}
 
@@ -121,16 +128,23 @@ export class KafkaOb1ProcessingService {
           response = { messageContent: { commentProcessed: true } };
           break;
         case 'test-tool':
-          const { toolId, toolInput } = functionInput;
-          this.logger.log(
-            `Testing tool with ID ${toolId} and input: ${toolInput}`,
+          const toolResponse = await this.agentServiceRequest.sendToolRequest(
+            personId,
+            userOrgId,
+            functionInput.toolId,
+            functionInput.toolInput,
           );
-          const toolTestResult = await this.testTool.runTest(
-            '35.161.118.26',
-            toolId,
-            toolInput,
+          response = { messageContent: { toolResponse: toolResponse } };
+          break;
+        case 'push-snapshots':
+          const { queryToolId: queryToolId2, googleSheetId } = functionInput;
+          await this.rateLead.pushSnapshotToGoogleSheet(
+            queryToolId2,
+            googleSheetId,
+            personId,
+            userOrgId,
           );
-          response = { messageContent: { toolTestResult: toolTestResult } };
+          response = { messageContent: { snapshotResponse: 'Success' } };
           break;
         case 'rate-leads':
           const {
@@ -144,7 +158,8 @@ export class KafkaOb1ProcessingService {
             ndays,
             limit,
             makeSnapshots,
-            rateLeads,
+            customQuery,
+            weekName,
           } = functionInput;
 
           // Step 1: Log that the process has started
@@ -170,20 +185,118 @@ export class KafkaOb1ProcessingService {
               createToolId,
               criteriaRecordId,
               promptId,
-              rateLeads,
               makeSnapshots,
               personId,
               userOrgId,
               ndays,
               limit,
+              customQuery,
+              weekName,
             )
             .then((result) => {
               this.logger.log(
-                `Lead rating process completed: Total API Count is ${result}`,
+                `Lead rating process completed: Total Count is ${result}`,
               );
             })
             .catch((error) => {
               this.logger.error(`Lead rating process failed: ${error.message}`);
+            });
+
+          break;
+
+        case 'rate-opportunities':
+          const {
+            queryToolId: oppQueryToolId,
+            describeToolId: oppDescribeToolId,
+            promptId: oppPromptId,
+            customQuery: oppCustomQuery,
+            limit: oppLimit,
+            batchSize,
+            criteriaRecordId: oppCriteriaRecordId,
+            patchToolId: oppPatchToolId,
+            // keyMetricsRecordId,
+            activityPromptId: oppActivityPromptId,
+            mergePromptId: oppMergePromptId,
+            performanceKeyMetricsId,
+            seasonalKeyMetricsId,
+          } = functionInput;
+
+          // Log start of opportunity rating process
+          this.logger.log(
+            'Received rate-opportunities request. Initiating processing...',
+          );
+          response = {
+            messageContent: {
+              status: 'Processing',
+              message:
+                'Opportunity rating process started. You will receive updates shortly.',
+            },
+          };
+
+          // Trigger opportunity rating process asynchronously
+          this.rateOpportunity
+            .processOpportunityRating({
+              messageContent: {
+                personId,
+                userOrgId,
+                queryToolId: oppQueryToolId,
+                describeToolId: oppDescribeToolId,
+                promptId: oppPromptId,
+                mergePromptId: oppMergePromptId,
+                customQuery: oppCustomQuery,
+                limit: oppLimit,
+                batchSize,
+                criteriaRecordId: oppCriteriaRecordId,
+                patchToolId: oppPatchToolId,
+                // keyMetricsRecordId,
+                activityPromptId: oppActivityPromptId,
+                performanceKeyMetricsId,
+                seasonalKeyMetricsId,
+              },
+            })
+            .then(() => {
+              this.logger.log(
+                'Opportunity rating process completed successfully',
+              );
+            })
+            .catch((error) => {
+              this.logger.error(
+                `Opportunity rating process failed: ${error.message}`,
+              );
+            });
+
+          break;
+
+        case 'sf-analysis':
+          this.logger.log('Starting Salesforce metrics analysis');
+          response = {
+            messageContent: {
+              status: 'Processing',
+              message:
+                'Salesforce metrics analysis started. You will receive updates shortly.',
+            },
+          };
+
+          // Trigger the analysis process asynchronously
+          this.sfAnalysis
+            .processMetricsAnalysis({
+              messageContent: {
+                personId,
+                userOrgId,
+                queryToolId: functionInput.queryToolId,
+                createToolId: functionInput.createToolId,
+                analysisType: functionInput.analysisType,
+              },
+            })
+            .then(() => {
+              this.logger.log(
+                'Salesforce metrics analysis completed successfully',
+              );
+            })
+            .catch((error) => {
+              this.logger.error(
+                `Salesforce metrics analysis failed: ${error.message}`,
+              );
             });
 
           break;
