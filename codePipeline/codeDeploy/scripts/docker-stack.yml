@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  application-services-1:
+    image: 471112823179.dkr.ecr.us-west-2.amazonaws.com/ob1/application-services:latest
+    networks:
+      - OB-prod-net1-overlay
+    volumes:
+      - application-services-1-logs:/app/logs
+    environment:
+      LOG_LEVEL: debug
+      ENV: prod
+      CREDENTIALS_PATH: /usr/src/app/credentials.json
+      SERVICE_NAME: application-services
+      SERVICE_ID: "{{.Task.ID}}"
+      KAFKAJS_NO_PARTITIONER_WARNING: 1
+    secrets:
+      - APPLICATION_SERVICES_GOOGLE_TOKEN
+      - APPLICATION_SERVICES_SALESFORCE_TOKEN
+      - APPLICATION_SERVICES_SALESFORCE_INSTANCE_URL
+      - APPLICATION_SERVICES_SF_SANDBOX_TOKEN
+      - APPLICATION_SERVICES_SF_SANDBOX_INSTANCE_URL
+    command: >
+      sh -c "
+      export GOOGLE_TOKEN=$$(cat /run/secrets/APPLICATION_SERVICES_GOOGLE_TOKEN | tr -d '\\n') && 
+      export SALESFORCE_TOKEN=$$(cat /run/secrets/APPLICATION_SERVICES_SALESFORCE_TOKEN) && 
+      export SALESFORCE_INSTANCE_URL=$$(cat /run/secrets/APPLICATION_SERVICES_SALESFORCE_INSTANCE_URL) &&
+      export SF_SANDBOX_TOKEN=$$(cat /run/secrets/APPLICATION_SERVICES_SF_SANDBOX_TOKEN) &&
+      export SF_SANDBOX_INSTANCE_URL=$$(cat /run/secrets/APPLICATION_SERVICES_SF_SANDBOX_INSTANCE_URL) &&
+      node --trace-warnings dist/main.js"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "2"
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - "node.labels.environment == prod"
+          - "node.labels.aarch == arm64"
+
+networks:
+  OB-prod-net1-overlay:
+    external: true
+
+volumes:
+  application-services-1-logs:
+    driver: local
+
+secrets:
+  APPLICATION_SERVICES_GOOGLE_TOKEN:
+    external: true
+  APPLICATION_SERVICES_SALESFORCE_TOKEN:
+    external: true
+  APPLICATION_SERVICES_SALESFORCE_INSTANCE_URL:
+    external: true
+  APPLICATION_SERVICES_SF_SANDBOX_TOKEN:
+    external: true
+  APPLICATION_SERVICES_SF_SANDBOX_INSTANCE_URL:
+    external: true
